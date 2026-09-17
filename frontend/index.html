@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Escalation Referee — Hệ Thống Điều Phối Phê Duyệt Nghỉ Phép AI</title>
+  <link rel="stylesheet" href="styles.css?v=20260917_white_theme">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>">
+</head>
+<body>
+
+  <!-- ===================================================================== -->
+  <!-- TOPBAR & HEADER                                                       -->
+  <!-- ===================================================================== -->
+  <header class="topbar">
+    <div class="brand-section">
+      <div class="brand-logo">⚖️</div>
+      <div class="brand-text">
+        <h1>THE ESCALATION REFEREE</h1>
+        <p>Hệ Thống Phê Duyệt Nghỉ Phép AI · Track A · MLAI Hackathon 2026</p>
+      </div>
+    </div>
+
+    <div class="header-badges">
+      <div class="badge badge-hackathon">HCMUT × HUTECH</div>
+      <div class="badge badge-model" id="badge-llm-status">
+        <span class="badge-dot" id="llm-dot"></span>
+        <span id="llm-status-text">LLM: Kiểm tra kết nối...</span>
+      </div>
+
+      <div class="badge badge-online">
+        <span class="badge-dot"></span>
+        <span id="server-status-text">Backend: Online (:8000)</span>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- NAVIGATION TABS                                                       -->
+  <!-- ===================================================================== -->
+  <div class="nav-container">
+    <nav class="nav-tabs">
+      <button class="tab-btn verify-special active" data-tab="tab-verify" id="btn-tab-verify">
+        <span>🎯</span>
+        <span>Verify Harness (BGK 90s)</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-dashboard" id="btn-tab-dashboard">
+        <span>📊</span>
+        <span>Dashboard & Đơn Nghỉ</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-submit" id="btn-tab-submit">
+        <span>✍️</span>
+        <span>Nộp Đơn Mới (AI Chat / Form)</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-escalation" id="btn-tab-escalation">
+        <span>⚖️</span>
+        <span>Escalation Inbox <span id="inbox-badge" style="background: var(--amber); color: #000; border-radius: 99px; padding: 2px 7px; font-size: 0.72rem; margin-left: 4px; display: none;">0</span></span>
+      </button>
+      <button class="tab-btn" data-tab="tab-policy" id="btn-tab-policy">
+        <span>📜</span>
+        <span>Quy Chế Ground Truth</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MAIN CONTENT CONTAINER                                                -->
+  <!-- ===================================================================== -->
+  <main class="content-container">
+
+    <!-- ----------------------------------------------------------------- -->
+    <!-- TAB 1: VERIFY HARNESS 90 GIÂY (BAN GIÁM KHẢO)                     -->
+    <!-- ----------------------------------------------------------------- -->
+    <section id="tab-verify" class="tab-pane active">
+      
+      <!-- HERO BANNER CỦA BAN GIÁM KHẢO -->
+      <div class="glass-card hero-verify">
+        <h2>BỘ ĐIỀU PHỐI CHUYỂN TIẾP — BÀI THI HARNESS 90 GIÂY</h2>
+        <p>
+          Thực thi tự động 5 ca kiểm thử chuẩn (3 ca tự duyệt + 2 ca chuyển tiếp kèm câu hỏi hành động). 
+          Đảm bảo không chuyển tiếp quá mức và tuyệt đối không hallucinate trên dữ liệu nghi vấn.
+        </p>
+        <button id="btn-exec-harness" class="btn-run-harness">
+          <span>⚡</span>
+          <span>CHẠY BỘ KIỂM THỬ HARNESS (5 KỊCH BẢN)</span>
+        </button>
+
+        <!-- Thống kê kết quả Benchmark -->
+        <div class="harness-stats-bar" id="harness-stats" style="display: none;">
+          <div class="stat-box">
+            <div class="stat-val" id="stat-total" style="color: var(--cyan);">5</div>
+            <div class="stat-label">Tổng số ca kiểm thử</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-auto" style="color: var(--emerald);">3 / 3</div>
+            <div class="stat-label">Tự động duyệt (Auto)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-escalate" style="color: var(--amber);">2 / 2</div>
+            <div class="stat-label">Chuyển tiếp (Escalate)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-overall" style="color: #34d399;">ĐẠT (100%)</div>
+            <div class="stat-label">Đánh giá Vòng Sơ loại</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG KẾT QUẢ 5 CASES HARNESS -->
+      <div class="glass-card" id="card-harness-table" style="display: none;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📋 BẢNG KẾT QUẢ KIỂM THỬ ĐỘC LẬP</div>
+            <div class="card-subtitle">So khớp giữa Kết quả Kỳ vọng và Quyết định Thực tế của AI Agent</div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="custom-table" id="table-harness-results">
+            <thead>
+              <tr>
+                <th>Mã Test</th>
+                <th>Tình huống nghiệp vụ</th>
+                <th>Kỳ vọng</th>
+                <th>AI Thực tế</th>
+                <th>Nhóm Bất định</th>
+                <th>Thẩm quyền</th>
+                <th>Câu hỏi hành động (Chất lượng 6/6 điểm BGK)</th>
+                <th>Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="harness-results-body">
+              <!-- Render động bằng JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE PLAYGROUND CHO GIÁM KHẢO TỰ TEST CA MỚI -->
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🧪 INTERACTIVE PLAYGROUND (GIÁM KHẢO KIỂM THỬ CA MỚI)</div>
+            <div class="card-subtitle">Nhập một trường hợp mới bất kỳ dựa trên quy chế để xác minh hệ thống hoạt động thực tế, không hard-code.</div>
+          </div>
+        </div>
+
+        <form id="form-custom-verify" class="form-grid">
+          <div class="form-group">
+            <label for="custom-emp-name">Họ tên nhân viên</label>
+            <input type="text" id="custom-emp-name" value="Nguyễn Giám Khảo" required>
+          </div>
+          <div class="form-group">
+            <label for="custom-dept">Phòng ban</label>
+            <select id="custom-dept">
+              <option value="Engineering">Engineering (Kỹ thuật)</option>
+              <option value="Finance">Finance (Tài chính)</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Human Resources">Human Resources (Nhân sự)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="custom-leave-type">Loại nghỉ phép</label>
+            <select id="custom-leave-type">
+              <option value="Annual">Nghỉ phép năm (Annual Leave)</option>
+              <option value="Sick">Nghỉ ốm đau (Sick Leave)</option>
+              <option value="Special">Nghỉ việc riêng hưởng lương (Special Leave)</option>
+              <option value="Unpaid">Nghỉ không hưởng lương (Unpaid Leave)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="custom-remaining-days">Số dư phép năm hiện có (ngày)</label>
+            <input type="number" id="custom-remaining-days" value="2.0" step="0.5" required>
+          </div>
+          <div class="form-group">
+            <label for="custom-from-date">Ngày bắt đầu nghỉ</label>
+            <input type="date" id="custom-from-date" value="2026-09-24" required>
+          </div>
+          <div class="form-group">
+            <label for="custom-to-date">Ngày kết thúc nghỉ</label>
+            <input type="date" id="custom-to-date" value="2026-09-26" required>
+          </div>
+          <div class="form-group">
+            <label for="custom-attachment">Loại chứng từ đính kèm</label>
+            <select id="custom-attachment">
+              <option value="none">Không có chứng từ</option>
+              <option value="valid_bhxh_cert">Giấy nghỉ BHXH chuẩn Bộ Y tế / Giấy ra viện</option>
+              <option value="vague_prescription">Toa thuốc / Đơn thuốc thông thường</option>
+              <option value="invalid">Ảnh mờ, mất góc, không dấu mộc</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="custom-handover">Mã nhân sự nhận bàn giao</label>
+            <input type="text" id="custom-handover" placeholder="Ví dụ: EMP045 (Bắt buộc nếu nghỉ >= 3 ngày)">
+          </div>
+          <div class="form-group full-width">
+            <label for="custom-reason">Lý do xin nghỉ chi tiết</label>
+            <textarea id="custom-reason" rows="2" required>Xin nghỉ giải quyết việc gia đình đột xuất và thăm người thân ở quê.</textarea>
+          </div>
+          <div class="form-group full-width" style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="submit" class="btn-primary" id="btn-submit-custom">
+              <span>🚀</span>
+              <span>ĐÁNH GIÁ CA KIỂM THỬ NÀY</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- KẾT QUẢ ĐÁNH GIÁ CA MỚI -->
+        <div id="custom-result-card" style="display: none; margin-top: 24px; padding: 20px; background: #f8fbff; border-radius: var(--radius-md); border: 1px solid #bae6fd;">
+          <!-- Render động bằng JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ----------------------------------------------------------------- -->
+    <!-- TAB 2: DASHBOARD & DANH SÁCH ĐƠN NGHỈ PHÉP                         -->
+    <!-- ----------------------------------------------------------------- -->
+    <section id="tab-dashboard" class="tab-pane">
+      
+      <!-- STATS KPI -->
+      <div class="glass-card" style="padding: 20px;">
+        <div class="harness-stats-bar" style="margin-top: 0;">
+          <div class="stat-box">
+            <div class="stat-val" id="kpi-total" style="color: var(--text-main);">0</div>
+            <div class="stat-label">Tổng đơn đã xử lý</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="kpi-auto" style="color: var(--emerald);">0</div>
+            <div class="stat-label">Tự động phê duyệt (AI)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="kpi-pending" style="color: var(--amber);">0</div>
+            <div class="stat-label">Chờ Quản lý can thiệp</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="kpi-resolved" style="color: var(--cyan);">0</div>
+            <div class="stat-label">Đã duyệt đặc cách</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLE DANH SÁCH ĐƠN -->
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📋 LỊCH SỬ ĐIỀU PHỐI ĐƠN NGHỈ PHÉP</div>
+            <div class="card-subtitle">Tra cứu toàn bộ hồ sơ, quyết định và nhật ký trách nhiệm giải trình</div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <select id="filter-status" style="padding: 6px 12px; font-size: 0.82rem;">
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="PENDING_ESCALATION">Chờ duyệt (Pending Escalation)</option>
+              <option value="COMPLETED">Đã hoàn tất (Completed)</option>
+              <option value="REJECTED">Đã từ chối (Rejected)</option>
+            </select>
+            <button class="btn-secondary" id="btn-refresh-list" style="padding: 6px 14px;">🔄 Làm mới</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="custom-table" id="table-leave-requests">
+            <thead>
+              <tr>
+                <th>Mã Đơn</th>
+                <th>Nhân viên</th>
+                <th>Phòng ban</th>
+                <th>Thời gian nghỉ</th>
+                <th>Số ngày</th>
+                <th>Loại nghỉ</th>
+                <th>Quyết định</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="leave-requests-body">
+              <tr>
+                <td colspan="9" style="text-align: center; color: var(--text-dim);">Đang tải dữ liệu...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ----------------------------------------------------------------- -->
+    <!-- TAB 3: NỘP ĐƠN NGHỈ PHÉP (AI CHAT & FORM)                          -->
+    <!-- ----------------------------------------------------------------- -->
+    <section id="tab-submit" class="tab-pane">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">✍️ NỘP ĐƠN NGHỈ PHÉP MỚI</div>
+            <div class="card-subtitle">Hỗ trợ trích xuất thông minh từ ngôn ngữ tự nhiên (NLP) hoặc Biểu mẫu chuẩn hóa</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-primary" id="mode-chat-btn" style="padding: 8px 16px; font-size: 0.84rem;">💬 Chat Tự Nhiên</button>
+            <button class="btn-secondary" id="mode-form-btn" style="padding: 8px 16px; font-size: 0.84rem;">📝 Biểu Mẫu Chuẩn</button>
+          </div>
+        </div>
+
+        <!-- CHẾ ĐỘ 1: CHAT TỰ NHIÊN (NLP) -->
+        <div id="submit-chat-mode">
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label for="chat-employee-select">Chọn tài khoản Nhân sự gửi đơn</label>
+            <select id="chat-employee-select" style="max-width: 400px;">
+              <!-- Load động 22 nhân viên -->
+            </select>
+          </div>
+
+          <div class="form-group full-width" style="margin-bottom: 20px;">
+            <label for="chat-raw-input">Tin nhắn xin nghỉ phép (Nhập tự do bằng tiếng Việt)</label>
+            <textarea id="chat-raw-input" rows="4" placeholder="Ví dụ: Chào sếp, tuần sau từ thứ Tư 24/09 đến thứ Sáu 26/09 em xin nghỉ phép về quê ăn cưới anh trai nhé. Công việc em đã bàn giao lại cho Tuấn rồi ạ."></textarea>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end;">
+            <button class="btn-primary" id="btn-submit-chat">
+              <span>🤖</span>
+              <span>AI PHÂN TÍCH & ĐIỀU PHỐI ĐƠN</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CHẾ ĐỘ 2: FORM CHUẨN -->
+        <div id="submit-form-mode" style="display: none;">
+          <form id="form-standard-submit" class="form-grid">
+            <div class="form-group">
+              <label for="form-employee-select">Nhân viên gửi đơn</label>
+              <select id="form-employee-select">
+                <!-- Load động -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="form-leave-type">Loại nghỉ phép</label>
+              <select id="form-leave-type">
+                <option value="Annual">Nghỉ phép năm (Annual Leave)</option>
+                <option value="Sick">Nghỉ ốm đau (Sick Leave)</option>
+                <option value="Special">Nghỉ việc riêng có lương (Special Leave)</option>
+                <option value="Unpaid">Nghỉ không lương (Unpaid Leave)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="form-from-date">Từ ngày</label>
+              <input type="date" id="form-from-date" required>
+            </div>
+            <div class="form-group">
+              <label for="form-to-date">Đến ngày</label>
+              <input type="date" id="form-to-date" required>
+            </div>
+            <div class="form-group">
+              <label for="form-handover-select">Nhân sự nhận bàn giao</label>
+              <select id="form-handover-select">
+                <option value="">-- Không chỉ định --</option>
+                <!-- Load động -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="form-attachment-type">Chứng từ đính kèm</label>
+              <select id="form-attachment-type">
+                <option value="none">Không có đính kèm</option>
+                <option value="valid_bhxh_cert">Giấy nghỉ BHXH / Giấy ra viện hợp lệ</option>
+                <option value="vague_prescription">Toa thuốc thông thường</option>
+                <option value="invalid">Chứng từ không rõ ràng</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label for="form-reason">Lý do nghỉ phép</label>
+              <textarea id="form-reason" rows="2" required placeholder="Nêu rõ lý do..."></textarea>
+            </div>
+            <div class="form-group full-width" style="display: flex; justify-content: flex-end;">
+              <button type="submit" class="btn-primary">
+                <span>📨</span>
+                <span>NỘP ĐƠN NGHỈ PHÉP</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------- -->
+    <!-- TAB 4: ESCALATION INBOX (HUMAN-IN-THE-LOOP)                       -->
+    <!-- ----------------------------------------------------------------- -->
+    <section id="tab-escalation" class="tab-pane">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">⚖️ HỘP THƯ CHUYỂN TIẾP (HUMAN-IN-THE-LOOP)</div>
+            <div class="card-subtitle">Dành cho Cấp Quản lý & Giám đốc xem xét các trường hợp ngoài quy chế hoặc vượt trần tự động</div>
+          </div>
+          <button class="btn-secondary" id="btn-refresh-inbox">🔄 Làm mới hộp thư</button>
+        </div>
+
+        <div id="escalation-inbox-list">
+          <!-- Render danh sách các thẻ escalation -->
+          <div style="text-align: center; color: var(--text-dim); padding: 40px 0;">
+            Hiện không có đơn nào đang chờ phê duyệt.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------------- -->
+    <!-- TAB 5: QUY CHẾ GROUND TRUTH (POLICY VIEWER)                       -->
+    <!-- ----------------------------------------------------------------- -->
+    <section id="tab-policy" class="tab-pane">
+      <div class="glass-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📜 TÀI LIỆU QUY CHẾ NGHỈ PHÉP NỘI BỘ (GROUND TRUTH)</div>
+            <div class="card-subtitle">Mã văn bản: POL-HR-2026-01 | Căn cứ Bộ luật Lao động 2019 & Chính sách vận hành</div>
+          </div>
+        </div>
+        <div id="policy-content" style="color: var(--text-main); font-size: 0.92rem; line-height: 1.7; max-height: 75vh; overflow-y: auto; padding-right: 12px;">
+          Đang nạp tài liệu quy chế từ máy chủ...
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: AUDIT TRAIL (TRÁCH NHIỆM GIẢI TRÌNH)                           -->
+  <!-- ===================================================================== -->
+  <div class="modal-backdrop" id="modal-audit">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 1.15rem; font-weight: 700;" id="modal-audit-title">NHẬT KÝ GIẢI TRÌNH (AUDIT TRAIL)</h3>
+          <p style="font-size: 0.78rem; color: var(--text-muted);" id="modal-audit-sub">Mã đơn: REQ-XXXX</p>
+        </div>
+        <button class="btn-secondary" id="btn-close-modal" style="padding: 4px 10px;">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="timeline" id="audit-timeline">
+          <!-- Render động danh sách các bước -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- APP JAVASCRIPT -->
+  <script src="app.js?v=20260917_qwen7b_ready"></script>
+</body>
+</html>
+
+

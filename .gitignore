@@ -1,0 +1,53 @@
+# ============================================================
+# .gitignore — MLAI / The Escalation Referee (Hackathon 2026)
+# ============================================================
+
+# ------ Python cache ----------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# ------ SQLite database (runtime data, không commit) --------
+*.db
+*.sqlite
+*.sqlite3
+
+# ------ Log files -------------------------------------------
+*.log
+
+# ------ Environment / secrets --------------------------------
+.env
+.env.*
+*.env
+
+# ------ Môi trường ảo / conda (nếu lỡ tạo trong project) ---
+venv/
+.venv/
+env/
+.conda/
+
+# ------ IDE / Editor -----------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ------ HuggingFace model cache (weights rất nặng) ----------
+.cache/
+huggingface/
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+
+# ------ OS artifacts -----------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ------ Build / dist -----------------------------------------
+dist/
+build/
+*.egg-info/

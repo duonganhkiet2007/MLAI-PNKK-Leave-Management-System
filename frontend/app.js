@@ -1,37 +1,249 @@
 /**
- * app.js
- * Logic giao diện Frontend SPA cho Hệ thống Điều phối Phê duyệt Nghỉ phép (The Escalation Referee).
- * Kết nối với Backend FastAPI tại http://localhost:8000.
+ * app.js — Team PNKK
+ * AI Leave Approval & Routing System Frontend Logic.
+ * Supports VI / EN Language Switching (Default: VI).
  */
 
 const API_BASE = window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1")
   ? window.location.origin
   : "http://localhost:8000";
 
-
-// Biến lưu trữ state
+let currentLang = localStorage.getItem("app_lang") || "vi";
 let employeesCache = [];
 let activeRequests = [];
+let inboxInterval = null;
 
-// Khởi chạy khi tài liệu sẵn sàng
+// i18n Translation Dictionary
+const I18N = {
+  vi: {
+    header_sub: "Hệ Thống Phê Duyệt Nghỉ Phép AI · Team PNKK · MLAI Hackathon 2026",
+    tab_verify: "Kiểm thử tự động",
+    tab_dashboard: "Tổng quan đơn nghỉ",
+    tab_submit: "Nộp đơn nghỉ phép",
+    tab_escalation: "Hộp thư chuyển tiếp",
+    tab_policy: "Quy chế nội bộ",
+    hero_title: "BỘ KIỂM THỬ TỰ ĐỘNG (HARNESS 90 GIÂY)",
+    hero_desc: "Thực thi 5 kịch bản kiểm thử chuẩn để xác minh khả năng tự duyệt và chuyển tiếp.",
+    btn_run_harness: "CHẠY BỘ KIỂM THỬ HARNESS (5 KỊCH BẢN)",
+    stat_total: "Tổng số ca",
+    stat_auto: "Tự động duyệt",
+    stat_escalate: "Chuyển cấp duyệt",
+    stat_overall: "Kết quả chung",
+    table_harness_title: "BẢNG KẾT QUẢ KIỂM THỬ",
+    table_harness_sub: "So sánh kết quả kỳ vọng và quyết định thực tế của AI",
+    th_test_id: "Mã",
+    th_scenario: "Kịch bản kiểm thử",
+    th_expected: "Kỳ vọng",
+    th_actual: "AI Thực tế",
+    th_category: "Phân loại",
+    th_authority: "Thẩm quyền",
+    th_question: "Câu hỏi xử lý",
+    th_status: "Trạng thái",
+    playground_title: "THỬ NGHIỆM CA MỚI",
+    playground_sub: "Nhập thông tin đơn nghỉ để kiểm tra phản hồi hệ thống thực tế",
+    lbl_emp_name: "Họ tên nhân viên",
+    lbl_dept: "Phòng ban",
+    lbl_leave_type: "Loại nghỉ phép",
+    lbl_balance: "Số ngày phép còn lại",
+    lbl_start_date: "Ngày bắt đầu",
+    lbl_end_date: "Ngày kết thúc",
+    lbl_attachment: "Chứng từ đính kèm",
+    lbl_handover: "Mã nhân sự nhận bàn giao",
+    lbl_reason: "Lý do xin nghỉ",
+    btn_evaluate: "ĐÁNH GIÁ ĐƠN NÀY",
+    dash_total: "Tổng số đơn",
+    dash_auto: "Tự động duyệt",
+    dash_pending: "Chờ duyệt",
+    dash_override: "Duyệt đặc cách",
+    dash_title: "DANH SÁCH ĐƠN NGHỈ PHÉP",
+    dash_sub: "Theo dõi hồ sơ và nhật ký xử lý",
+    opt_all: "Tất cả trạng thái",
+    opt_pending: "Chờ duyệt",
+    opt_completed: "Hoàn tất",
+    opt_rejected: "Đã từ chối",
+    btn_refresh: "Làm mới",
+    th_req_id: "Mã đơn",
+    th_employee: "Nhân viên",
+    th_department: "Phòng ban",
+    th_period: "Thời gian",
+    th_days: "Số ngày",
+    th_type: "Loại nghỉ",
+    th_decision: "Quyết định",
+    th_req_status: "Trạng thái",
+    th_action: "Thao tác",
+    submit_title: "NỘP ĐƠN NGHỈ PHÉP",
+    submit_sub: "Nhập tin nhắn tự do hoặc điền biểu mẫu chuẩn",
+    btn_nlp: "Nhập văn bản",
+    btn_form: "Biểu mẫu chuẩn",
+    lbl_chat_emp: "Chọn nhân viên gửi đơn",
+    lbl_chat_input: "Nội dung tin nhắn xin nghỉ",
+    btn_submit_req: "GỬI ĐƠN NGHỈ PHÉP",
+    esc_title: "HỘP THƯ CHUYỂN TIẾP",
+    esc_sub: "Đơn nghỉ cần Cấp quản lý xem xét và phê duyệt",
+    esc_empty: "Hộp thư trống! Tất cả các đơn hợp lệ đã được tự động xử lý.",
+    esc_pills_title: "GỢI Ý HÀNH ĐỘNG NHANH (ẤN ĐỂ DUYỆT NGAY):",
+    policy_title: "QUY CHẾ NGHỈ PHÉP NỘI BỘ",
+    policy_sub: "Mã văn bản: POL-HR-2026-01 | Quy chuẩn quản lý",
+    modal_audit_title: "NHẬT KÝ XỬ LÝ ĐƠN",
+    badge_auto: "Tự động duyệt",
+    badge_escalate: "Chuyển tiếp",
+    badge_override: "Duyệt đặc cách",
+    badge_rejected: "Từ chối",
+    badge_completed: "Hoàn tất",
+    badge_pending: "Chờ duyệt",
+    btn_audit: "Nhật ký"
+  },
+  en: {
+    header_sub: "AI Leave Approval & Routing System · Team PNKK · MLAI Hackathon 2026",
+    tab_verify: "Harness Verification",
+    tab_dashboard: "Dashboard",
+    tab_submit: "Submit Request",
+    tab_escalation: "Escalation Inbox",
+    tab_policy: "Company Policy",
+    hero_title: "AUTOMATED HARNESS VERIFICATION",
+    hero_desc: "Executes 5 benchmark test scenarios to verify automated approval and escalation routing logic.",
+    btn_run_harness: "RUN HARNESS TEST (5 SCENARIOS)",
+    stat_total: "Total Cases",
+    stat_auto: "Auto Approved",
+    stat_escalate: "Escalated",
+    stat_overall: "Overall Result",
+    table_harness_title: "HARNESS BENCHMARK RESULTS",
+    table_harness_sub: "Comparison of expected outcomes vs. AI agent decisions",
+    th_test_id: "ID",
+    th_scenario: "Scenario Description",
+    th_expected: "Expected",
+    th_actual: "AI Decision",
+    th_category: "Category",
+    th_authority: "Authority",
+    th_question: "Actionable Question",
+    th_status: "Status",
+    playground_title: "CUSTOM TEST PLAYGROUND",
+    playground_sub: "Submit a custom scenario to evaluate real-time agent responses",
+    lbl_emp_name: "Employee Name",
+    lbl_dept: "Department",
+    lbl_leave_type: "Leave Type",
+    lbl_balance: "Remaining Leave Balance (Days)",
+    lbl_start_date: "Start Date",
+    lbl_end_date: "End Date",
+    lbl_attachment: "Attachment Status",
+    lbl_handover: "Handover Employee ID",
+    lbl_reason: "Leave Reason",
+    btn_evaluate: "EVALUATE REQUEST",
+    dash_total: "Total Requests",
+    dash_auto: "Auto Approved",
+    dash_pending: "Pending Approval",
+    dash_override: "Override Approved",
+    dash_title: "LEAVE REQUESTS HISTORY",
+    dash_sub: "Track leave records and audit trail logs",
+    opt_all: "All Statuses",
+    opt_pending: "Pending Approval",
+    opt_completed: "Completed",
+    opt_rejected: "Rejected",
+    btn_refresh: "Refresh",
+    th_req_id: "ID",
+    th_employee: "Employee",
+    th_department: "Department",
+    th_period: "Period",
+    th_days: "Days",
+    th_type: "Type",
+    th_decision: "Decision",
+    th_req_status: "Status",
+    th_action: "Action",
+    submit_title: "SUBMIT LEAVE REQUEST",
+    submit_sub: "Submit via natural language text input or standard structured form",
+    btn_nlp: "NLP Text Input",
+    btn_form: "Standard Form",
+    lbl_chat_emp: "Select Employee",
+    lbl_chat_input: "Leave Request Message",
+    btn_submit_req: "SUBMIT LEAVE REQUEST",
+    esc_title: "ESCALATION INBOX (HUMAN-IN-THE-LOOP)",
+    esc_sub: "Requests requiring Manager or Executive review",
+    esc_empty: "Inbox Empty! All compliant leave requests have been automatically processed.",
+    esc_pills_title: "QUICK ACTION SUGGESTIONS (CLICK TO APPROVE INSTANTLY):",
+    policy_title: "CORPORATE LEAVE POLICY (GROUND TRUTH)",
+    policy_sub: "Document Code: POL-HR-2026-01 | Governance Framework",
+    modal_audit_title: "AUDIT TRAIL LOG",
+    badge_auto: "Auto Approved",
+    badge_escalate: "Escalated",
+    badge_override: "Override Approved",
+    badge_rejected: "Rejected",
+    badge_completed: "Completed",
+    badge_pending: "Pending Review",
+    btn_audit: "Audit Log"
+  }
+};
+
 document.addEventListener("DOMContentLoaded", () => {
-  initTabs();
-  initVerifyHarness();
-  initCustomVerify();
-  initDashboard();
-  initSubmitLeave();
-  initEscalationInbox();
-  initPolicyViewer();
-  loadEmployees();
   checkServerHealth();
   checkLlmHealth();
+
+  const safeInit = (fn, name) => {
+    try { fn(); } catch (e) { console.warn(`[Init] ${name} error:`, e); }
+  };
+
+  safeInit(initLanguage, "Language");
+  safeInit(initTabs, "Tabs");
+  safeInit(initVerifyHarness, "VerifyHarness");
+  safeInit(initCustomVerify, "CustomVerify");
+  safeInit(initDashboard, "Dashboard");
+  safeInit(initSubmitLeave, "SubmitLeave");
+  safeInit(initEscalationInbox, "EscalationInbox");
+  safeInit(initPolicyViewer, "PolicyViewer");
+  safeInit(loadEmployees, "Employees");
+
   setInterval(checkServerHealth, 10000);
   setInterval(checkLlmHealth, 5000);
+  
+  inboxInterval = setInterval(() => {
+    const escTab = document.getElementById("tab-escalation");
+    if (escTab && escTab.classList.contains("active")) {
+      loadEscalationInbox(true);
+    }
+  }, 5000);
 });
 
+/* ========================================================================= */
+/* 0. LANGUAGE SWITCHER                                                      */
+/* ========================================================================= */
+function initLanguage() {
+  const langBtn = document.getElementById("btn-lang-toggle");
+  if (langBtn) {
+    langBtn.innerText = currentLang === "vi" ? "🌐 VI (Bật EN)" : "🌐 EN (Switch VI)";
+    langBtn.addEventListener("click", () => {
+      currentLang = currentLang === "vi" ? "en" : "vi";
+      localStorage.setItem("app_lang", currentLang);
+      langBtn.innerText = currentLang === "vi" ? "🌐 VI (Bật EN)" : "🌐 EN (Switch VI)";
+      applyLanguage();
+    });
+  }
+  applyLanguage();
+}
+
+function applyLanguage() {
+  const dict = I18N[currentLang] || I18N.vi;
+  document.querySelectorAll("[data-i18n]").forEach(elem => {
+    const key = elem.getAttribute("data-i18n");
+    if (dict[key]) {
+      elem.innerText = dict[key];
+    }
+  });
+
+  // Re-render dynamic components
+  if (activeRequests.length > 0) renderRequestsTable(activeRequests);
+  const escTab = document.getElementById("tab-escalation");
+  if (escTab && escTab.classList.contains("active")) loadEscalationInbox(false);
+}
+
+function t(key) {
+  return (I18N[currentLang] && I18N[currentLang][key]) || (I18N.vi[key] || key);
+}
+
+function initPolicyViewer() {
+  // Loaded when policy tab is active
+}
 
 /* ========================================================================= */
-/* 1. ĐIỀU HƯỚNG TABS                                                        */
+/* 1. TAB NAVIGATION                                                         */
 /* ========================================================================= */
 function initTabs() {
   const tabBtns = document.querySelectorAll(".tab-btn");
@@ -54,7 +266,6 @@ function switchTab(tabId) {
     targetBtn.classList.add("active");
     targetPane.classList.add("active");
 
-    // Kích hoạt nạp dữ liệu theo tab
     if (tabId === "tab-dashboard") loadDashboardData();
     if (tabId === "tab-escalation") loadEscalationInbox();
     if (tabId === "tab-policy") loadPolicyDocument();
@@ -62,7 +273,7 @@ function switchTab(tabId) {
 }
 
 /* ========================================================================= */
-/* 2. TAB 1: VERIFY HARNESS (BAN GIÁM KHẢO 90 GIÂY)                          */
+/* 2. HARNESS VERIFICATION                                                   */
 /* ========================================================================= */
 function initVerifyHarness() {
   const btnRun = document.getElementById("btn-exec-harness");
@@ -70,21 +281,21 @@ function initVerifyHarness() {
 
   btnRun.addEventListener("click", async () => {
     btnRun.disabled = true;
-    btnRun.innerHTML = `<span>⏳</span><span>ĐANG THỰC THI 5 KỊCH BẢN KIỂM THỬ...</span>`;
+    btnRun.innerHTML = `<span>${currentLang === "vi" ? "Đang chạy 5 kịch bản..." : "Executing 5 scenarios..."}</span>`;
 
     try {
       const res = await fetch(`${API_BASE}/api/verify/escalation`, { method: "POST" });
       const data = await res.json();
 
-      if (!data.success) throw new Error(data.detail || "Lỗi chạy harness");
+      if (!data.success) throw new Error(data.detail || "Lỗi kịch bản kiểm thử");
 
       renderHarnessResults(data);
-      showToast("Đã thực thi thành công 5 ca kiểm thử Harness!", "success");
+      showToast(currentLang === "vi" ? "Đã thực thi xong 5 kịch bản kiểm thử!" : "5 benchmark scenarios executed!", "success");
     } catch (err) {
-      showToast(`Lỗi: ${err.message}`, "error");
+      showToast(`Error: ${err.message}`, "error");
     } finally {
       btnRun.disabled = false;
-      btnRun.innerHTML = `<span>⚡</span><span>CHẠY LẠI BỘ KIỂM THỬ HARNESS</span>`;
+      btnRun.innerHTML = `<span>${t("btn_run_harness")}</span>`;
     }
   });
 }
@@ -93,16 +304,14 @@ function renderHarnessResults(data) {
   const stats = data.summary;
   const details = data.details;
 
-  // Hiển thị stats bar
   const statsBar = document.getElementById("harness-stats");
   statsBar.style.display = "grid";
 
   document.getElementById("stat-total").innerText = stats.total_cases;
   document.getElementById("stat-auto").innerText = `${stats.auto_approved_cases} / ${stats.target_auto}`;
   document.getElementById("stat-escalate").innerText = `${stats.escalated_cases} / ${stats.target_escalate}`;
-  document.getElementById("stat-overall").innerText = stats.overall_status;
+  document.getElementById("stat-overall").innerText = stats.overall_status === "PASS" ? "ĐẠT (PASS 100%)" : stats.overall_status;
 
-  // Hiển thị bảng chi tiết
   const cardTable = document.getElementById("card-harness-table");
   cardTable.style.display = "block";
 
@@ -113,20 +322,20 @@ function renderHarnessResults(data) {
     const tr = document.createElement("tr");
 
     const expectedBadge = item.expected_decision === "AUTO_APPROVE"
-      ? `<span class="tag-decision tag-auto">AUTO</span>`
-      : `<span class="tag-decision tag-escalate">ESCALATE</span>`;
+      ? `<span class="tag-decision tag-auto">${t("badge_auto")}</span>`
+      : `<span class="tag-decision tag-escalate">${t("badge_escalate")}</span>`;
 
     const actualBadge = item.actual_decision === "AUTO_APPROVE"
-      ? `<span class="tag-decision tag-auto">AUTO</span>`
-      : `<span class="tag-decision tag-escalate">ESCALATE</span>`;
+      ? `<span class="tag-decision tag-auto">${t("badge_auto")}</span>`
+      : `<span class="tag-decision tag-escalate">${t("badge_escalate")}</span>`;
 
     const catTag = item.actual_category 
       ? `<span class="tag-category">${item.actual_category}</span>` 
       : `<span style="color: var(--text-dim);">-</span>`;
 
     const statusBadge = item.is_passed
-      ? `<span style="color: var(--emerald); font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">✅ PASS</span>`
-      : `<span style="color: var(--rose); font-weight: 700;">❌ FAIL</span>`;
+      ? `<span style="color: var(--emerald); font-weight: 700;">ĐẠT / PASS</span>`
+      : `<span style="color: var(--rose); font-weight: 700;">FAIL</span>`;
 
     tr.innerHTML = `
       <td style="font-family: var(--font-mono); font-weight: 700; color: var(--primary);">${item.test_id}</td>
@@ -134,7 +343,7 @@ function renderHarnessResults(data) {
       <td>${expectedBadge}</td>
       <td>${actualBadge}</td>
       <td>${catTag}</td>
-      <td style="color: var(--text-muted); font-size: 0.8rem;">${item.target_role || "Hệ thống tự duyệt"}</td>
+      <td style="color: var(--text-muted); font-size: 0.8rem;">${item.target_role || "Tự động"}</td>
       <td>
         <div class="question-preview">${item.actionable_question}</div>
       </td>
@@ -143,12 +352,11 @@ function renderHarnessResults(data) {
     tbody.appendChild(tr);
   });
 
-  // Tự cuộn xuống xem bảng
   cardTable.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 /* ========================================================================= */
-/* 3. INTERACTIVE PLAYGROUND (GIÁM KHẢO TEST CA MỚI)                         */
+/* 3. CUSTOM TEST PLAYGROUND                                                 */
 /* ========================================================================= */
 function initCustomVerify() {
   const form = document.getElementById("form-custom-verify");
@@ -158,7 +366,7 @@ function initCustomVerify() {
     e.preventDefault();
     const btn = document.getElementById("btn-submit-custom");
     btn.disabled = true;
-    btn.innerHTML = `<span>⏳</span><span>Đang phân tích...</span>`;
+    btn.innerHTML = `<span>${currentLang === "vi" ? "Đang phân tích..." : "Evaluating..."}</span>`;
 
     const payload = {
       employee_name: document.getElementById("custom-emp-name").value,
@@ -185,15 +393,15 @@ function initCustomVerify() {
 
       renderCustomVerifyResult(data);
       if (data.decision === "LLM_OFFLINE") {
-        showToast("⚠️ Local LLM Qwen 7B chưa được bật trong tmux!", "error");
+        showToast(currentLang === "vi" ? "Mô hình LLM chưa được bật!" : "LLM server offline!", "error");
       } else {
-        showToast("Đã phân tích ca kiểm thử mới!", "success");
+        showToast(currentLang === "vi" ? "Đã phân tích xong ca kiểm thử!" : "Scenario evaluated!", "success");
       }
     } catch (err) {
-      showToast(`Lỗi: ${err.message}`, "error");
+      showToast(`Error: ${err.message}`, "error");
     } finally {
       btn.disabled = false;
-      btn.innerHTML = `<span>🚀</span><span>ĐÁNH GIÁ CA KIỂM THỬ NÀY</span>`;
+      btn.innerHTML = `<span>${t("btn_evaluate")}</span>`;
     }
   });
 }
@@ -205,17 +413,13 @@ function renderCustomVerifyResult(data) {
   if (data.decision === "LLM_OFFLINE") {
     container.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h4 style="font-weight: 700; color: #b91c1c;">KẾT QUẢ ĐÁNH GIÁ:</h4>
-        <span class="tag-decision" style="background: #fef2f2; color: #b91c1c; border: 1px solid #f87171; font-size: 0.9rem; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
-          🔴 LLM SERVER OFFLINE
+        <h4 style="font-weight: 700; color: #b91c1c;">${currentLang === "vi" ? "KẾT QUẢ ĐÁNH GIÁ:" : "RESULT:"}</h4>
+        <span class="tag-decision" style="background: #fef2f2; color: #b91c1c; border: 1px solid #f87171; font-size: 0.85rem; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
+          LLM OFFLINE
         </span>
       </div>
-      <div style="background: #fff5f5; border: 1px solid #fca5a5; border-radius: 8px; padding: 14px; margin-bottom: 12px; color: #991b1b;">
-        <div style="font-weight: 700; margin-bottom: 6px;">⚠️ Mô hình Local LLM (Qwen 2.5 7B) chưa được khởi chạy:</div>
-        <div style="font-size: 0.88rem; line-height: 1.5;">${data.plain_reason}</div>
-        <div style="margin-top: 10px; padding: 8px 12px; background: #ffffff; border-radius: 6px; font-family: monospace; font-size: 0.84rem; color: #1e293b; border: 1px solid #e2e8f0;">
-          👉 Cách bật trong tmux: <code>bash '/workingspace_aiclub/WorkingSpace/Personal/phongnh/ML AI /LLM-KIET/run_qwen7b_vllm.sh'</code>
-        </div>
+      <div style="background: #fff5f5; border: 1px solid #fca5a5; border-radius: 8px; padding: 14px; color: #991b1b; font-size: 0.88rem;">
+        ${data.plain_reason}
       </div>
     `;
     container.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -224,44 +428,44 @@ function renderCustomVerifyResult(data) {
 
   const isAuto = data.decision === "AUTO_APPROVE";
   const badge = isAuto
-    ? `<span class="tag-decision tag-auto" style="font-size: 0.9rem;">✅ TỰ ĐỘNG PHÊ DUYỆT (AUTO_APPROVE)</span>`
-    : `<span class="tag-decision tag-escalate" style="font-size: 0.9rem;">⚠️ CHUYỂN TIẾP CHO CON NGƯỜI (ESCALATE)</span>`;
+    ? `<span class="tag-decision tag-auto" style="font-size: 0.85rem;">${t("badge_auto")}</span>`
+    : `<span class="tag-decision tag-escalate" style="font-size: 0.85rem;">${t("badge_escalate")}</span>`;
 
   let clausesHtml = "";
   if (data.applied_policy_clauses && data.applied_policy_clauses.length > 0) {
     clausesHtml = `
       <div style="margin-top: 12px; font-size: 0.8rem; color: var(--text-dim);">
-        <strong>Căn cứ điều khoản:</strong> ${data.applied_policy_clauses.join(" | ")}
+        <strong>${currentLang === "vi" ? "Căn cứ quy chế:" : "Applicable Policy Clauses:"}</strong> ${data.applied_policy_clauses.join(" | ")}
       </div>
     `;
   }
 
   container.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-      <h4 style="font-weight: 700; color: var(--text-main);">KẾT QUẢ ĐÁNH GIÁ CỦA AI REFEREE:</h4>
+      <h4 style="font-weight: 700; color: var(--text-main);">${currentLang === "vi" ? "KẾT QUẢ PHÂN TÍCH:" : "AI EVALUATION RESULT:"}</h4>
       ${badge}
     </div>
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; font-size: 0.84rem;">
       <div class="stat-box" style="padding: 10px;">
-        <div class="stat-label">Số ngày làm việc tính ra</div>
-        <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">${data.calculated_workdays} ngày</div>
+        <div class="stat-label">${currentLang === "vi" ? "Số ngày làm việc" : "Calculated Workdays"}</div>
+        <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">${data.calculated_workdays} ${currentLang === "vi" ? "ngày" : "days"}</div>
       </div>
       <div class="stat-box" style="padding: 10px;">
-        <div class="stat-label">Nhóm bất định</div>
+        <div class="stat-label">${currentLang === "vi" ? "Phân loại" : "Category"}</div>
         <div style="font-weight: 700; color: #d97706;">${data.uncertainty_category || "None"}</div>
       </div>
       <div class="stat-box" style="padding: 10px;">
-        <div class="stat-label">Cấp xử lý đích</div>
+        <div class="stat-label">${currentLang === "vi" ? "Thẩm quyền" : "Target Role"}</div>
         <div style="font-weight: 700; color: var(--primary);">${data.target_role || "Tự động"}</div>
       </div>
     </div>
     ${!isAuto ? `
       <div class="action-question-box">
-        <div class="action-question-title">CÂU HỎI HÀNH ĐỘNG DÀNH CHO NGƯỜI DUYỆT:</div>
+        <div class="action-question-title">${currentLang === "vi" ? "CÂU HỎI XỬ LÝ DÀNH CHO QUẢN LÝ:" : "ACTIONABLE QUESTION FOR APPROVER:"}</div>
         <div class="action-question-text">"${data.actionable_question}"</div>
       </div>
     ` : `
-      <div style="color: #047857; font-weight: 600; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+      <div style="color: #047857; font-weight: 600; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; font-size: 0.88rem;">
         ${data.plain_reason}
       </div>
     `}
@@ -271,9 +475,8 @@ function renderCustomVerifyResult(data) {
   container.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
-
 /* ========================================================================= */
-/* 4. TAB 2: DASHBOARD & DANH SÁCH ĐƠN                                       */
+/* 4. DASHBOARD & REQUESTS TABLE                                             */
 /* ========================================================================= */
 function initDashboard() {
   document.getElementById("btn-refresh-list").addEventListener("click", loadDashboardData);
@@ -314,7 +517,6 @@ function renderDashboardStats(requests) {
   document.getElementById("kpi-pending").innerText = pending;
   document.getElementById("kpi-resolved").innerText = resolved;
 
-  // Cập nhật badge trên menu
   const inboxBadge = document.getElementById("inbox-badge");
   if (pending > 0) {
     inboxBadge.innerText = pending;
@@ -327,7 +529,7 @@ function renderDashboardStats(requests) {
 function renderRequestsTable(requests) {
   const tbody = document.getElementById("leave-requests-body");
   if (requests.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 30px;">Chưa có đơn nào trong danh sách.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 30px;">${currentLang === "vi" ? "Không có đơn nào." : "No leave requests found."}</td></tr>`;
     return;
   }
 
@@ -335,33 +537,33 @@ function renderRequestsTable(requests) {
   requests.forEach(req => {
     const tr = document.createElement("tr");
 
-    let decBadge = `<span class="tag-decision tag-auto">AUTO</span>`;
+    let decBadge = `<span class="tag-decision tag-auto">${t("badge_auto")}</span>`;
     if (req.decision === "ESCALATE" || req.decision === "ESCALATED_PENDING_HUMAN") {
-      decBadge = `<span class="tag-decision tag-escalate">ESCALATE</span>`;
+      decBadge = `<span class="tag-decision tag-escalate">${t("badge_escalate")}</span>`;
     } else if (req.decision === "APPROVED_BY_HUMAN_OVERRIDE") {
-      decBadge = `<span class="tag-decision tag-approved-override">OVERRIDE</span>`;
+      decBadge = `<span class="tag-decision tag-approved-override">${t("badge_override")}</span>`;
     } else if (req.decision === "REJECTED" || req.decision === "REJECTED_BY_HUMAN") {
-      decBadge = `<span class="tag-decision tag-rejected">REJECTED</span>`;
+      decBadge = `<span class="tag-decision tag-rejected">${t("badge_rejected")}</span>`;
     }
 
     const statusBadge = req.status === "COMPLETED"
-      ? `<span style="color: var(--emerald); font-weight: 600;">● Hoàn tất</span>`
+      ? `<span style="color: var(--emerald); font-weight: 600;">${t("badge_completed")}</span>`
       : (req.status === "PENDING_ESCALATION" 
-          ? `<span style="color: var(--amber); font-weight: 600; animation: pulse-dot 2s infinite;">● Chờ sếp duyệt</span>`
-          : `<span style="color: var(--rose);">● Đã đóng</span>`);
+          ? `<span style="color: var(--amber); font-weight: 600;">${t("badge_pending")}</span>`
+          : `<span style="color: var(--rose);">${currentLang === "vi" ? "Đã đóng" : "Closed"}</span>`);
 
     tr.innerHTML = `
       <td style="font-family: var(--font-mono); font-weight: 700; color: var(--primary);">${req.id}</td>
       <td style="font-weight: 600;">${req.employee_name}</td>
       <td style="color: var(--text-muted);">${req.department}</td>
       <td style="font-size: 0.84rem;">${req.from_date || "N/A"} → ${req.to_date || "N/A"}</td>
-      <td style="font-family: var(--font-mono); font-weight: 700;">${req.workdays}d</td>
+      <td style="font-family: var(--font-mono); font-weight: 700;">${req.workdays} ${currentLang === "vi" ? "ngày" : "d"}</td>
       <td>${req.leave_type}</td>
       <td>${decBadge}</td>
       <td>${statusBadge}</td>
       <td>
         <button class="btn-secondary" onclick="openAuditModal('${req.id}')" style="padding: 4px 10px; font-size: 0.78rem;">
-          🔍 Audit Trail
+          ${t("btn_audit")}
         </button>
       </td>
     `;
@@ -370,7 +572,7 @@ function renderRequestsTable(requests) {
 }
 
 /* ========================================================================= */
-/* 5. TAB 3: NỘP ĐƠN NGHỈ PHÉP (AI CHAT / FORM)                             */
+/* 5. SUBMIT LEAVE REQUEST                                                   */
 /* ========================================================================= */
 function initSubmitLeave() {
   const modeChatBtn = document.getElementById("mode-chat-btn");
@@ -392,15 +594,14 @@ function initSubmitLeave() {
     chatModeDiv.style.display = "none";
   });
 
-  // Nộp dạng Chat NLP
   document.getElementById("btn-submit-chat").addEventListener("click", async () => {
     const text = document.getElementById("chat-raw-input").value.trim();
-    if (!text) return showToast("Vui lòng nhập nội dung tin nhắn xin nghỉ.", "error");
+    if (!text) return showToast(currentLang === "vi" ? "Vui lòng nhập nội dung xin nghỉ!" : "Please enter leave request text!", "error");
 
     const empId = document.getElementById("chat-employee-select").value;
     const btn = document.getElementById("btn-submit-chat");
     btn.disabled = true;
-    btn.innerHTML = `<span>⏳</span><span>AI đang xử lý...</span>`;
+    btn.innerHTML = `<span>${currentLang === "vi" ? "Đang phân tích..." : "Analyzing..."}</span>`;
 
     try {
       const res = await fetch(`${API_BASE}/api/leave/request`, {
@@ -411,7 +612,7 @@ function initSubmitLeave() {
       const data = await res.json();
       if (!data.success) throw new Error(data.detail);
 
-      showToast(`Đã tạo đơn ${data.data.id}! Quyết định: ${data.data.decision}`, "success");
+      showToast(currentLang === "vi" ? `Đã nộp đơn ${data.data.id} thành công!` : `Request ${data.data.id} submitted!`, "success");
       document.getElementById("chat-raw-input").value = "";
       loadDashboardData();
       
@@ -421,14 +622,13 @@ function initSubmitLeave() {
         switchTab("tab-dashboard");
       }
     } catch (err) {
-      showToast(`Lỗi: ${err.message}`, "error");
+      showToast(`Error: ${err.message}`, "error");
     } finally {
       btn.disabled = false;
-      btn.innerHTML = `<span>🤖</span><span>AI PHÂN TÍCH & ĐIỀU PHỐI ĐƠN</span>`;
+      btn.innerHTML = `<span>${t("btn_submit_req")}</span>`;
     }
   });
 
-  // Nộp dạng Form chuẩn
   document.getElementById("form-standard-submit").addEventListener("submit", async (e) => {
     e.preventDefault();
     const payload = {
@@ -450,23 +650,23 @@ function initSubmitLeave() {
       const data = await res.json();
       if (!data.success) throw new Error(data.detail);
 
-      showToast(`Đã nộp đơn thành công (${data.data.id})!`, "success");
+      showToast(currentLang === "vi" ? `Đã nộp đơn thành công (${data.data.id})!` : `Request submitted (${data.data.id})!`, "success");
       loadDashboardData();
       switchTab("tab-dashboard");
     } catch (err) {
-      showToast(`Lỗi: ${err.message}`, "error");
+      showToast(`Error: ${err.message}`, "error");
     }
   });
 }
 
 /* ========================================================================= */
-/* 6. TAB 4: ESCALATION INBOX (HUMAN-IN-THE-LOOP)                           */
+/* 6. ESCALATION INBOX (1-CLICK INSTANT OPTION SUBMISSION)                   */
 /* ========================================================================= */
 function initEscalationInbox() {
-  document.getElementById("btn-refresh-inbox").addEventListener("click", loadEscalationInbox);
+  document.getElementById("btn-refresh-inbox").addEventListener("click", () => loadEscalationInbox(false));
 }
 
-async function loadEscalationInbox() {
+async function loadEscalationInbox(isSilent = false) {
   const container = document.getElementById("escalation-inbox-list");
   try {
     const res = await fetch(`${API_BASE}/api/leave/requests?status=PENDING_ESCALATION`);
@@ -474,14 +674,25 @@ async function loadEscalationInbox() {
     if (!json.success) throw new Error(json.detail);
 
     const pending = json.data;
+    
+    const inboxBadge = document.getElementById("inbox-badge");
+    if (pending.length > 0) {
+      inboxBadge.innerText = pending.length;
+      inboxBadge.style.display = "inline";
+    } else {
+      inboxBadge.style.display = "none";
+    }
+
     if (pending.length === 0) {
       container.innerHTML = `
         <div style="text-align: center; color: var(--text-dim); padding: 48px 0;">
-          <div style="font-size: 2.5rem; margin-bottom: 8px;">🎉</div>
-          <div style="font-weight: 700; color: var(--text-main); font-size: 1.1rem;">Hộp thư trống!</div>
-          <div style="font-size: 0.85rem; margin-top: 4px; color: var(--text-muted);">Tất cả các đơn thường quy đã được AI tự động phê duyệt an toàn.</div>
+          <div style="font-weight: 700; color: var(--text-main); font-size: 1.05rem;">${t("esc_empty")}</div>
         </div>
       `;
+      return;
+    }
+
+    if (isSilent && container.querySelectorAll(".escalation-card").length === pending.length) {
       return;
     }
 
@@ -489,16 +700,16 @@ async function loadEscalationInbox() {
     pending.forEach(item => {
       const card = document.createElement("div");
       card.className = "escalation-card";
+      card.id = `card-escalation-${item.id}`;
 
-      // Render options pills
       let pillsHtml = "";
       if (item.quick_action_options && item.quick_action_options.length > 0) {
         pillsHtml = `
-          <div style="font-size: 0.76rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">GỢI Ý HÀNH ĐỘNG NHANH:</div>
+          <div style="font-size: 0.76rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">${t("esc_pills_title")}</div>
           <div class="quick-options-container">
             ${item.quick_action_options.map(opt => `
               <button class="btn-option-pill" onclick="selectQuickOption('${item.id}', '${opt.replace(/'/g, "\\'")}')">
-                👉 ${opt}
+                ${opt}
               </button>
             `).join("")}
           </div>
@@ -509,29 +720,29 @@ async function loadEscalationInbox() {
         <div class="escalation-header">
           <div>
             <span style="font-family: var(--font-mono); font-weight: 700; color: var(--primary); font-size: 0.85rem;">${item.id}</span>
-            <h3 style="font-size: 1.15rem; font-weight: 700; margin-top: 2px;">
-              ${item.employee_name} xin nghỉ ${item.workdays} ngày (${item.from_date} → ${item.to_date})
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin-top: 2px;">
+              ${item.employee_name} ${currentLang === "vi" ? "xin nghỉ" : "requested"} ${item.workdays} ${currentLang === "vi" ? "ngày" : "days"} (${item.from_date} → ${item.to_date})
             </h3>
-            <div style="font-size: 0.82rem; color: var(--text-muted);">Phòng ban: ${item.department} · Loại: ${item.leave_type}</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted);">${currentLang === "vi" ? "Phòng ban" : "Dept"}: ${item.department} · ${currentLang === "vi" ? "Loại" : "Type"}: ${item.leave_type}</div>
           </div>
-          <span class="approver-badge">Định tuyến: ${item.target_role || "Quản lý"}</span>
+          <span class="approver-badge">${currentLang === "vi" ? "Cấp duyệt" : "Target Role"}: ${item.target_role || "Quản lý"}</span>
         </div>
 
         <div class="action-question-box">
-          <div class="action-question-title">CÂU HỎI HÀNH ĐỘNG DÀNH CHO CẤP THẨM QUYỀN (CHUẨN 6/6 ĐIỂM BGK):</div>
+          <div class="action-question-title">${currentLang === "vi" ? "CÂU HỎI XỬ LÝ DÀNH CHO CẤP THẨM QUYỀN:" : "ACTIONABLE QUESTION FOR APPROVER:"}</div>
           <div class="action-question-text">"${item.actionable_question || "Vui lòng xem xét đơn nghỉ này."}"</div>
         </div>
 
         <div style="background: #f8fbff; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.84rem; color: var(--text-muted);">
-          <strong>Lý do từ hệ thống:</strong> ${item.human_readable_explanation || "Vi phạm quy chế hoặc vượt thẩm quyền tự duyệt."}
+          <strong>${currentLang === "vi" ? "Lý do chuyển tiếp:" : "System Explanation:"}</strong> ${item.human_readable_explanation || "Vi phạm quy chế hoặc vượt trần tự duyệt."}
         </div>
 
         ${pillsHtml}
 
-        <div style="display: flex; gap: 12px; align-items: center; margin-top: 12px;">
-          <input type="text" id="feedback-input-${item.id}" placeholder="Gõ câu trả lời / chỉ đạo của bạn (ví dụ: Đồng ý duyệt đặc cách...)" style="flex: 1;">
-          <button class="btn-primary" onclick="submitHumanDecision('${item.id}')" style="white-space: nowrap;">
-            <span>✍️</span><span>Gửi Phê Duyệt / Re-check</span>
+        <div style="display: flex; gap: 12px; align-items: center; margin-top: 12px;" id="action-row-${item.id}">
+          <input type="text" id="feedback-input-${item.id}" placeholder="${currentLang === "vi" ? "Gõ câu trả lời hoặc chỉ đạo..." : "Type decision feedback or click an option above..."}" style="flex: 1;">
+          <button class="btn-primary" id="btn-submit-human-${item.id}" onclick="submitHumanDecision('${item.id}')" style="white-space: nowrap;">
+            <span>${currentLang === "vi" ? "Gửi chỉ đạo & Phê duyệt" : "Submit Decision"}</span>
           </button>
         </div>
       `;
@@ -539,22 +750,34 @@ async function loadEscalationInbox() {
       container.appendChild(card);
     });
   } catch (err) {
-    container.innerHTML = `<div style="color: var(--rose);">Lỗi: ${err.message}</div>`;
+    if (!isSilent) container.innerHTML = `<div style="color: var(--rose);">Lỗi: ${err.message}</div>`;
   }
 }
 
-function selectQuickOption(requestId, optionText) {
+async function selectQuickOption(requestId, optionText) {
   const input = document.getElementById(`feedback-input-${requestId}`);
   if (input) {
     input.value = optionText;
-    input.focus();
   }
+  await submitHumanDecision(requestId);
 }
 
 async function submitHumanDecision(requestId) {
   const input = document.getElementById(`feedback-input-${requestId}`);
   const feedback = input ? input.value.trim() : "";
-  if (!feedback) return showToast("Vui lòng nhập câu trả lời hoặc chọn một gợi ý hành động!", "error");
+  if (!feedback) return showToast(currentLang === "vi" ? "Vui lòng nhập chỉ đạo hoặc chọn gợi ý!" : "Please enter feedback or select a quick option!", "error");
+
+  const btn = document.getElementById(`btn-submit-human-${requestId}`);
+  const card = document.getElementById(`card-escalation-${requestId}`);
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = currentLang === "vi" ? "Đang xử lý..." : "Processing...";
+  }
+  if (card) {
+    card.style.opacity = "0.6";
+    card.style.pointerEvents = "none";
+  }
 
   try {
     const res = await fetch(`${API_BASE}/api/leave/${requestId}/human-decision`, {
@@ -565,16 +788,25 @@ async function submitHumanDecision(requestId) {
     const json = await res.json();
     if (!json.success) throw new Error(json.detail);
 
-    showToast(`Đã ghi nhận chỉ đạo và Re-check thành công (${json.data.decision})!`, "success");
-    loadEscalationInbox();
-    loadDashboardData();
+    showToast(currentLang === "vi" ? `Đã ghi nhận chỉ đạo thành công (${json.data.decision})!` : `Decision recorded successfully (${json.data.decision})!`, "success");
+    
+    await loadEscalationInbox(false);
+    await loadDashboardData();
   } catch (err) {
-    showToast(`Lỗi: ${err.message}`, "error");
+    showToast(`Error: ${err.message}`, "error");
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = currentLang === "vi" ? "Gửi chỉ đạo & Phê duyệt" : "Submit Decision";
+    }
+    if (card) {
+      card.style.opacity = "1";
+      card.style.pointerEvents = "auto";
+    }
   }
 }
 
 /* ========================================================================= */
-/* 7. TAB 5: QUY CHẾ NGHỈ PHÉP (POLICY VIEWER)                               */
+/* 7. POLICY VIEWER                                                          */
 /* ========================================================================= */
 async function loadPolicyDocument() {
   const container = document.getElementById("policy-content");
@@ -583,14 +815,28 @@ async function loadPolicyDocument() {
     const json = await res.json();
     if (!json.success) throw new Error(json.detail);
 
-    // Format markdown đơn giản
     let md = json.content_markdown;
-    md = md.replace(/### (.*)/g, '<h3 style="color: #0284c7; margin: 18px 0 8px 0; font-size: 1.15rem;">$1</h3>');
-    md = md.replace(/## (.*)/g, '<h2 style="color: #0369a1; margin: 24px 0 12px 0; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; font-size: 1.35rem;">$1</h2>');
-    md = md.replace(/# (.*)/g, '<h1 style="color: #0f172a; margin: 0 0 16px 0; font-size: 1.6rem;">$1</h1>');
+
+    // Convert blockquotes to callout boxes
+    md = md.replace(/^> (.*$)/gim, '<div class="policy-blockquote">$1</div>');
+
+    // Parse Markdown tables
+    const tableRegex = /\|(.+)\|\n\|[-:\s|]+\|\n((?:\|.+\|\n?)+)/g;
+    md = md.replace(tableRegex, (match, header, body) => {
+      const headersHtml = header.split('|').filter(h => h.trim()).map(h => `<th>${h.trim()}</th>`).join('');
+      const rowsHtml = body.trim().split('\n').map(row => {
+        const cols = row.split('|').filter(c => c.trim()).map(c => `<td>${c.trim()}</td>`).join('');
+        return `<tr>${cols}</tr>`;
+      }).join('');
+      return `<div class="table-responsive" style="margin: 16px 0;"><table class="custom-table"><thead><tr>${headersHtml}</tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+    });
+
+    md = md.replace(/### (.*)/g, '<h3 style="color: #0284c7; margin: 20px 0 8px 0; font-size: 1.15rem; font-weight: 700; border-left: 3px solid #0284c7; padding-left: 10px;">$1</h3>');
+    md = md.replace(/## (.*)/g, '<h2 style="color: #0369a1; margin: 26px 0 12px 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; font-size: 1.35rem; font-weight: 700;">$1</h2>');
+    md = md.replace(/# (.*)/g, '<h1 style="color: #0f172a; margin: 0 0 16px 0; font-size: 1.55rem; font-weight: 800; text-align: center; text-transform: uppercase;">$1</h1>');
     md = md.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #0f172a;">$1</strong>');
-    md = md.replace(/\* (.*)/g, '<li style="margin-left: 20px; color: #334155;">$1</li>');
-    md = md.replace(/\n\n/g, '<br><br>');
+    md = md.replace(/\* (.*)/g, '<li style="margin-left: 20px; color: #334155; margin-bottom: 4px;">$1</li>');
+    md = md.replace(/\n\n/g, '<br>');
 
     container.innerHTML = md;
   } catch (err) {
@@ -599,13 +845,13 @@ async function loadPolicyDocument() {
 }
 
 /* ========================================================================= */
-/* 8. MODAL AUDIT TRAIL (TRÁCH NHIỆM GIẢI TRÌNH)                            */
+/* 8. MODAL AUDIT TRAIL LOG                                                 */
 /* ========================================================================= */
 async function openAuditModal(requestId) {
   const modal = document.getElementById("modal-audit");
-  document.getElementById("modal-audit-sub").innerText = `Mã đơn: ${requestId}`;
+  document.getElementById("modal-audit-sub").innerText = `${currentLang === "vi" ? "Mã đơn" : "Request ID"}: ${requestId}`;
   const timeline = document.getElementById("audit-timeline");
-  timeline.innerHTML = `<div style="color: var(--text-dim);">Đang nạp nhật ký kiểm tra...</div>`;
+  timeline.innerHTML = `<div style="color: var(--text-dim);">${currentLang === "vi" ? "Đang tải nhật ký..." : "Loading audit logs..."}</div>`;
   modal.classList.add("open");
 
   try {
@@ -615,7 +861,7 @@ async function openAuditModal(requestId) {
 
     const logs = json.audit_trail;
     if (logs.length === 0) {
-      timeline.innerHTML = `<div style="color: var(--text-dim);">Không có nhật ký nào.</div>`;
+      timeline.innerHTML = `<div style="color: var(--text-dim);">${currentLang === "vi" ? "Không có nhật ký." : "No audit logs available."}</div>`;
       return;
     }
 
@@ -632,7 +878,7 @@ async function openAuditModal(requestId) {
       timeline.appendChild(item);
     });
   } catch (err) {
-    timeline.innerHTML = `<div style="color: var(--rose);">Lỗi: ${err.message}</div>`;
+    timeline.innerHTML = `<div style="color: var(--rose);">Error: ${err.message}</div>`;
   }
 }
 
@@ -647,7 +893,7 @@ document.getElementById("modal-audit").addEventListener("click", (e) => {
 });
 
 /* ========================================================================= */
-/* 9. NẠP DỮ LIỆU NHÂN VIÊN & TIỆN ÍCH                                      */
+/* 9. METADATA & HEALTH                                                     */
 /* ========================================================================= */
 async function loadEmployees() {
   try {
@@ -662,10 +908,10 @@ async function loadEmployees() {
 
     chatSelect.innerHTML = "";
     formSelect.innerHTML = "";
-    handoverSelect.innerHTML = `<option value="">-- Không chỉ định --</option>`;
+    handoverSelect.innerHTML = `<option value="">-- ${currentLang === "vi" ? "Không chỉ định" : "None Specified"} --</option>`;
 
     employeesCache.forEach(emp => {
-      const optText = `${emp.name} (${emp.employee_id} - ${emp.department}) [Phép: ${emp.remaining_leave_days}d]`;
+      const optText = `${emp.name} (${emp.employee_id} - ${emp.department}) [${currentLang === "vi" ? "Phép:" : "Balance:"} ${emp.remaining_leave_days}d]`;
       const opt = new Option(optText, emp.employee_id);
       chatSelect.appendChild(opt.cloneNode(true));
       formSelect.appendChild(opt.cloneNode(true));
@@ -674,7 +920,7 @@ async function loadEmployees() {
       handoverSelect.appendChild(optHandover);
     });
   } catch (e) {
-    console.error("Lỗi nạp nhân viên:", e);
+    console.error("Error loading employees list:", e);
   }
 }
 
@@ -683,13 +929,13 @@ async function checkServerHealth() {
   try {
     const res = await fetch(`${API_BASE}/api/meta/health`);
     if (res.ok) {
-      statusElem.innerText = "Backend: Online (:8000)";
+      statusElem.innerText = currentLang === "vi" ? "Máy chủ: Đang chạy (:8000)" : "Backend: Online (:8000)";
       statusElem.parentElement.className = "badge badge-online";
     } else {
       throw new Error();
     }
   } catch {
-    statusElem.innerText = "Backend: Disconnected";
+    statusElem.innerText = currentLang === "vi" ? "Máy chủ: Mất kết nối" : "Backend: Disconnected";
     statusElem.parentElement.style.borderColor = "var(--rose)";
   }
 }
@@ -705,28 +951,28 @@ async function checkLlmHealth() {
     if (res.ok) {
       const data = await res.json();
       if (data.online) {
-        textElem.innerText = `LLM: Online (Qwen 2.5 7B)`;
+        textElem.innerText = `LLM: Qwen 2.5 7B (${currentLang === "vi" ? "Sẵn sàng" : "Ready"})`;
         badgeElem.style.borderColor = "var(--emerald)";
         badgeElem.style.background = "#ecfdf5";
         badgeElem.style.color = "#047857";
         badgeElem.style.cursor = "default";
         if (dotElem) dotElem.style.background = "var(--emerald)";
       } else if (data.loading) {
-        textElem.innerText = `LLM: Đang nạp vào GPU...`;
+        textElem.innerText = `LLM: ${currentLang === "vi" ? "Đang nạp vào GPU..." : "Loading into GPU..."}`;
         badgeElem.style.borderColor = "var(--amber)";
         badgeElem.style.background = "#fffbeb";
         badgeElem.style.color = "#b45309";
         badgeElem.style.cursor = "wait";
         if (dotElem) dotElem.style.background = "var(--amber)";
       } else {
-        textElem.innerText = `LLM: Bấm để nạp Qwen 7B`;
+        textElem.innerText = `LLM: ${currentLang === "vi" ? "Bấm nạp Qwen 2.5 7B" : "Load Qwen 2.5 7B"}`;
         badgeElem.style.borderColor = "#94a3b8";
         badgeElem.style.background = "#f8fafc";
         badgeElem.style.color = "#475569";
         badgeElem.style.cursor = "pointer";
         if (dotElem) dotElem.style.background = "#94a3b8";
         badgeElem.onclick = async () => {
-          showToast("🚀 Đang bắt đầu nạp model Qwen 2.5 7B vào GPU...", "info");
+          showToast(currentLang === "vi" ? "Đang nạp mô hình Qwen 2.5 7B..." : "Loading Qwen 2.5 7B model...", "info");
           await fetch(`${API_BASE}/api/meta/llm-load`, { method: "POST" });
           checkLlmHealth();
         };
@@ -735,15 +981,13 @@ async function checkLlmHealth() {
       throw new Error();
     }
   } catch {
-    textElem.innerText = `LLM: Chưa nạp Model`;
+    textElem.innerText = `LLM: ${currentLang === "vi" ? "Chưa nạp" : "Offline"}`;
     badgeElem.style.borderColor = "#f87171";
     badgeElem.style.background = "#fff1f2";
     badgeElem.style.color = "#e11d48";
     if (dotElem) dotElem.style.background = "#ef4444";
   }
 }
-
-
 
 function showToast(message, type = "info") {
   const container = document.getElementById("toast-container");
@@ -752,8 +996,7 @@ function showToast(message, type = "info") {
   if (type === "success") toast.style.borderLeftColor = "var(--emerald)";
   if (type === "error") toast.style.borderLeftColor = "var(--rose)";
 
-  const icon = type === "success" ? "✅" : (type === "error" ? "❌" : "ℹ️");
-  toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+  toast.innerHTML = `<span>${message}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {

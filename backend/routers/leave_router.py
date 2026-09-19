@@ -89,3 +89,27 @@ def submit_human_decision(request_id: str, payload: HumanDecisionInput):
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{request_id}/cancel", summary="Nhân viên tự hủy/thu hồi đơn đang chờ")
+def cancel_single_request(request_id: str):
+    from database import cancel_leave_request
+    success = cancel_leave_request(request_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hoặc không thể hủy")
+    return {"success": True, "message": "Đã hủy đơn thành công"}
+
+
+class RevokeDecisionInput(BaseModel):
+    reason: Optional[str] = Field("Quản lý hủy quyết định tự duyệt của AI", description="Lý do hủy quyết định")
+
+
+@router.post("/{request_id}/revoke", summary="Quản lý hủy quyết định tự duyệt của AI (Override)")
+def revoke_single_approval(request_id: str, payload: Optional[RevokeDecisionInput] = None):
+    from database import override_revoke_auto_approval
+    reason = payload.reason if payload else "Quản lý hủy quyết định tự duyệt của AI"
+    success = override_revoke_auto_approval(request_id, reason)
+    if not success:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hoặc không thể hủy quyết định")
+    return {"success": True, "message": "Đã hủy quyết định duyệt của AI thành công"}
+

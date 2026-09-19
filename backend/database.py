@@ -227,6 +227,11 @@ def get_all_leave_requests(status_filter: Optional[str] = None) -> List[Dict[str
                 d["quick_action_options"] = json.loads(d["quick_action_options"])
             except Exception:
                 pass
+        if d.get("applied_policy_clauses"):
+            try:
+                d["applied_policy_clauses"] = json.loads(d["applied_policy_clauses"])
+            except Exception:
+                pass
         result.append(d)
     return result
 
@@ -250,3 +255,75 @@ def deduct_employee_leave_days(employee_id: str, days: float):
     )
     conn.commit()
     conn.close()
+
+
+def cancel_leave_request(request_id: str) -> bool:
+    """Nhân viên tự hủy đơn khi đơn đang ở trạng thái PENDING_ESCALATION."""
+    conn = get_db_connection()
+    req = conn.execute("SELECT * FROM leave_requests WHERE id = ?", (request_id,)).fetchone()
+    if not req:
+        conn.close()
+        return False
+    conn.execute(
+        "UPDATE leave_requests SET status = 'CANCELLED', decision = 'CANCELLED_BY_EMPLOYEE', updated_at = ? WHERE id = ?",
+        (datetime.now().isoformat(), request_id)
+    )
+    conn.execute(
+        "INSERT INTO audit_logs (request_id, step_name, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
+        (request_id, "EMPLOYEE_ACTION", "CANCEL_REQUEST", "Nhân viên đã chủ động hủy/thu hồi yêu cầu nghỉ phép", datetime.now().isoformat())
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def override_revoke_auto_approval(request_id: str, reason: str = "Quản lý hủy quyết định tự duyệt của AI") -> bool:
+    """Quản lý hủy quyết định tự duyệt của AI và hoàn lại ngày phép nếu có."""
+    conn = get_db_connection()
+    req = conn.execute("SELECT * FROM leave_requests WHERE id = ?", (request_id,)).fetchone()
+    if not req:
+        conn.close()
+        return False
+    
+    # Nếu đơn đã trừ ngày phép năm thì hoàn trả
+    if req["leave_type"] in ["Annual", "Nghỉ phép năm"] and req["workdays"] and req["workdays"] > 0:
+        conn.execute(
+            "UPDATE employees SET remaining_leave_days = remaining_leave_days + ? WHERE employee_id = ?",
+            (req["workdays"], req["employee_id"])
+        )
+    
+    conn.execute(
+        "UPDATE leave_requests SET status = 'REJECTED', decision = 'REVOKED_BY_ADMIN', human_feedback_text = ?, updated_at = ? WHERE id = ?",
+        (reason, datetime.now().isoformat(), request_id)
+    )
+    conn.execute(
+        "INSERT INTO audit_logs (request_id, step_name, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
+        (request_id, "ADMIN_OVERRIDE", "REVOKE_AUTO_APPROVAL", f"Quản lý hủy quyết định duyệt của AI: {reason}", datetime.now().isoformat())
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def allocate_leave_days(target_type: str, target_id: Optional[str], days: float, reason: str) -> int:
+    """Cấp phát / cộng thêm ngày phép cho nhân viên (Toàn công ty, Phòng ban hoặc Cá nhân)."""
+    conn = get_db_connection()
+    count = 0
+    if target_type == "ALL":
+        conn.execute("UPDATE employees SET remaining_leave_days = remaining_leave_days + ? WHERE status = 'ACTIVE'", (days,))
+        cursor = conn.execute("SELECT COUNT(*) FROM employees WHERE status = 'ACTIVE'")
+        count = cursor.fetchone()[0]
+    elif target_type == "DEPARTMENT":
+        conn.execute("UPDATE employees SET remaining_leave_days = remaining_leave_days + ? WHERE department = ? AND status = 'ACTIVE'", (days, target_id))
+        cursor = conn.execute("SELECT COUNT(*) FROM employees WHERE department = ? AND status = 'ACTIVE'", (target_id,))
+        count = cursor.fetchone()[0]
+    elif target_type == "EMPLOYEE":
+        conn.execute("UPDATE employees SET remaining_leave_days = remaining_leave_days + ? WHERE employee_id = ?", (days, target_id))
+        count = 1
+    
+    conn.commit()
+    conn.close()
+    return count
+
+
+

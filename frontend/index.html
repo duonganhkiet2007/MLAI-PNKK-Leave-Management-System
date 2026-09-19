@@ -3,415 +3,937 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hệ Thống Phê Duyệt Nghỉ Phép AI — Team PNKK</title>
-  <link rel="stylesheet" href="styles.css?v=20260918_pnkk_lang">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚖️</text></svg>">
+  <title>Hệ Thống Phê Duyệt Nghỉ Phép AI — The Escalation Referee</title>
+  
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tabler Core CSS -->
+  <link rel="stylesheet" href="/static/vendor/tabler/tabler.min.css">
+  
+  <!-- Custom Styling & Refinements -->
+  <link rel="stylesheet" href="styles.css?v=20260919_harness_buttons_v3">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e40af'/><text x='16' y='22' font-family='sans-serif' font-size='16' font-weight='bold' fill='white' text-anchor='middle'>HR</text></svg>">
 </head>
-<body>
+<body class="bg-body">
+  <div class="page">
 
-  <!-- TOPBAR & HEADER -->
-  <header class="topbar">
-    <div class="brand-section">
-      <div class="brand-logo">⚖️</div>
-      <div class="brand-text">
-        <h1>THE ESCALATION REFEREE</h1>
-        <p data-i18n="header_sub">Hệ Thống Phê Duyệt Nghỉ Phép AI · Team PNKK · MLAI Hackathon 2026</p>
+    <!-- TOPBAR & NAVBAR (TABLER) -->
+    <header class="navbar navbar-expand navbar-light bg-white border-bottom shadow-xs d-print-none sticky-top">
+      <div class="container-xl">
+        
+        <!-- Brand Logo & Title -->
+        <div class="d-flex align-items-center me-4">
+          <div class="me-3">
+            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 36px; height: 36px;">
+              <defs>
+                <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#1e40af" />
+                  <stop offset="100%" stop-color="#3b82f6" />
+                </linearGradient>
+              </defs>
+              <rect width="40" height="40" rx="8" fill="url(#logoGrad)" />
+              <path d="M20 9V31M11 16L20 12L29 16" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 22C9 24.5 11 25.5 13 25.5C15 25.5 17 24.5 17 22L15 17H11L9 22Z" fill="white" fill-opacity="0.9"/>
+              <path d="M23 22C23 24.5 25 25.5 27 25.5C29 25.5 31 24.5 31 22L29 17H25L23 22Z" fill="white" fill-opacity="0.9"/>
+              <circle cx="20" cy="12" r="2" fill="#fef08a" />
+            </svg>
+          </div>
+          <div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="h3 mb-0 fw-bold text-dark tracking-tight">THE ESCALATION REFEREE</span>
+              <span class="badge bg-primary-lt fw-bold fs-6">AI CORE</span>
+            </div>
+            <div class="text-secondary small">Hệ Thống Phê Duyệt Nghỉ Phép AI · Team PNKK</div>
+          </div>
+        </div>
+
+        <!-- MODE SWITCHER (NHÂN VIÊN <-> QUẢN LÝ) -->
+        <div class="btn-group me-auto" role="group" aria-label="Mode switcher">
+          <button type="button" class="btn btn-outline-primary active mode-btn" id="btn-mode-staff" data-mode="staff">
+            Cổng Nhân Viên
+          </button>
+          <button type="button" class="btn btn-outline-primary mode-btn position-relative" id="btn-mode-manager" data-mode="manager">
+            Giao Diện Quản Lý
+            <span class="badge bg-danger rounded-pill ms-2" id="global-pending-pill" style="display: none;">0</span>
+          </button>
+        </div>
+
+        <!-- HEADER CONTROLS (DEMO LOGIN / ROLE SWITCH & ACTION BUTTONS) -->
+        <div class="d-flex align-items-center gap-2 flex-wrap flex-lg-nowrap ms-auto">
+          
+          <!-- Staff View: Demo Login Selector -->
+          <div class="d-flex align-items-center gap-2" id="header-staff-selector">
+            <span class="text-secondary small fw-bold text-uppercase text-nowrap">Nhân viên:</span>
+            <select id="demo-employee-select" class="form-select form-select-sm" style="width: auto; min-width: 200px;" title="Chọn nhân viên giả lập đăng nhập">
+              <!-- Populated dynamically via JS -->
+            </select>
+          </div>
+
+          <!-- Manager View: Role Switcher Dropdown -->
+          <div class="d-none align-items-center gap-2" id="header-manager-selector">
+            <span class="text-primary small fw-bold text-uppercase text-nowrap">Vai trò:</span>
+            <select id="manager-role-select" class="form-select form-select-sm text-primary fw-bold" style="width: auto; min-width: 260px;">
+              <option value="MGR001">Quản lý - Đào Tuấn Minh</option>
+              <option value="MGR002">Quản lý - Trần Thu Hà</option>
+              <option value="HRD001">Giám đốc Nhân sự - Nguyễn Bích Ngọc</option>
+            </select>
+          </div>
+
+          <!-- Manager Notification Badge -->
+          <div class="badge bg-danger-lt text-danger fw-bold px-3 py-2" id="header-pending-alert" style="display: none;">
+            <span id="header-pending-count-text">0 đơn cần duyệt</span>
+          </div>
+
+          <!-- Nút mở Hộp thoại Cấp phát ngày phép -->
+          <button class="btn btn-sm btn-outline-primary" id="btn-header-allocate" style="display: none;" title="Cấp phát ngày phép cho nhân sự">
+            Cấp phát phép
+          </button>
+
+          <!-- Language Switcher -->
+          <button class="btn btn-sm btn-outline-secondary" id="btn-lang-toggle" title="Chuyển đổi ngôn ngữ VI/EN">
+            VI / EN
+          </button>
+
+          <!-- Server & LLM status -->
+          <div class="d-none d-lg-flex align-items-center gap-2 ms-2">
+            <span class="badge bg-success-lt fw-medium" id="server-status-badge">
+              <span id="server-status-text">Máy chủ: :8000</span>
+            </span>
+            <span class="badge bg-secondary-lt fw-medium" id="badge-llm-status">
+              <span class="status-dot status-dot-animated bg-success me-1" id="llm-dot"></span>
+              <span id="llm-status-text">LLM: Sẵn sàng</span>
+            </span>
+          </div>
+
+        </div>
+      </div>
+    </header>
+
+    <div class="page-wrapper">
+
+      <!-- ======================================================================= -->
+      <!-- 1. GIAO DIỆN NHÂN VIÊN (STAFF PORTAL)                                  -->
+      <!-- ======================================================================= -->
+      <div id="view-staff-portal" class="portal-view active">
+
+        <!-- SUB-NAV DÀNH CHO NHÂN VIÊN -->
+        <div class="border-bottom bg-white mb-3">
+          <div class="container-xl">
+            <ul class="nav nav-tabs border-0">
+              <li class="nav-item">
+                <button class="nav-link active tab-btn" data-tab="tab-staff-dashboard" id="btn-tab-staff-dash">
+                  <span data-i18n="tab_staff_dashboard">Tổng quan & Quỹ phép</span>
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link tab-btn" data-tab="tab-staff-submit" id="btn-tab-staff-submit">
+                  <span data-i18n="tab_staff_submit">Nộp đơn nghỉ phép</span>
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link tab-btn" data-tab="tab-staff-requests" id="btn-tab-staff-requests">
+                  <span data-i18n="tab_staff_requests">Theo dõi đơn của tôi</span>
+                  <span id="staff-requests-count" class="badge bg-primary-lt rounded-pill ms-2">0</span>
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link tab-btn" data-tab="tab-staff-calendar" id="btn-tab-staff-calendar">
+                  <span data-i18n="tab_staff_calendar">Lịch vắng mặt trong tuần</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- MAIN CONTENT NHÂN VIÊN -->
+        <div class="page-body">
+          <div class="container-xl">
+
+            <!-- TAB S1: TỔNG QUAN & QUỸ PHÉP (DASHBOARD) -->
+            <section id="tab-staff-dashboard" class="tab-pane active">
+              
+              <!-- THẺ ĐỊNH DANH NHÂN VIÊN & METRIC CARDS -->
+              <div class="card mb-3 shadow-xs">
+                <div class="card-body">
+                  <div class="row align-items-center mb-3 pb-3 border-bottom">
+                    <div class="col-auto">
+                      <span class="avatar avatar-lg bg-primary text-white rounded-circle fw-bold fs-3" id="staff-avatar">NV</span>
+                    </div>
+                    <div class="col">
+                      <h2 class="card-title h2 mb-1 fw-bold text-dark" id="staff-name">Dương Anh Kiệt</h2>
+                      <div class="text-secondary" id="staff-role-dept">Thực tập sinh AI · Trung tâm Công nghệ AI</div>
+                      <div class="text-muted small mt-1" id="staff-emp-id">
+                        Mã nhân viên: <b>EMP001</b> · Quản lý trực tiếp: <b>Đào Tuấn Minh</b>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 3 THẺ SỐ LIỆU QUỸ PHÉP -->
+                  <div class="row row-cards">
+                    <div class="col-4">
+                      <div class="card card-sm bg-light-subtle border">
+                        <div class="card-body">
+                          <div class="text-secondary text-uppercase fw-bold small" data-i18n="metric_total">Tổng phép năm tiêu chuẩn</div>
+                          <div class="fs-2 fw-bold text-dark mt-1" id="metric-total-leave">12.0 <span class="fs-5 text-secondary">ngày</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="card card-sm bg-light-subtle border">
+                        <div class="card-body">
+                          <div class="text-secondary text-uppercase fw-bold small" data-i18n="metric_used">Số ngày đã nghỉ</div>
+                          <div class="fs-2 fw-bold text-dark mt-1" id="metric-used-leave">3.0 <span class="fs-5 text-secondary">ngày</span></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-4">
+                      <div class="card card-sm bg-light-subtle border border-success">
+                        <div class="card-body">
+                          <div class="text-success text-uppercase fw-bold small" data-i18n="metric_remaining">Số ngày phép còn lại</div>
+                          <div class="fs-2 fw-bold text-success mt-1" id="metric-remaining-leave">9.0 <span class="fs-5 text-success">ngày</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- TỔNG HỢP NHANH: NỘP ĐƠN NHANH + TRẠNG THÁI GẦN ĐÂY -->
+              <div class="row row-cards">
+                <!-- Widget Nộp đơn nhanh -->
+                <div class="col-6">
+                  <div class="card h-100 shadow-xs">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                      <div>
+                        <h3 class="card-title fw-bold" data-i18n="quick_submit_title">Nộp đơn nghỉ phép nhanh</h3>
+                        <div class="card-subtitle text-secondary small" data-i18n="quick_submit_sub">Trợ lý AI sẽ hỗ trợ thẩm định tự động ngay trong 1 giây</div>
+                      </div>
+                      <button class="btn btn-sm btn-outline-primary" onclick="switchStaffTab('tab-staff-submit')">
+                        <span data-i18n="btn_full_form">Mở biểu mẫu đầy đủ →</span>
+                      </button>
+                    </div>
+                    <div class="card-body">
+                      <textarea id="quick-chat-input" class="form-control mb-3" rows="3" placeholder="Nhập nhanh bằng ngôn ngữ tự nhiên... Ví dụ: 'Thứ 6 tuần này ngày 25/09 em xin nghỉ phép năm 1 ngày về quê, công việc đã bàn giao cho anh Tuấn.'"></textarea>
+                      <div class="d-flex justify-content-end">
+                        <button class="btn btn-primary" id="btn-quick-submit">
+                          <span data-i18n="btn_send_quick">Gửi duyệt ngay bằng AI</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Widget Đơn gần nhất -->
+                <div class="col-6">
+                  <div class="card h-100 shadow-xs">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                      <div>
+                        <h3 class="card-title fw-bold" data-i18n="recent_requests_title">Đơn gần nhất của bạn</h3>
+                        <div class="card-subtitle text-secondary small" data-i18n="recent_requests_sub">Trạng thái và phản hồi minh bạch từ AI</div>
+                      </div>
+                      <button class="btn btn-sm btn-outline-secondary" onclick="switchStaffTab('tab-staff-requests')">
+                        <span data-i18n="btn_view_all">Xem tất cả</span>
+                      </button>
+                    </div>
+                    <div class="card-body">
+                      <div id="staff-recent-requests-preview" class="recent-requests-list">
+                        <!-- Rendered dynamically -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </section>
+
+            <!-- TAB S2: KHU VỰC NỘP ĐƠN (LEAVE REQUEST FORM - BƯỚC 1) -->
+            <section id="tab-staff-submit" class="tab-pane">
+              <div class="card shadow-xs">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <h3 class="card-title fw-bold" data-i18n="staff_form_title">NỘP ĐƠN XIN NGHỈ PHÉP</h3>
+                    <div class="card-subtitle text-secondary small" data-i18n="staff_form_sub">Hệ thống Trợ lý AI sẽ tự động phân tích quy định và phê duyệt hoặc chuyển tiếp cấp Quản lý</div>
+                  </div>
+                  <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-outline-primary active btn-toggle" id="btn-mode-standard-form">Biểu mẫu chuẩn</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-toggle" id="btn-mode-nlp-chat">Nhập tin nhắn tự do</button>
+                  </div>
+                </div>
+
+                <div class="card-body">
+                  <!-- CHẾ ĐỘ 1: BIỂU MẪU CHUẨN (STANDARD STRUCTURED FORM) -->
+                  <form id="form-staff-standard">
+                    <div class="row g-3">
+                      <!-- Dòng 1: Loại nghỉ phép & Người bàn giao -->
+                      <div class="col-6">
+                        <label for="staff-leave-type" class="form-label required" data-i18n="lbl_leave_type">Loại nghỉ phép</label>
+                        <select id="staff-leave-type" class="form-select" required>
+                          <option value="Annual">Nghỉ phép năm</option>
+                          <option value="Sick">Nghỉ ốm đau</option>
+                          <option value="Special">Nghỉ cưới / Tang chế / Việc riêng có lương</option>
+                          <option value="Maternity">Nghỉ thai sản / Chăm sóc con</option>
+                          <option value="Unpaid">Nghỉ không hưởng lương</option>
+                        </select>
+                      </div>
+
+                      <div class="col-6">
+                        <label for="staff-handover-select" class="form-label required" data-i18n="lbl_handover">Người nhận bàn giao công việc</label>
+                        <select id="staff-handover-select" class="form-select" required>
+                          <option value="">-- Chọn đồng nghiệp nhận bàn giao --</option>
+                          <!-- Dynamic options -->
+                        </select>
+                      </div>
+
+                      <!-- Dòng 2: Thời gian nghỉ (Date Picker + Tính số ngày tự động) -->
+                      <div class="col-6">
+                        <label for="staff-from-date" class="form-label required" data-i18n="lbl_start_date">Từ ngày</label>
+                        <input type="date" id="staff-from-date" class="form-control" required>
+                      </div>
+
+                      <div class="col-6">
+                        <label for="staff-to-date" class="form-label required" data-i18n="lbl_end_date">Đến ngày</label>
+                        <input type="date" id="staff-to-date" class="form-control" required>
+                      </div>
+
+                      <!-- Banner tính toán số ngày vắng mặt -->
+                      <div class="col-12">
+                        <div class="alert alert-info py-2 px-3 mb-0 d-flex align-items-center" id="staff-duration-badge">
+                          <span>Tổng thời gian vắng mặt dự kiến:</span>
+                          <b id="staff-calc-days-text" class="ms-1 me-2">1 ngày</b>
+                          <span id="staff-calc-balance-warning" class="text-secondary small"></span>
+                        </div>
+                      </div>
+
+                      <!-- Dòng 3: Lý do chi tiết -->
+                      <div class="col-12">
+                        <label for="staff-reason" class="form-label required" data-i18n="lbl_reason">Lý do chi tiết</label>
+                        <textarea id="staff-reason" class="form-control" rows="3" required placeholder="Mô tả cụ thể lý do nghỉ và kế hoạch bàn giao giải quyết công việc tồn đọng..."></textarea>
+                      </div>
+
+                      <!-- Dòng 4: Đính kèm chứng từ (Hỗ trợ PDF, PNG, JPG) -->
+                      <div class="col-12">
+                        <label class="form-label" data-i18n="lbl_attachment_box">Đính kèm chứng từ</label>
+                        <div class="file-upload-dropzone card bg-light-subtle border-dashed p-3 text-center" id="file-dropzone" style="cursor: pointer;">
+                          <input type="file" id="staff-file-input" accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
+                          <div class="dropzone-content" id="dropzone-prompt">
+                            <div class="upload-text text-dark fw-bold">
+                              Bấm vào đây để tải tài liệu lên hoặc kéo thả file vào khung
+                            </div>
+                            <div class="upload-hint text-secondary small mt-1">
+                              Đính kèm giấy khám bệnh, giấy chứng nhận y tế, thiệp cưới hoặc đơn xin nghỉ · Hỗ trợ tệp tối đa 10MB
+                            </div>
+                          </div>
+                          <!-- File đính kèm đã chọn -->
+                          <div class="attached-file-card align-items-center justify-content-between p-2 bg-white rounded border d-none" id="attached-file-card">
+                            <div class="d-flex align-items-center gap-2">
+                              <span class="file-icon" id="attached-file-icon"></span>
+                              <div class="text-start">
+                                <div class="fw-bold text-dark small" id="attached-file-name">chung_tu_y_te.pdf</div>
+                                <div class="text-secondary small" id="attached-file-size">145 KB</div>
+                              </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="btn-remove-file" title="Gỡ bỏ tài liệu này">
+                              Gỡ bỏ
+                            </button>
+                          </div>
+                        </div>
+                        <input type="hidden" id="staff-attachment-type-val" value="none">
+                      </div>
+
+                      <!-- Nút gửi đơn -->
+                      <div class="col-12 d-flex justify-content-end gap-2 pt-2 border-top">
+                        <button type="reset" class="btn btn-secondary" data-i18n="btn_reset">Làm lại</button>
+                        <button type="submit" class="btn btn-primary" id="btn-submit-leave-form">
+                          <span data-i18n="btn_submit_req">NỘP ĐƠN XIN NGHỈ</span>
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+
+                  <!-- CHẾ ĐỘ 2: NHẬP VĂN BẢN TỰ DO (NLP CHAT MODE) -->
+                  <div id="form-staff-nlp" style="display: none;">
+                    <div class="mb-3">
+                      <label for="staff-nlp-raw-text" class="form-label">Nhập nội dung đơn nghỉ bằng ngôn ngữ tự nhiên</label>
+                      <textarea id="staff-nlp-raw-text" class="form-control" rows="5" placeholder="Ví dụ: Em chào anh Minh, tuần tới từ 24/09 đến 26/09 em xin nghỉ phép 3 ngày về quê lo việc gia đình. Công việc sprint em đã hoàn thành và bàn giao lại cho anh Tuấn theo dõi giúp em."></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                      <button class="btn btn-primary" id="btn-submit-nlp">
+                        <span>GỬI YÊU CẦU DUYỆT BẰNG AI</span>
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </section>
+
+            <!-- TAB S3: THEO DÕI ĐƠN -->
+            <section id="tab-staff-requests" class="tab-pane">
+              <div class="card shadow-xs">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <h3 class="card-title fw-bold" data-i18n="my_requests_title">THEO DÕI ĐƠN NGHỈ PHÉP</h3>
+                    <div class="card-subtitle text-secondary small" data-i18n="my_requests_sub">Theo dõi kết quả thẩm định tự động của AI và phản hồi của Cấp quản lý</div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <select id="staff-requests-filter" class="form-select form-select-sm" style="width: auto;">
+                      <option value="ALL">Tất cả trạng thái</option>
+                      <option value="AUTO_APPROVE">Tự động duyệt</option>
+                      <option value="PENDING_ESCALATION">Đang chờ Quản lý</option>
+                      <option value="APPROVED_BY_HUMAN_OVERRIDE">Quản lý đã duyệt</option>
+                      <option value="REJECTED">Đã từ chối</option>
+                      <option value="CANCELLED">Đã hủy</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-staff-requests" data-i18n="btn_refresh">Làm mới</button>
+                  </div>
+                </div>
+
+                <div class="card-body">
+                  <!-- DANH SÁCH THẺ CARD -->
+                  <div id="staff-requests-card-container" class="requests-card-list">
+                    <div class="text-center text-secondary py-5">Đang tải danh sách đơn...</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- TAB S4: LỊCH VẮNG MẶT TRONG TUẦN -->
+            <section id="tab-staff-calendar" class="tab-pane">
+              <div class="card shadow-xs">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="card-title fw-bold" data-i18n="calendar_title">LỊCH VẮNG MẶT TRONG TUẦN</h3>
+                    <div class="card-subtitle text-secondary small" data-i18n="calendar_sub">Tình hình nhân sự nghỉ phép trong phòng ban để thuận tiện bàn giao công việc</div>
+                  </div>
+                  <span class="badge bg-secondary-lt fw-bold" id="staff-calendar-week-label">Tuần hiện tại</span>
+                </div>
+
+                <div class="card-body">
+                  <!-- BẢNG LỊCH TUẦN TRỰC QUAN 7 NGÀY -->
+                  <div class="weekly-calendar-grid" id="staff-weekly-calendar">
+                    <!-- Rendered dynamically -->
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ======================================================================= -->
+      <!-- 2. GIAO DIỆN QUẢN LÝ (MANAGER DASHBOARD)                               -->
+      <!-- ======================================================================= -->
+      <div id="view-manager-portal" class="portal-view">
+
+        <!-- KHU VỰC 1: CẤP PHÁT NGÀY PHÉP -->
+        <div class="border-bottom bg-light py-3 mb-3" id="allocation-drawer" style="display: none;">
+          <div class="container-xl">
+            <div class="card shadow-sm border-primary">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                  <h3 class="card-title text-primary fw-bold">CẤP PHÁT QUỸ PHÉP</h3>
+                  <div class="card-subtitle text-secondary small">Cộng thêm ngày phép thưởng dự án hoặc chế độ đặc biệt cho nhân sự</div>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" id="btn-close-allocate">Đóng</button>
+              </div>
+
+              <div class="card-body">
+                <form id="form-allocate-leave">
+                  <div class="row g-3">
+                    <div class="col-4">
+                      <label for="alloc-target-type" class="form-label required">Quy mô áp dụng</label>
+                      <select id="alloc-target-type" class="form-select">
+                        <option value="ALL">Toàn công ty</option>
+                        <option value="DEPARTMENT">Phòng ban cụ thể</option>
+                        <option value="EMPLOYEE">Cá nhân cụ thể</option>
+                      </select>
+                    </div>
+
+                    <div class="col-4" id="alloc-dept-group" style="display: none;">
+                      <label for="alloc-dept-select" class="form-label">Chọn phòng ban</label>
+                      <select id="alloc-dept-select" class="form-select">
+                        <option value="Trung tâm Công nghệ AI">Trung tâm Công nghệ AI</option>
+                        <option value="Phòng Tài chính - Kế toán">Phòng Tài chính - Kế toán</option>
+                        <option value="Phòng Dự án Toàn cầu">Phòng Dự án Toàn cầu</option>
+                        <option value="Phòng Kỹ thuật Phần mềm">Phòng Kỹ thuật Phần mềm</option>
+                      </select>
+                    </div>
+
+                    <div class="col-4" id="alloc-emp-group" style="display: none;">
+                      <label for="alloc-emp-select" class="form-label">Chọn nhân viên</label>
+                      <select id="alloc-emp-select" class="form-select">
+                        <!-- Dynamic options -->
+                      </select>
+                    </div>
+
+                    <div class="col-4">
+                      <label for="alloc-days" class="form-label required">Số ngày phép cộng thêm</label>
+                      <input type="number" id="alloc-days" class="form-control" value="2.0" step="0.5" min="0.5" max="30" required>
+                    </div>
+
+                    <div class="col-12">
+                      <label for="alloc-reason" class="form-label required">Lý do lưu vết kiểm toán</label>
+                      <input type="text" id="alloc-reason" class="form-control" value="Thưởng hoàn thành dự án vượt tiến độ" required placeholder="Ví dụ: Thưởng dự án, phép thâm niên...">
+                    </div>
+
+                    <div class="col-12 d-flex justify-content-end">
+                      <button type="submit" class="btn btn-primary" id="btn-submit-allocation">
+                        <span>CẬP NHẬT QUỸ PHÉP NGAY</span>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-NAV DÀNH CHO QUẢN LÝ -->
+        <div class="border-bottom bg-white mb-3">
+          <div class="container-xl">
+            <ul class="nav nav-tabs border-0">
+              <li class="nav-item">
+                <button class="nav-link active tab-btn" data-tab="tab-mgr-overview" id="btn-tab-mgr-overview">
+                  <span>Tổng quan</span>
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link tab-btn" data-tab="tab-mgr-queue" id="btn-tab-mgr-queue">
+                  <span data-i18n="tab_mgr_queue">Hàng đợi xử lý</span>
+                  <span id="mgr-queue-badge" class="badge bg-warning rounded-pill ms-2">0</span>
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link tab-btn" data-tab="tab-mgr-auto-logs" id="btn-tab-mgr-logs">
+                  <span data-i18n="tab_mgr_logs">Nhật ký tự duyệt</span>
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link tab-btn" data-tab="tab-mgr-all-requests" id="btn-tab-mgr-all">
+                  <span data-i18n="tab_mgr_all">Toàn bộ hồ sơ</span>
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link tab-btn" data-tab="tab-mgr-verify" id="btn-tab-mgr-verify">
+                  <span data-i18n="tab_verify">Bộ kiểm thử</span>
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link tab-btn" data-tab="tab-mgr-policy" id="btn-tab-mgr-policy">
+                  <span data-i18n="tab_policy">Quy chế nội bộ</span>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- MAIN CONTENT QUẢN LÝ -->
+        <div class="page-body">
+          <div class="container-xl">
+
+            <!-- TAB M1: TỔNG QUAN & BỐI CẢNH (OVERVIEW & CONTEXT) -->
+            <section id="tab-mgr-overview" class="tab-pane active">
+              
+              <!-- THỐNG KÊ NHANH (METRIC CARDS) -->
+              <div class="row row-cards mb-3">
+                <div class="col-3">
+                  <div class="card card-sm border-start border-start-lg border-success shadow-xs">
+                    <div class="card-body">
+                      <div class="text-success text-uppercase fw-bold small">AI Đã Tự Duyệt Trong Ngày</div>
+                      <div class="fs-1 fw-bold text-dark mt-1" id="mgr-kpi-auto-today">0 <span class="fs-4 text-secondary">đơn</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-3">
+                  <div class="card card-sm border-start border-start-lg border-warning shadow-xs">
+                    <div class="card-body">
+                      <div class="text-warning text-uppercase fw-bold small">Đang Chờ Quản Lý Xử Lý</div>
+                      <div class="fs-1 fw-bold text-dark mt-1" id="mgr-kpi-pending">0 <span class="fs-4 text-secondary">đơn</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-3">
+                  <div class="card card-sm border-start border-start-lg border-primary shadow-xs">
+                    <div class="card-body">
+                      <div class="text-primary text-uppercase fw-bold small">Duyệt Đặc Cách / Can Thiệp</div>
+                      <div class="fs-1 fw-bold text-dark mt-1" id="mgr-kpi-override">0 <span class="fs-4 text-secondary">đơn</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-3">
+                  <div class="card card-sm border-start border-start-lg border-purple shadow-xs">
+                    <div class="card-body">
+                      <div class="text-purple text-uppercase fw-bold small">Tỷ Lệ Tự Động Hóa AI</div>
+                      <div class="fs-1 fw-bold text-dark mt-1" id="mgr-kpi-rate">85%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- LỊCH VẮNG MẶT TRONG TUẦN + BỘ LỌC PHÒNG BAN -->
+              <div class="card shadow-xs">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <h3 class="card-title fw-bold">LỊCH VẮNG MẶT TRONG TUẦN</h3>
+                    <div class="card-subtitle text-secondary small">Kiểm tra rủi ro thiếu hụt quân số theo từng phòng ban trước khi quyết định duyệt đơn</div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <label for="mgr-cal-dept-filter" class="form-label mb-0 small fw-bold text-secondary text-nowrap">Lọc phòng ban:</label>
+                    <select id="mgr-cal-dept-filter" class="form-select form-select-sm" style="max-width: 260px;">
+                      <option value="ALL">Toàn bộ phòng ban</option>
+                      <option value="Trung tâm Công nghệ AI">Trung tâm Công nghệ AI</option>
+                      <option value="Phòng Tài chính - Kế toán">Phòng Tài chính - Kế toán</option>
+                      <option value="Phòng Dự án Toàn cầu">Phòng Dự án Toàn cầu</option>
+                      <option value="Phòng Kỹ thuật Phần mềm">Phòng Kỹ thuật Phần mềm</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="card-body">
+                  <!-- LƯỚI 7 NGÀY -->
+                  <div class="weekly-calendar-grid-7days" id="mgr-weekly-calendar-grid">
+                    <!-- Rendered dynamically -->
+                  </div>
+                </div>
+              </div>
+
+            </section>
+
+            <!-- TAB M2: HÀNG ĐỢI XỬ LÝ -->
+            <section id="tab-mgr-queue" class="tab-pane">
+              <div class="card shadow-xs">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="card-title fw-bold" data-i18n="esc_title">HÀNG ĐỢI XỬ LÝ</h3>
+                    <div class="card-subtitle text-secondary small" data-i18n="esc_sub">Các đơn nghỉ phép ngoại lệ hoặc vượt quyền tự duyệt cần Quản lý chỉ đạo</div>
+                  </div>
+                  <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-mgr-queue" data-i18n="btn_refresh">Làm mới</button>
+                </div>
+
+                <div class="card-body">
+                  <div id="mgr-escalation-inbox-list">
+                    <!-- Dynamic Escalation Cards -->
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- TAB M3: NHẬT KÝ AI TỰ DUYỆT -->
+            <section id="tab-mgr-auto-logs" class="tab-pane">
+              <div class="card shadow-xs">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <div>
+                    <h3 class="card-title fw-bold" data-i18n="audit_log_title">NHẬT KÝ AI TỰ DUYỆT</h3>
+                    <div class="card-subtitle text-secondary small">Danh sách các ca thường quy do AI tự động duyệt. Quản lý có quyền bấm <b>[ Hủy lệnh AI ]</b> để thu hồi khi cần thiết.</div>
+                  </div>
+                  <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-mgr-logs" data-i18n="btn_refresh">Làm mới</button>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table table-vcenter card-table table-hover table-striped" id="table-auto-approved-logs">
+                    <thead>
+                      <tr>
+                        <th>Mã đơn</th>
+                        <th>Nhân viên</th>
+                        <th>Phòng ban</th>
+                        <th>Thời gian nghỉ</th>
+                        <th>Số ngày</th>
+                        <th>Loại phép</th>
+                        <th>Lý do duyệt</th>
+                        <th>Thời điểm duyệt</th>
+                        <th>Quyền kiểm soát</th>
+                      </tr>
+                    </thead>
+                    <tbody id="auto-approved-logs-body">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <!-- TAB M4: TOÀN BỘ HỒ SƠ ĐƠN -->
+            <section id="tab-mgr-all-requests" class="tab-pane">
+              <div class="card shadow-xs">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                  <div>
+                    <h3 class="card-title fw-bold" data-i18n="all_requests_title">TOÀN BỘ HỒ SƠ ĐƠN NGHỈ PHÉP</h3>
+                    <div class="card-subtitle text-secondary small" data-i18n="all_requests_sub">Tổng hợp tất cả các đơn trong hệ thống</div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <select id="mgr-filter-status" class="form-select form-select-sm" style="width: auto;">
+                      <option value="ALL">Tất cả trạng thái</option>
+                      <option value="PENDING_ESCALATION">Chờ duyệt</option>
+                      <option value="COMPLETED">Đã duyệt</option>
+                      <option value="REJECTED">Đã từ chối</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-mgr-all" data-i18n="btn_refresh">Làm mới</button>
+                  </div>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table table-vcenter card-table table-hover table-striped" id="table-mgr-all-requests">
+                    <thead>
+                      <tr>
+                        <th>Mã đơn</th>
+                        <th>Nhân viên</th>
+                        <th>Phòng ban</th>
+                        <th>Thời gian</th>
+                        <th>Số ngày</th>
+                        <th>Loại nghỉ</th>
+                        <th>Quyết định</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody id="mgr-all-requests-body">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <!-- TAB M5: BỘ KIỂM THỬ -->
+            <section id="tab-mgr-verify" class="tab-pane">
+              <div class="card mb-3 shadow-xs">
+                <div class="card-body py-4">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div>
+                      <h2 class="card-title h2 mb-1 fw-bold" data-i18n="hero_title">Bộ kiểm thử tự động</h2>
+                      <p class="text-secondary mb-0" data-i18n="hero_desc">Thực thi 5 kịch bản kiểm thử chuẩn để xác minh khả năng tự duyệt và chuyển tiếp.</p>
+                    </div>
+                    <button id="btn-exec-harness" class="btn btn-primary">
+                      <span data-i18n="btn_run_harness">Chạy bộ kiểm thử</span>
+                    </button>
+                  </div>
+
+                  <div class="row g-3 justify-content-center" id="harness-stats" style="display: none;">
+                    <div class="col-3">
+                      <div class="card card-sm">
+                        <div class="card-body text-center py-3">
+                          <div class="fs-1 fw-bold text-primary" id="stat-total">5</div>
+                          <div class="text-secondary small fw-bold text-uppercase" data-i18n="stat_total">Tổng số ca</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-3">
+                      <div class="card card-sm">
+                        <div class="card-body text-center py-3">
+                          <div class="fs-1 fw-bold text-success" id="stat-auto">3 / 3</div>
+                          <div class="text-secondary small fw-bold text-uppercase" data-i18n="stat_auto">Tự động duyệt</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-3">
+                      <div class="card card-sm">
+                        <div class="card-body text-center py-3">
+                          <div class="fs-1 fw-bold text-warning" id="stat-escalate">2 / 2</div>
+                          <div class="text-secondary small fw-bold text-uppercase" data-i18n="stat_escalate">Chuyển cấp duyệt</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-3">
+                      <div class="card card-sm">
+                        <div class="card-body text-center py-3">
+                          <div class="fs-1 fw-bold text-success" id="stat-overall">100% ĐẠT</div>
+                          <div class="text-secondary small fw-bold text-uppercase" data-i18n="stat_overall">Kết quả chung</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BẢNG KẾT QUẢ HARNESS -->
+              <div class="card mb-3 shadow-xs" id="card-harness-table" style="display: none;">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title fw-bold" data-i18n="table_harness_title">BẢNG KẾT QUẢ KIỂM THỬ</h3>
+                    <div class="card-subtitle text-secondary small" data-i18n="table_harness_sub">So sánh kết quả kỳ vọng và quyết định thực tế của AI</div>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-vcenter card-table table-hover table-striped" id="table-harness-results">
+                    <thead>
+                      <tr>
+                        <th data-i18n="th_test_id">Mã</th>
+                        <th data-i18n="th_scenario">Kịch bản kiểm thử</th>
+                        <th data-i18n="th_expected">Kỳ vọng</th>
+                        <th data-i18n="th_actual">AI Thực tế</th>
+                        <th data-i18n="th_category">Phân loại</th>
+                        <th data-i18n="th_authority">Thẩm quyền</th>
+                        <th data-i18n="th_question">Câu hỏi xử lý</th>
+                        <th data-i18n="th_status">Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody id="harness-results-body">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- PLAYGROUND -->
+              <div class="card shadow-xs">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title fw-bold" data-i18n="playground_title">THỬ NGHIỆM CA MỚI</h3>
+                    <div class="card-subtitle text-secondary small" data-i18n="playground_sub">Nhập thông tin đơn nghỉ để kiểm tra phản hồi hệ thống thực tế</div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <form id="form-custom-verify">
+                    <div class="row g-3">
+                      <div class="col-6">
+                        <label for="custom-emp-name" class="form-label required" data-i18n="lbl_emp_name">Họ tên nhân viên</label>
+                        <input type="text" id="custom-emp-name" class="form-control" value="Nguyễn Văn A" required>
+                      </div>
+                      <div class="col-6">
+                        <label for="custom-dept" class="form-label required" data-i18n="lbl_dept">Phòng ban</label>
+                        <select id="custom-dept" class="form-select">
+                          <option value="Engineering">Kỹ thuật</option>
+                          <option value="Finance">Tài chính</option>
+                          <option value="Marketing">Marketing</option>
+                          <option value="Human Resources">Nhân sự</option>
+                        </select>
+                      </div>
+                      <div class="col-6">
+                        <label for="custom-leave-type" class="form-label required" data-i18n="lbl_leave_type">Loại nghỉ phép</label>
+                        <select id="custom-leave-type" class="form-select">
+                          <option value="Annual">Nghỉ phép năm</option>
+                          <option value="Sick">Nghỉ ốm đau</option>
+                          <option value="Special">Nghỉ việc riêng hưởng lương</option>
+                          <option value="Unpaid">Nghỉ không hưởng lương</option>
+                        </select>
+                      </div>
+                      <div class="col-6">
+                        <label for="custom-remaining-days" class="form-label required" data-i18n="lbl_balance">Số ngày phép còn lại</label>
+                        <input type="number" id="custom-remaining-days" class="form-control" value="2.0" step="0.5" required>
+                      </div>
+                      <div class="col-6">
+                        <label for="custom-from-date" class="form-label required" data-i18n="lbl_start_date">Ngày bắt đầu</label>
+                        <input type="date" id="custom-from-date" class="form-control" value="2026-09-24" required>
+                      </div>
+                      <div class="col-6">
+                        <label for="custom-to-date" class="form-label required" data-i18n="lbl_end_date">Đến ngày</label>
+                        <input type="date" id="custom-to-date" class="form-control" value="2026-09-26" required>
+                      </div>
+                      <div class="col-6">
+                        <label for="custom-attachment" class="form-label required" data-i18n="lbl_attachment">Chứng từ đính kèm</label>
+                        <select id="custom-attachment" class="form-select">
+                          <option value="none">Không có chứng từ</option>
+                          <option value="valid_bhxh_cert">Giấy nghỉ BHXH / Giấy ra viện hợp lệ</option>
+                          <option value="vague_prescription">Toa thuốc thông thường</option>
+                          <option value="invalid">Chứng từ mờ / không hợp lệ</option>
+                        </select>
+                      </div>
+                      <div class="col-6">
+                        <label for="custom-handover" class="form-label" data-i18n="lbl_handover">Mã nhân sự nhận bàn giao</label>
+                        <input type="text" id="custom-handover" class="form-control" placeholder="Ví dụ: EMP045">
+                      </div>
+                      <div class="col-12">
+                        <label for="custom-reason" class="form-label required" data-i18n="lbl_reason">Lý do xin nghỉ</label>
+                        <textarea id="custom-reason" class="form-control" rows="2" required>Xin nghỉ giải quyết việc gia đình và thăm người thân ở quê.</textarea>
+                      </div>
+                      <div class="col-12 d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary" id="btn-submit-custom">
+                          <span data-i18n="btn_evaluate">ĐÁNH GIÁ ĐƠN NÀY</span>
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                  <div id="custom-result-card" class="mt-3 p-3 bg-light border rounded" style="display: none;"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- TAB M6: QUY CHẾ NỘI BỘ -->
+            <section id="tab-mgr-policy" class="tab-pane">
+              <div class="card shadow-xs">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title fw-bold" data-i18n="policy_title">QUY CHẾ NGHỈ PHÉP NỘI BỘ</h3>
+                    <div class="card-subtitle text-secondary small" data-i18n="policy_sub">Mã văn bản: POL-HR-2026-01</div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div id="policy-content" class="text-dark small" style="line-height: 1.7; max-height: 75vh; overflow-y: auto;">
+                    Đang tải quy chế...
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MODAL: XEM FILE ĐÍNH KÈM CHỨNG TỪ -->
+    <div class="modal modal-blur" id="modal-attachment" tabindex="-1" style="display: none; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(3px);">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow-lg">
+          <div class="modal-header">
+            <div>
+              <h5 class="modal-title fw-bold">XEM TÀI LIỆU ĐÍNH KÈM</h5>
+              <div class="text-secondary small" id="modal-attach-sub">Chứng từ xác minh y tế / lý do nghỉ</div>
+            </div>
+            <button type="button" class="btn-close" id="btn-close-attach-modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center p-4">
+            <div id="modal-attach-content">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+          <div class="modal-footer py-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-footer-close-attach-modal">Đóng</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="header-badges">
-      <button id="btn-lang-toggle" class="badge" style="cursor: pointer; background: #0284c7; color: #ffffff; border: none; font-weight: 700;">
-        🌐 VI / EN
-      </button>
-      <div class="badge badge-hackathon">Team PNKK</div>
-      <div class="badge badge-model" id="badge-llm-status">
-        <span class="badge-dot" id="llm-dot"></span>
-        <span id="llm-status-text">LLM: Kiểm tra kết nối...</span>
-      </div>
-
-      <div class="badge badge-online">
-        <span class="badge-dot"></span>
-        <span id="server-status-text">Máy chủ: Đang chạy (:8000)</span>
+    <!-- MODAL: NHẬT KÝ AUDIT TRAIL CHI TIẾT -->
+    <div class="modal modal-blur" id="modal-audit" tabindex="-1" style="display: none; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(3px);">
+      <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content shadow-lg">
+          <div class="modal-header">
+            <div>
+              <h5 class="modal-title fw-bold" id="modal-audit-title" data-i18n="modal_audit_title">NHẬT KÝ XỬ LÝ ĐƠN</h5>
+              <div class="text-secondary small" id="modal-audit-sub">Mã đơn: REQ-XXXX</div>
+            </div>
+            <button type="button" class="btn-close" id="btn-close-modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div class="timeline" id="audit-timeline">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+          <div class="modal-footer py-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-footer-close-modal">Đóng</button>
+          </div>
+        </div>
       </div>
     </div>
-  </header>
 
-  <!-- NAVIGATION TABS -->
-  <div class="nav-container">
-    <nav class="nav-tabs">
-      <button class="tab-btn verify-special active" data-tab="tab-verify" id="btn-tab-verify">
-        <span data-i18n="tab_verify">Kiểm thử tự động</span>
-      </button>
-      <button class="tab-btn" data-tab="tab-dashboard" id="btn-tab-dashboard">
-        <span data-i18n="tab_dashboard">Tổng quan đơn nghỉ</span>
-      </button>
-      <button class="tab-btn" data-tab="tab-submit" id="btn-tab-submit">
-        <span data-i18n="tab_submit">Nộp đơn nghỉ phép</span>
-      </button>
-      <button class="tab-btn" data-tab="tab-escalation" id="btn-tab-escalation">
-        <span data-i18n="tab_escalation">Hộp thư chuyển tiếp</span> <span id="inbox-badge" style="background: var(--amber); color: #000; border-radius: 99px; padding: 2px 7px; font-size: 0.72rem; margin-left: 4px; display: none;">0</span>
-      </button>
-      <button class="tab-btn" data-tab="tab-policy" id="btn-tab-policy">
-        <span data-i18n="tab_policy">Quy chế nội bộ</span>
-      </button>
-    </nav>
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index: 1080;"></div>
+
   </div>
 
-  <!-- MAIN CONTENT CONTAINER -->
-  <main class="content-container">
+  <!-- TABLER CORE JAVASCRIPT -->
+  <script src="/static/vendor/tabler/tabler.min.js" defer></script>
 
-    <!-- TAB 1: HARNESS VERIFICATION -->
-    <section id="tab-verify" class="tab-pane active">
-      
-      <div class="glass-card hero-verify">
-        <h2 data-i18n="hero_title">BỘ KIỂM THỬ TỰ ĐỘNG (HARNESS 90 GIÂY)</h2>
-        <p data-i18n="hero_desc">
-          Thực thi 5 kịch bản kiểm thử chuẩn để xác minh khả năng tự duyệt và chuyển tiếp.
-        </p>
-        <button id="btn-exec-harness" class="btn-run-harness">
-          <span data-i18n="btn_run_harness">CHẠY BỘ KIỂM THỬ HARNESS (5 KỊCH BẢN)</span>
-        </button>
-
-        <!-- Benchmark Stats -->
-        <div class="harness-stats-bar" id="harness-stats" style="display: none;">
-          <div class="stat-box">
-            <div class="stat-val" id="stat-total" style="color: var(--cyan);">5</div>
-            <div class="stat-label" data-i18n="stat_total">Tổng số ca</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="stat-auto" style="color: var(--emerald);">3 / 3</div>
-            <div class="stat-label" data-i18n="stat_auto">Tự động duyệt</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="stat-escalate" style="color: var(--amber);">2 / 2</div>
-            <div class="stat-label" data-i18n="stat_escalate">Chuyển cấp duyệt</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="stat-overall" style="color: #34d399;">ĐẠT (100%)</div>
-            <div class="stat-label" data-i18n="stat_overall">Kết quả chung</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- HARNESS RESULTS TABLE -->
-      <div class="glass-card" id="card-harness-table" style="display: none;">
-        <div class="card-header">
-          <div>
-            <div class="card-title" data-i18n="table_harness_title">BẢNG KẾT QUẢ KIỂM THỬ</div>
-            <div class="card-subtitle" data-i18n="table_harness_sub">So sánh kết quả kỳ vọng và quyết định thực tế của AI</div>
-          </div>
-        </div>
-        <div class="table-responsive">
-          <table class="custom-table" id="table-harness-results">
-            <thead>
-              <tr>
-                <th data-i18n="th_test_id">Mã</th>
-                <th data-i18n="th_scenario">Kịch bản kiểm thử</th>
-                <th data-i18n="th_expected">Kỳ vọng</th>
-                <th data-i18n="th_actual">AI Thực tế</th>
-                <th data-i18n="th_category">Phân loại</th>
-                <th data-i18n="th_authority">Thẩm quyền</th>
-                <th data-i18n="th_question">Câu hỏi xử lý</th>
-                <th data-i18n="th_status">Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody id="harness-results-body">
-              <!-- Dynamic JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- INTERACTIVE PLAYGROUND -->
-      <div class="glass-card">
-        <div class="card-header">
-          <div>
-            <div class="card-title" data-i18n="playground_title">THỬ NGHIỆM CA MỚI</div>
-            <div class="card-subtitle" data-i18n="playground_sub">Nhập thông tin đơn nghỉ để kiểm tra phản hồi hệ thống thực tế</div>
-          </div>
-        </div>
-
-        <form id="form-custom-verify" class="form-grid">
-          <div class="form-group">
-            <label for="custom-emp-name" data-i18n="lbl_emp_name">Họ tên nhân viên</label>
-            <input type="text" id="custom-emp-name" value="Nguyễn Văn A" required>
-          </div>
-          <div class="form-group">
-            <label for="custom-dept" data-i18n="lbl_dept">Phòng ban</label>
-            <select id="custom-dept">
-              <option value="Engineering">Engineering (Kỹ thuật)</option>
-              <option value="Finance">Finance (Tài chính)</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Human Resources">Human Resources (Nhân sự)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="custom-leave-type" data-i18n="lbl_leave_type">Loại nghỉ phép</label>
-            <select id="custom-leave-type">
-              <option value="Annual">Annual Leave (Nghỉ phép năm)</option>
-              <option value="Sick">Sick Leave (Nghỉ ốm đau)</option>
-              <option value="Special">Special Leave (Nghỉ việc riêng hưởng lương)</option>
-              <option value="Unpaid">Unpaid Leave (Nghỉ không hưởng lương)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="custom-remaining-days" data-i18n="lbl_balance">Số ngày phép còn lại</label>
-            <input type="number" id="custom-remaining-days" value="2.0" step="0.5" required>
-          </div>
-          <div class="form-group">
-            <label for="custom-from-date" data-i18n="lbl_start_date">Ngày bắt đầu</label>
-            <input type="date" id="custom-from-date" value="2026-09-24" required>
-          </div>
-          <div class="form-group">
-            <label for="custom-to-date" data-i18n="lbl_end_date">Ngày kết thúc</label>
-            <input type="date" id="custom-to-date" value="2026-09-26" required>
-          </div>
-          <div class="form-group">
-            <label for="custom-attachment" data-i18n="lbl_attachment">Chứng từ đính kèm</label>
-            <select id="custom-attachment">
-              <option value="none">Không có chứng từ</option>
-              <option value="valid_bhxh_cert">Giấy nghỉ BHXH / Giấy ra viện hợp lệ</option>
-              <option value="vague_prescription">Toa thuốc thông thường</option>
-              <option value="invalid">Chứng từ mờ / không hợp lệ</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="custom-handover" data-i18n="lbl_handover">Mã nhân sự nhận bàn giao</label>
-            <input type="text" id="custom-handover" placeholder="VD: EMP045 (khi nghỉ >= 3 ngày)">
-          </div>
-          <div class="form-group full-width">
-            <label for="custom-reason" data-i18n="lbl_reason">Lý do xin nghỉ</label>
-            <textarea id="custom-reason" rows="2" required>Xin nghỉ giải quyết việc gia đình và thăm người thân ở quê.</textarea>
-          </div>
-          <div class="form-group full-width" style="display: flex; justify-content: flex-end; gap: 12px;">
-            <button type="submit" class="btn-primary" id="btn-submit-custom">
-              <span data-i18n="btn_evaluate">ĐÁNH GIÁ ĐƠN NÀY</span>
-            </button>
-          </div>
-        </form>
-
-        <div id="custom-result-card" style="display: none; margin-top: 24px; padding: 20px; background: #f8fbff; border-radius: var(--radius-md); border: 1px solid #bae6fd;">
-          <!-- Dynamic JS -->
-        </div>
-      </div>
-
-    </section>
-
-    <!-- TAB 2: DASHBOARD -->
-    <section id="tab-dashboard" class="tab-pane">
-      
-      <div class="glass-card" style="padding: 20px;">
-        <div class="harness-stats-bar" style="margin-top: 0;">
-          <div class="stat-box">
-            <div class="stat-val" id="kpi-total" style="color: var(--text-main);">0</div>
-            <div class="stat-label" data-i18n="dash_total">Tổng số đơn</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="kpi-auto" style="color: var(--emerald);">0</div>
-            <div class="stat-label" data-i18n="dash_auto">Tự động duyệt</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="kpi-pending" style="color: var(--amber);">0</div>
-            <div class="stat-label" data-i18n="dash_pending">Chờ duyệt</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-val" id="kpi-resolved" style="color: var(--cyan);">0</div>
-            <div class="stat-label" data-i18n="dash_override">Duyệt đặc cách</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="glass-card">
-        <div class="card-header">
-          <div>
-            <div class="card-title" data-i18n="dash_title">DANH SÁCH ĐƠN NGHỈ PHÉP</div>
-            <div class="card-subtitle" data-i18n="dash_sub">Theo dõi hồ sơ và nhật ký xử lý</div>
-          </div>
-          <div style="display: flex; gap: 10px;">
-            <select id="filter-status" style="padding: 6px 12px; font-size: 0.82rem;">
-              <option value="ALL" data-i18n="opt_all">Tất cả trạng thái</option>
-              <option value="PENDING_ESCALATION" data-i18n="opt_pending">Chờ duyệt</option>
-              <option value="COMPLETED" data-i18n="opt_completed">Hoàn tất</option>
-              <option value="REJECTED" data-i18n="opt_rejected">Đã từ chối</option>
-            </select>
-            <button class="btn-secondary" id="btn-refresh-list" style="padding: 6px 14px;" data-i18n="btn_refresh">Làm mới</button>
-          </div>
-        </div>
-
-        <div class="table-responsive">
-          <table class="custom-table" id="table-leave-requests">
-            <thead>
-              <tr>
-                <th data-i18n="th_req_id">Mã đơn</th>
-                <th data-i18n="th_employee">Nhân viên</th>
-                <th data-i18n="th_department">Phòng ban</th>
-                <th data-i18n="th_period">Thời gian</th>
-                <th data-i18n="th_days">Số ngày</th>
-                <th data-i18n="th_type">Loại nghỉ</th>
-                <th data-i18n="th_decision">Quyết định</th>
-                <th data-i18n="th_req_status">Trạng thái</th>
-                <th data-i18n="th_action">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody id="leave-requests-body">
-              <tr>
-                <td colspan="9" style="text-align: center; color: var(--text-dim);">Đang tải dữ liệu...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- TAB 3: SUBMIT LEAVE REQUEST -->
-    <section id="tab-submit" class="tab-pane">
-      <div class="glass-card">
-        <div class="card-header">
-          <div>
-            <div class="card-title" data-i18n="submit_title">NỘP ĐƠN NGHỈ PHÉP</div>
-            <div class="card-subtitle" data-i18n="submit_sub">Nhập tin nhắn tự do hoặc điền biểu mẫu chuẩn</div>
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn-primary" id="mode-chat-btn" style="padding: 8px 16px; font-size: 0.84rem;" data-i18n="btn_nlp">Nhập văn bản</button>
-            <button class="btn-secondary" id="mode-form-btn" style="padding: 8px 16px; font-size: 0.84rem;" data-i18n="btn_form">Biểu mẫu chuẩn</button>
-          </div>
-        </div>
-
-        <div id="submit-chat-mode">
-          <div class="form-group" style="margin-bottom: 20px;">
-            <label for="chat-employee-select" data-i18n="lbl_chat_emp">Chọn nhân viên gửi đơn</label>
-            <select id="chat-employee-select" style="max-width: 400px;">
-              <!-- Dynamic options -->
-            </select>
-          </div>
-
-          <div class="form-group full-width" style="margin-bottom: 20px;">
-            <label for="chat-raw-input" data-i18n="lbl_chat_input">Nội dung tin nhắn xin nghỉ</label>
-            <textarea id="chat-raw-input" rows="4" placeholder="Ví dụ: Chào sếp, tuần sau từ thứ Tư 24/09 đến thứ Sáu 26/09 em xin nghỉ phép về quê giải quyết việc gia đình. Công việc em đã bàn giao cho anh Tuấn."></textarea>
-          </div>
-
-          <div style="display: flex; justify-content: flex-end;">
-            <button class="btn-primary" id="btn-submit-chat">
-              <span data-i18n="btn_submit_req">GỬI ĐƠN NGHỈ PHÉP</span>
-            </button>
-          </div>
-        </div>
-
-        <div id="submit-form-mode" style="display: none;">
-          <form id="form-standard-submit" class="form-grid">
-            <div class="form-group">
-              <label for="form-employee-select" data-i18n="lbl_chat_emp">Nhân viên gửi đơn</label>
-              <select id="form-employee-select">
-                <!-- Dynamic options -->
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="form-leave-type" data-i18n="lbl_leave_type">Loại nghỉ phép</label>
-              <select id="form-leave-type">
-                <option value="Annual">Nghỉ phép năm</option>
-                <option value="Sick">Nghỉ ốm đau</option>
-                <option value="Special">Nghỉ việc riêng hưởng lương</option>
-                <option value="Unpaid">Nghỉ không hưởng lương</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="form-from-date" data-i18n="lbl_start_date">Từ ngày</label>
-              <input type="date" id="form-from-date" required>
-            </div>
-            <div class="form-group">
-              <label for="form-to-date" data-i18n="lbl_end_date">Đến ngày</label>
-              <input type="date" id="form-to-date" required>
-            </div>
-            <div class="form-group">
-              <label for="form-handover-select" data-i18n="lbl_handover">Nhân sự nhận bàn giao</label>
-              <select id="form-handover-select">
-                <option value="">-- Không chỉ định --</option>
-                <!-- Dynamic options -->
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="form-attachment-type" data-i18n="lbl_attachment">Chứng từ đính kèm</label>
-              <select id="form-attachment-type">
-                <option value="none">Không có chứng từ</option>
-                <option value="valid_bhxh_cert">Giấy nghỉ BHXH / Giấy ra viện hợp lệ</option>
-                <option value="vague_prescription">Toa thuốc thông thường</option>
-                <option value="invalid">Chứng từ mờ / không hợp lệ</option>
-              </select>
-            </div>
-            <div class="form-group full-width">
-              <label for="form-reason" data-i18n="lbl_reason">Lý do nghỉ phép</label>
-              <textarea id="form-reason" rows="2" required placeholder="Nêu rõ lý do..."></textarea>
-            </div>
-            <div class="form-group full-width" style="display: flex; justify-content: flex-end;">
-              <button type="submit" class="btn-primary">
-                <span data-i18n="btn_submit_req">GỬI ĐƠN NGHỈ PHÉP</span>
-              </button>
-            </div>
-          </form>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- TAB 4: ESCALATION INBOX -->
-    <section id="tab-escalation" class="tab-pane">
-      <div class="glass-card">
-        <div class="card-header">
-          <div>
-            <div class="card-title" data-i18n="esc_title">HỘP THƯ CHUYỂN TIẾP</div>
-            <div class="card-subtitle" data-i18n="esc_sub">Đơn nghỉ cần Cấp quản lý xem xét và phê duyệt</div>
-          </div>
-          <button class="btn-secondary" id="btn-refresh-inbox" data-i18n="btn_refresh">Làm mới</button>
-        </div>
-
-        <div id="escalation-inbox-list">
-          <div style="text-align: center; color: var(--text-dim); padding: 40px 0;">
-            Hiện không có đơn nào đang chờ duyệt.
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- TAB 5: COMPANY POLICY -->
-    <section id="tab-policy" class="tab-pane">
-      <div class="glass-card">
-        <div class="card-header">
-          <div>
-            <div class="card-title" data-i18n="policy_title">QUY CHẾ NGHỈ PHÉP NỘI BỘ</div>
-            <div class="card-subtitle" data-i18n="policy_sub">Mã văn bản: POL-HR-2026-01</div>
-          </div>
-        </div>
-        <div id="policy-content" style="color: var(--text-main); font-size: 0.92rem; line-height: 1.7; max-height: 75vh; overflow-y: auto; padding-right: 12px;">
-          Đang tải quy chế...
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- MODAL: AUDIT TRAIL -->
-  <div class="modal-backdrop" id="modal-audit">
-    <div class="modal-window">
-      <div class="modal-header">
-        <div>
-          <h3 style="font-size: 1.15rem; font-weight: 700;" id="modal-audit-title" data-i18n="modal_audit_title">NHẬT KÝ XỬ LÝ ĐƠN</h3>
-          <p style="font-size: 0.78rem; color: var(--text-muted);" id="modal-audit-sub">Mã đơn: REQ-XXXX</p>
-        </div>
-        <button class="btn-secondary" id="btn-close-modal" style="padding: 4px 10px;">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="timeline" id="audit-timeline">
-          <!-- Dynamic JS -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOAST CONTAINER -->
-  <div class="toast-container" id="toast-container"></div>
-
-  <!-- APP JAVASCRIPT -->
-  <script src="app.js?v=20260918_pnkk_lang"></script>
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <script src="app.js?v=20260919_button_fixes_v4"></script>
 </body>
 </html>

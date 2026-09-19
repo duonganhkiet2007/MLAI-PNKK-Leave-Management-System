@@ -96,10 +96,27 @@ def test_custom_verify_endpoint(reason: str = "nghỉ vì lười biếng không
 
 
 
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
+
+class LeaveAllocationInput(BaseModel):
+    target_type: str = Field(..., description="ALL, DEPARTMENT, EMPLOYEE")
+    target_id: Optional[str] = Field(None, description="Tên phòng ban hoặc mã nhân viên")
+    days: float = Field(..., description="Số ngày phép cộng thêm")
+    reason: str = Field("Thưởng phép", description="Lý do cấp phát")
+
 @router.get("/employees", summary="Danh sách nhân viên & số dư phép năm")
 def list_employees():
     employees = get_all_employees()
     return {"success": True, "total": len(employees), "data": employees}
+
+
+@router.post("/allocate-leave", summary="Cấp phát / cộng thêm ngày phép (Toàn công ty, Phòng ban hoặc Cá nhân)")
+def allocate_leave_endpoint(payload: LeaveAllocationInput):
+    from database import allocate_leave_days
+    count = allocate_leave_days(payload.target_type, payload.target_id, payload.days, payload.reason)
+    return {"success": True, "updated_count": count, "message": f"Đã cấp phát +{payload.days} ngày phép thành công cho {count} nhân sự!"}
+
 
 
 @router.get("/policy", summary="Tài liệu quy chế phê duyệt nghỉ phép nội bộ (Ground Truth)")

@@ -10,7 +10,7 @@ import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "leave_app.db")
+DB_PATH = os.getenv("LEAVE_DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "leave_app.db"))
 EMPLOYEES_JSON_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "Leave_Application",
@@ -20,12 +20,14 @@ EMPLOYEES_JSON_PATH = os.path.join(
 
 def get_db_connection() -> sqlite3.Connection:
     """Tạo kết nối tới SQLite DB với row_factory dạng dict-like."""
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=30000")
     return conn
 
 
-def init_db():
+def _init_legacy_schema():
     """Khởi tạo cấu trúc các bảng và nạp dữ liệu ban đầu nếu chưa có."""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -71,7 +73,20 @@ def init_db():
             human_feedback_text TEXT,
             status TEXT NOT NULL,
             submitted_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            updated_at TEXT NOT NULL,
+            vlm_analysis_json TEXT,
+            llm_summary_json TEXT,
+            doc_patient_name TEXT,
+            doc_diagnosis TEXT,
+            has_red_stamp INTEGER,
+            has_doctor_signature INTEGER,
+            is_tampered INTEGER,
+            ai_edited INTEGER,
+            days_granted_by_doctor INTEGER,
+            correlation_score REAL,
+            correlation_issues TEXT,
+            persona_role_used TEXT,
+            escalation_reasons_json TEXT
         )
     """)
 
@@ -112,6 +127,132 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+
+def seed_demo_request():
+    """Tự động nạp 5 đơn demo cho 5 nhân viên khác nhau nếu bảng leave_requests còn trống."""
+    conn = get_db_connection()
+    try:
+        count = conn.execute("SELECT COUNT(*) FROM leave_requests").fetchone()[0]
+        if count == 0:
+            now = datetime.now().isoformat()
+            cases = [
+                {
+                    "id": "REQ-2026-001-AN", "employee_id": "EMP012", "employee_name": "Nguyễn Văn An", "department": "Engineering",
+                    "from_date": "2026-09-22", "to_date": "2026-09-22", "workdays": 1, "leave_type": "SICK_MEDICAL",
+                    "reason": "Bị sốt phát ban và cảm cúm, cần nghỉ ngơi và theo dõi sức khỏe tại nhà.",
+                    "handover_person_id": "EMP015", "handover_person_name": "Đỗ Hoàng Long", "attachment_type": "none",
+                    "decision": "ESCALATE", "uncertainty_category": "AUTHORITY_ESCALATION", "error_code": "DURATION_OVER_AI_LIMIT",
+                    "target_role": "DIRECT_MANAGER",
+                    "actionable_question": "Quản lý Đỗ Hoàng Long xem xét phê duyệt đơn xin nghỉ ốm 1 ngày cho Nguyễn Văn An.",
+                    "human_readable_explanation": "Đơn nghỉ ốm đang chờ Quản lý trực tiếp (Đỗ Hoàng Long) xem xét và phê duyệt.",
+                    "applied_policy_clauses": ["MED-01", "AUTH-01"], "status": "PENDING_ESCALATION",
+                    "approval_role": "DIRECT_MANAGER", "approval_status": "PENDING"
+                },
+                {
+                    "id": "REQ-2026-002-NGAN", "employee_id": "EMP019", "employee_name": "Nguyễn Thị Kim Ngân", "department": "Product Design",
+                    "from_date": "2026-09-23", "to_date": "2026-09-24", "workdays": 2, "leave_type": "ANNUAL",
+                    "reason": "Nghỉ phép năm theo kế hoạch cá nhân cùng gia đình.",
+                    "handover_person_id": "EMP012", "handover_person_name": "Nguyễn Văn An", "attachment_type": "none",
+                    "decision": "AUTO_APPROVE", "uncertainty_category": "NONE", "error_code": None,
+                    "target_role": "DIRECT_MANAGER", "actionable_question": "",
+                    "human_readable_explanation": "Đơn xin nghỉ phép năm 2 ngày trong hạn mức quỹ phép còn lại, AI tự động phê duyệt.",
+                    "applied_policy_clauses": ["ANN-01", "AUTO-01"], "status": "COMPLETED",
+                    "approval_role": "DIRECT_MANAGER", "approval_status": "APPROVED"
+                },
+                {
+                    "id": "REQ-2026-003-TRONG", "employee_id": "EMP023", "employee_name": "Vũ Đình Trọng", "department": "DevOps",
+                    "from_date": "2026-09-24", "to_date": "2026-09-26", "workdays": 3, "leave_type": "SPECIAL_PAID",
+                    "reason": "Nghỉ đám cưới bản thân theo chế độ việc riêng hưởng lương.",
+                    "handover_person_id": "EMP015", "handover_person_name": "Đỗ Hoàng Long", "attachment_type": "none",
+                    "decision": "ESCALATE", "uncertainty_category": "AUTHORITY_ESCALATION", "error_code": "SPECIAL_LEAVE_REVIEW",
+                    "target_role": "DIRECT_MANAGER",
+                    "actionable_question": "Quản lý Đỗ Hoàng Long xác nhận duyệt chế độ nghỉ kết hôn 3 ngày hưởng nguyên lương.",
+                    "human_readable_explanation": "Đơn việc riêng hưởng lương kết hôn đang chờ Quản lý xác nhận.",
+                    "applied_policy_clauses": ["SPEC-01", "AUTH-01"], "status": "PENDING_ESCALATION",
+                    "approval_role": "DIRECT_MANAGER", "approval_status": "PENDING"
+                },
+                {
+                    "id": "REQ-2026-004-YEN", "employee_id": "EMP051", "employee_name": "Trịnh Hoàng Yến", "department": "Finance",
+                    "from_date": "2026-09-25", "to_date": "2026-09-25", "workdays": 1, "leave_type": "ANNUAL",
+                    "reason": "Giải quyết thủ tục hành chính cá nhân tại địa phương.",
+                    "handover_person_id": "EMP045", "handover_person_name": "Trần Thị Bích", "attachment_type": "none",
+                    "decision": "AUTO_APPROVE", "uncertainty_category": "NONE", "error_code": None,
+                    "target_role": "DIRECT_MANAGER", "actionable_question": "",
+                    "human_readable_explanation": "Đơn nghỉ 1 ngày đã có người bàn giao hợp lệ, AI tự động phê duyệt.",
+                    "applied_policy_clauses": ["ANN-01", "AUTO-01"], "status": "COMPLETED",
+                    "approval_role": "DIRECT_MANAGER", "approval_status": "APPROVED"
+                },
+                {
+                    "id": "REQ-2026-005-CUONG", "employee_id": "EMP062", "employee_name": "Lâm Quốc Cường", "department": "Quality Assurance",
+                    "from_date": "2026-09-28", "to_date": "2026-09-29", "workdays": 2, "leave_type": "UNPAID_OTHER",
+                    "reason": "Nghỉ việc riêng không hưởng lương theo thỏa thuận với quản lý bộ phận.",
+                    "handover_person_id": "EMP015", "handover_person_name": "Đỗ Hoàng Long", "attachment_type": "none",
+                    "decision": "ESCALATE", "uncertainty_category": "AUTHORITY_ESCALATION", "error_code": "LONG_TERM_UNPAID",
+                    "target_role": "DIRECT_MANAGER",
+                    "actionable_question": "Quản lý xem xét thỏa thuận nghỉ không hưởng lương 2 ngày cho nhân sự Lâm Quốc Cường.",
+                    "human_readable_explanation": "Đơn nghỉ không hưởng lương cần Quản lý trực tiếp xem xét và phê duyệt.",
+                    "applied_policy_clauses": ["UNP-01", "AUTH-01"], "status": "PENDING_ESCALATION",
+                    "approval_role": "DIRECT_MANAGER", "approval_status": "PENDING"
+                }
+            ]
+
+            for c in cases:
+                facts_data = {
+                    "leave_type": c["leave_type"], "reason_category": "PERSONAL",
+                    "from_date": c["from_date"], "to_date": c["to_date"], "reason": c["reason"],
+                    "handover_person_id": c["handover_person_id"], "handover_person_name": c["handover_person_name"],
+                    "attachment_type": c["attachment_type"]
+                }
+                result_data = {
+                    "decision": c["decision"], "requested_calendar_days": c["workdays"],
+                    "requested_working_days": c["workdays"], "working_dates": [c["from_date"]],
+                    "paid": True if c["leave_type"] in ["ANNUAL", "SPECIAL_PAID"] else False,
+                    "warnings": [c["human_readable_explanation"]], "error_code": c["error_code"]
+                }
+                conn.execute("""
+                    INSERT INTO leave_requests (
+                        id, employee_id, employee_name, department, from_date, to_date,
+                        workdays, leave_type, reason, handover_person_id, handover_person_name,
+                        attachment_type, decision, uncertainty_category, error_code, target_role,
+                        actionable_question, quick_action_options, human_readable_explanation,
+                        applied_policy_clauses, status, submitted_at, updated_at,
+                        facts_json, result_json, legacy_reconciliation_required
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    c["id"], c["employee_id"], c["employee_name"], c["department"], c["from_date"], c["to_date"],
+                    c["workdays"], c["leave_type"], c["reason"], c["handover_person_id"], c["handover_person_name"],
+                    c["attachment_type"], c["decision"], c["uncertainty_category"], c["error_code"], c["target_role"],
+                    c["actionable_question"], json.dumps(["APPROVE", "REJECT", "REQUEST_MORE_INFO"], ensure_ascii=False),
+                    c["human_readable_explanation"], json.dumps(c["applied_policy_clauses"], ensure_ascii=False),
+                    c["status"], now, now,
+                    json.dumps(facts_data, ensure_ascii=False), json.dumps(result_data, ensure_ascii=False), 0
+                ))
+                conn.execute("""
+                    INSERT OR IGNORE INTO approval_steps (request_id, revision, step_index, role, status)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (c["id"], 1, 0, c["approval_role"], c["approval_status"]))
+                conn.execute("""
+                    INSERT INTO audit_logs (request_id, step_name, action, details, created_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (c["id"], "WORKFLOW", "SUBMITTED", f"Nhân sự {c['employee_name']} nộp đơn {c['leave_type']}", now))
+
+            conn.commit()
+            print("✅ [DEMO SEED] Đã nạp thành công 5 đơn mẫu cho 5 nhân viên.")
+    finally:
+        conn.close()
+
+
+def init_db():
+    from migrations import backup_if_needed, migrate
+    backup_if_needed(DB_PATH)
+    _init_legacy_schema()
+    conn = get_db_connection()
+    try:
+        migrate(conn)
+    finally:
+        conn.close()
+    seed_demo_request()
 
 
 # -----------------------------------------------------------------------------
@@ -155,7 +296,31 @@ def get_department_total_members(department: str) -> int:
     return max(total, 1)
 
 
+def _serialize_for_save(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Reverse of _parse_leave_row: serialize dict/list JSON fields to strings and bools to ints for SQLite binding."""
+    data = dict(data)
+    json_fields = [
+        "quick_action_options", "applied_policy_clauses",
+        "vlm_analysis_json", "llm_summary_json",
+        "correlation_issues", "escalation_reasons_json", "facts_json", "result_json", "decision_trace"
+    ]
+    for f in json_fields:
+        v = data.get(f)
+        if v is not None and not isinstance(v, str):
+            try:
+                data[f] = json.dumps(v, ensure_ascii=False)
+            except Exception:
+                data[f] = None
+    bool_int_fields = ["has_red_stamp", "has_doctor_signature", "is_tampered", "ai_edited"]
+    for f in bool_int_fields:
+        v = data.get(f)
+        if v is not None:
+            data[f] = 1 if v else 0
+    return data
+
+
 def save_leave_request(data: Dict[str, Any]):
+    data = _serialize_for_save(data)
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -165,16 +330,62 @@ def save_leave_request(data: Dict[str, Any]):
             attachment_type, decision, uncertainty_category, error_code,
             target_role, actionable_question, quick_action_options,
             human_readable_explanation, applied_policy_clauses,
-            human_feedback_text, status, submitted_at, updated_at
+            human_feedback_text, status, submitted_at, updated_at,
+            vlm_analysis_json, llm_summary_json, doc_patient_name, doc_diagnosis,
+            has_red_stamp, has_doctor_signature, is_tampered, ai_edited,
+            days_granted_by_doctor, correlation_score, correlation_issues,
+            persona_role_used, escalation_reasons_json
         ) VALUES (
             :id, :employee_id, :employee_name, :department, :from_date, :to_date,
             :workdays, :leave_type, :reason, :handover_person_id, :handover_person_name,
             :attachment_type, :decision, :uncertainty_category, :error_code,
             :target_role, :actionable_question, :quick_action_options,
             :human_readable_explanation, :applied_policy_clauses,
-            :human_feedback_text, :status, :submitted_at, :updated_at
+            :human_feedback_text, :status, :submitted_at, :updated_at,
+            :vlm_analysis_json, :llm_summary_json, :doc_patient_name, :doc_diagnosis,
+            :has_red_stamp, :has_doctor_signature, :is_tampered, :ai_edited,
+            :days_granted_by_doctor, :correlation_score, :correlation_issues,
+            :persona_role_used, :escalation_reasons_json
         )
-    """, data)
+    """, {
+        "id": data.get("id"),
+        "employee_id": data.get("employee_id"),
+        "employee_name": data.get("employee_name"),
+        "department": data.get("department"),
+        "from_date": data.get("from_date"),
+        "to_date": data.get("to_date"),
+        "workdays": data.get("workdays", 0),
+        "leave_type": data.get("leave_type"),
+        "reason": data.get("reason"),
+        "handover_person_id": data.get("handover_person_id"),
+        "handover_person_name": data.get("handover_person_name"),
+        "attachment_type": data.get("attachment_type", "none"),
+        "decision": data.get("decision"),
+        "uncertainty_category": data.get("uncertainty_category"),
+        "error_code": data.get("error_code"),
+        "target_role": data.get("target_role"),
+        "actionable_question": data.get("actionable_question"),
+        "quick_action_options": data.get("quick_action_options"),
+        "human_readable_explanation": data.get("human_readable_explanation"),
+        "applied_policy_clauses": data.get("applied_policy_clauses"),
+        "human_feedback_text": data.get("human_feedback_text"),
+        "status": data.get("status"),
+        "submitted_at": data.get("submitted_at"),
+        "updated_at": data.get("updated_at"),
+        "vlm_analysis_json": data.get("vlm_analysis_json"),
+        "llm_summary_json": data.get("llm_summary_json"),
+        "doc_patient_name": data.get("doc_patient_name"),
+        "doc_diagnosis": data.get("doc_diagnosis"),
+        "has_red_stamp": 1 if data.get("has_red_stamp") else (0 if data.get("has_red_stamp") is not None else None),
+        "has_doctor_signature": 1 if data.get("has_doctor_signature") else (0 if data.get("has_doctor_signature") is not None else None),
+        "is_tampered": 1 if data.get("is_tampered") else (0 if data.get("is_tampered") is not None else None),
+        "ai_edited": 1 if data.get("ai_edited") else (0 if data.get("ai_edited") is not None else None),
+        "days_granted_by_doctor": data.get("days_granted_by_doctor"),
+        "correlation_score": data.get("correlation_score"),
+        "correlation_issues": data.get("correlation_issues"),
+        "persona_role_used": data.get("persona_role_used"),
+        "escalation_reasons_json": data.get("escalation_reasons_json")
+    })
     conn.commit()
     conn.close()
 
@@ -195,18 +406,28 @@ def get_leave_request(request_id: str) -> Optional[Dict[str, Any]]:
     conn.close()
     if not row:
         return None
-    res = dict(row)
-    if res.get("quick_action_options"):
-        try:
-            res["quick_action_options"] = json.loads(res["quick_action_options"])
-        except Exception:
-            pass
-    if res.get("applied_policy_clauses"):
-        try:
-            res["applied_policy_clauses"] = json.loads(res["applied_policy_clauses"])
-        except Exception:
-            pass
+    res = _parse_leave_row(dict(row))
     return res
+
+
+def _parse_leave_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Parse JSON fields and convert boolean integers from a leave request row."""
+    json_fields = [
+        "quick_action_options", "applied_policy_clauses",
+        "vlm_analysis_json", "llm_summary_json",
+        "correlation_issues", "escalation_reasons_json", "facts_json", "result_json", "decision_trace"
+    ]
+    for f in json_fields:
+        if row.get(f):
+            try:
+                row[f] = json.loads(row[f])
+            except Exception:
+                pass
+    bool_int_fields = ["has_red_stamp", "has_doctor_signature", "is_tampered", "ai_edited"]
+    for f in bool_int_fields:
+        if row.get(f) is not None:
+            row[f] = bool(row[f])
+    return row
 
 
 def get_all_leave_requests(status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -221,17 +442,7 @@ def get_all_leave_requests(status_filter: Optional[str] = None) -> List[Dict[str
     conn.close()
     result = []
     for r in rows:
-        d = dict(r)
-        if d.get("quick_action_options"):
-            try:
-                d["quick_action_options"] = json.loads(d["quick_action_options"])
-            except Exception:
-                pass
-        if d.get("applied_policy_clauses"):
-            try:
-                d["applied_policy_clauses"] = json.loads(d["applied_policy_clauses"])
-            except Exception:
-                pass
+        d = _parse_leave_row(dict(r))
         result.append(d)
     return result
 
@@ -247,61 +458,18 @@ def get_audit_logs(request_id: str) -> List[Dict[str, Any]]:
 
 
 def deduct_employee_leave_days(employee_id: str, days: float):
-    """Trừ ngày phép năm của nhân sự sau khi đơn được duyệt."""
-    conn = get_db_connection()
-    conn.execute(
-        "UPDATE employees SET remaining_leave_days = MAX(0.0, remaining_leave_days - ?) WHERE employee_id = ?",
-        (days, employee_id)
-    )
-    conn.commit()
-    conn.close()
+    raise ValueError("Use transactional request approval; standalone deduction is prohibited")
 
 
-def cancel_leave_request(request_id: str) -> bool:
-    """Nhân viên tự hủy đơn khi đơn đang ở trạng thái PENDING_ESCALATION."""
-    conn = get_db_connection()
-    req = conn.execute("SELECT * FROM leave_requests WHERE id = ?", (request_id,)).fetchone()
-    if not req:
-        conn.close()
-        return False
-    conn.execute(
-        "UPDATE leave_requests SET status = 'CANCELLED', decision = 'CANCELLED_BY_EMPLOYEE', updated_at = ? WHERE id = ?",
-        (datetime.now().isoformat(), request_id)
-    )
-    conn.execute(
-        "INSERT INTO audit_logs (request_id, step_name, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
-        (request_id, "EMPLOYEE_ACTION", "CANCEL_REQUEST", "Nhân viên đã chủ động hủy/thu hồi yêu cầu nghỉ phép", datetime.now().isoformat())
-    )
-    conn.commit()
-    conn.close()
+def cancel_leave_request(request_id: str, actor_id=None) -> bool:
+    from services.orchestration import LeaveOrchestratorService
+    LeaveOrchestratorService().cancel(request_id, actor_id)
     return True
 
 
-def override_revoke_auto_approval(request_id: str, reason: str = "Quản lý hủy quyết định tự duyệt của AI") -> bool:
-    """Quản lý hủy quyết định tự duyệt của AI và hoàn lại ngày phép nếu có."""
-    conn = get_db_connection()
-    req = conn.execute("SELECT * FROM leave_requests WHERE id = ?", (request_id,)).fetchone()
-    if not req:
-        conn.close()
-        return False
-    
-    # Nếu đơn đã trừ ngày phép năm thì hoàn trả
-    if req["leave_type"] in ["Annual", "Nghỉ phép năm"] and req["workdays"] and req["workdays"] > 0:
-        conn.execute(
-            "UPDATE employees SET remaining_leave_days = remaining_leave_days + ? WHERE employee_id = ?",
-            (req["workdays"], req["employee_id"])
-        )
-    
-    conn.execute(
-        "UPDATE leave_requests SET status = 'REJECTED', decision = 'REVOKED_BY_ADMIN', human_feedback_text = ?, updated_at = ? WHERE id = ?",
-        (reason, datetime.now().isoformat(), request_id)
-    )
-    conn.execute(
-        "INSERT INTO audit_logs (request_id, step_name, action, details, created_at) VALUES (?, ?, ?, ?, ?)",
-        (request_id, "ADMIN_OVERRIDE", "REVOKE_AUTO_APPROVAL", f"Quản lý hủy quyết định duyệt của AI: {reason}", datetime.now().isoformat())
-    )
-    conn.commit()
-    conn.close()
+def override_revoke_auto_approval(request_id: str, reason: str = "", actor_id=None) -> bool:
+    from services.orchestration import LeaveOrchestratorService
+    LeaveOrchestratorService().cancel(request_id, actor_id, revoke=True, reason=reason)
     return True
 
 

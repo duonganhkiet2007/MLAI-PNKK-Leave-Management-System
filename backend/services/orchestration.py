@@ -1,211 +1,511 @@
-"""
-orchestration.py
-Service kết nối Database, Agent LLM (Kiệt) và Rule Engine (Kim).
-Thực thi toàn bộ luồng nghiệp vụ và ghi nhận Audit Log chi tiết.
-"""
-
+"""Authoritative workflow. Financial mutation and state transitions are atomic."""
 import sys
-import os
-import json
 import uuid
-from datetime import datetime, date
-from typing import Dict, Any, Optional
-
-# Thêm đường dẫn tới Leave_Application và LLM-KIET
-backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-root_dir = os.path.dirname(backend_dir)
-leave_app_dir = os.path.join(root_dir, "Leave_Application")
-llm_kiet_dir = os.path.join(root_dir, "LLM-KIET")
-
-for p in [leave_app_dir, llm_kiet_dir, backend_dir]:
-    if p not in sys.path:
-        sys.path.insert(0, p)
-
+import json
+from pathlib import Path
+from datetime import datetime
+root=Path(__file__).resolve().parents[2]
+for name in ('Leave_Application','LLM-KIET','backend'):
+    if str(root/name) not in sys.path: sys.path.insert(0,str(root/name))
+from domain import RequestFacts, HumanFeedbackResolution, EditableFields, should_deduct_annual_balance, VerifiedProof
+from rule_engine import LeaveRuleEngine
+from taxonomy import ErrorCode, DecisionType
 from agent_orchestrator import LeaveApprovalAgent
-from rule_engine import calculate_workdays
-from database import (
-    get_employee,
-    get_team_absent_count,
-    get_department_total_members,
-    save_leave_request,
-    add_audit_log,
-    get_leave_request,
-    deduct_employee_leave_days
-)
+from calendar_service import CalendarService
+from vlm_inspector import inspect_document_with_vlm, VLMInspectionOutput
+import storage as st
+import json
+from datetime import date
 
+STATES={'AUTO_APPROVE':'COMPLETED','NO_LEAVE_REQUIRED':'COMPLETED','AUTO_REJECT':'REJECTED',
+        'NEED_CORRECTION':'WAITING_EMPLOYEE','ESCALATE':'PENDING_ESCALATION'}
 
 class LeaveOrchestratorService:
-    def __init__(self):
-        self.agent = LeaveApprovalAgent()
+    def __init__(self, agent=None, clock=None, calendar=None):
+        self.agent=agent or LeaveApprovalAgent()
+        self.calendar=calendar or CalendarService()
+        self.clock=clock or (lambda: datetime.now(self.calendar.timezone))
 
-    def process_new_request(
-        self,
-        raw_text: Optional[str] = None,
-        employee_id: Optional[str] = None,
-        structured_data: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        Tiếp nhận đơn nghỉ phép:
-        1. Nhận qua tin nhắn chat tự nhiên (raw_text)
-        2. Hoặc nhận qua Form có cấu trúc (structured_data)
-        """
-        request_id = f"REQ-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
-        
-        # 1. Xác định nhân sự gửi đơn
-        emp_id = employee_id or (structured_data.get("employee_id") if structured_data else None) or "EMP012"
-        employee = get_employee(emp_id)
-        if not employee:
-            # Fallback nếu mã nhân sự chưa có trong DB
-            employee = {
-                "employee_id": emp_id,
-                "name": "Nhân sự mới",
-                "department": "Engineering",
-                "remaining_leave_days": 12.0
-            }
+    def _evaluate(self, conn, record, facts, granted=None, waived=None):
+        ctx=st.load_context(conn,record['employee_id'],facts,record['submitted_at'],record['id'],granted,waived,self.calendar)
 
-        # 2. Xây dựng ngữ cảnh nhân sự (Context)
-        submitted_at = datetime.now()
-        dep = employee.get("department", "Engineering")
-        target_date_str = (structured_data.get("from_date") if structured_data else None) or submitted_at.strftime("%Y-%m-%d")
-        team_absent = get_team_absent_count(dep, target_date_str)
-        total_members = get_department_total_members(dep)
+        # ---- Step VLM (new): inspect document via VLM when attachment provided ----
+        att = (getattr(facts,'attachment_type', None) or '').strip()
+        proof_id = getattr(facts,'proof_id',None)
+        proof_row = None
+        if proof_id:
+            proof_row = conn.execute('SELECT * FROM proof_documents WHERE id=?',(proof_id,)).fetchone()
+            proof_row = dict(proof_row) if proof_row else None
+            if proof_row and not (att and att.casefold()!='none'):
+                # derive att from proof storage_name/mime when attachment_type was not set explicitly
+                from pathlib import Path
+                name = Path(proof_row['storage_name']).name.casefold()
+                mime = (proof_row.get('mime_type') or '').casefold()
+                pt = (proof_row.get('proof_type') or '').casefold()
+                if 'pdf' in name or 'pdf' in mime:
+                    att = 'pdf_attachment'
+                elif 'png' in name or 'jpg' in name or 'jpeg' in name or 'image' in mime:
+                    att = 'image_attachment'
+                else:
+                    att = proof_row.get('proof_type') or 'generic_attachment'
+        vlm_out: VLMInspectionOutput | None = None
+        needs_vlm = bool(att and att.casefold() != 'none') or bool(proof_row)
+        if needs_vlm:
+            f_date, t_date = None, None
+            try:
+                if getattr(facts,'from_date',None): f_date = date.fromisoformat(str(facts.from_date))
+            except Exception: pass
+            try:
+                if getattr(facts,'to_date',None): t_date = date.fromisoformat(str(facts.to_date))
+            except Exception: pass
+            proof_type_hint = None
+            readability_hint = None
+            doc_flags = {}
+            attachment_for_vlm = att
+            if proof_row:
+                proof_type_hint = proof_row['proof_type']
+                readability_hint = proof_row.get('document_readability')
+                doc_flags = {
+                    'has_signature': bool(proof_row.get('signature_present')) if proof_row.get('signature_present') is not None else None,
+                    'has_stamp': None,
+                    'is_tampered': None,
+                    'ai_edited': None,
+                }
+                # If real file exists, pass the absolute real path so Ollama wrapper reads the PNG directly
+                from pathlib import Path as _P
+                import os
+                uploads_dir = _P(os.getenv('LEAVE_UPLOAD_DIR', str(_P(__file__).resolve().parents[1] / 'uploads')))
+                candidate = uploads_dir / proof_row['storage_name']
+                if candidate.exists():
+                    attachment_for_vlm = str(candidate)
+                elif att:
+                    attachment_for_vlm = att
+            vlm_out = inspect_document_with_vlm(
+                leave_type=str(getattr(facts,'leave_type','')),
+                employee_name=getattr(ctx,'employee_name',None),
+                reason=str(getattr(facts,'reason','') or ''),
+                attachment_path_or_type=attachment_for_vlm,
+                from_date=f_date, to_date=t_date,
+                workdays=0,
+                proof_type_hint=proof_type_hint,
+                document_readability_hint=readability_hint,
+                doc_flags=doc_flags,
+            )
+            # Inject VLM proof fields into context so rule engine PROOF stage uses REAL VLM extraction
+            # and not just storage heuristics.
+            if vlm_out.proof_extraction:
+                proof_dict = vlm_out.proof_extraction.model_dump(mode='python')
+                existing_ver_status = getattr(ctx.proof, 'proof_verification_status', 'UNVERIFIED')
+                existing_notes = getattr(ctx.proof, 'verification_notes', None)
+                # Preserve storage-provided verification status; otherwise default to UNVERIFIED
+                proof_dict.setdefault('proof_verification_status', existing_ver_status)
+                proof_dict.setdefault('verification_notes', existing_notes)
+                try:
+                    ctx.proof = VerifiedProof.model_validate(proof_dict)
+                except Exception:
+                    pass  # storage fallback stays if validation fails on VLM edge data
+            # Calculate workdays using calendar service to refine correlation
+            if vlm_out and hasattr(ctx,'from_date') and hasattr(ctx,'to_date'):
+                try:
+                    d1 = date.fromisoformat(str(ctx.from_date))
+                    d2 = date.fromisoformat(str(ctx.to_date))
+                    wd = len(self.calendar.working_dates(d1,d2)) if d1 and d2 and d1<=d2 else 0
+                    # Re-score correlation with exact calculated workdays
+                    if wd and vlm_out.proof_extraction:
+                        from vlm_inspector import _score_correlation
+                        pe = vlm_out.proof_extraction
+                        new_score, new_additional_issues, new_doctor_days = _score_correlation(
+                            employee_name=getattr(ctx,'employee_name',''),
+                            reason=str(getattr(facts,'reason','')),
+                            recommended_from=pe.recommended_from_date,
+                            recommended_to=pe.recommended_to_date,
+                            requested_from=d1, requested_to=d2,
+                            diagnosis=vlm_out.doc_diagnosis,
+                            days_granted_by_doctor=vlm_out.days_granted_by_doctor,
+                            requested_workdays=wd,
+                        )
+                        if new_score is not None:
+                            vlm_dict = dict(vlm_out.vlm_analysis_json or {})
+                            merged = list(dict.fromkeys((vlm_out.correlation_issues or []) + list(new_additional_issues)))
+                            vlm_out.correlation_score = new_score
+                            vlm_out.correlation_issues = merged
+                            if new_doctor_days is not None:
+                                vlm_out.days_granted_by_doctor = new_doctor_days
+                            ca = vlm_dict.get('correlation_analysis', {}); ca['score'] = new_score; ca['issues'] = merged; ca['requested_workdays'] = wd
+                            vlm_dict['correlation_analysis'] = ca
+                            dr = vlm_dict.get('document_summary',{}); dr['doctor_recommended_range'] = dict(dr.get('doctor_recommended_range',{}) or {}); dr['doctor_recommended_range']['days'] = new_doctor_days
+                            vlm_out.vlm_analysis_json = vlm_dict
+                except Exception: pass
 
-        context = {
-            "request_id": request_id,
-            "employee_id": employee["employee_id"],
-            "employee_name": employee["name"],
-            "department": dep,
-            "remaining_leave_days": float(employee["remaining_leave_days"]),
-            "submitted_at": submitted_at.isoformat(),
-            "team_absent_count": team_absent,
-            "total_team_members": total_members,
-            "handover_person_id": structured_data.get("handover_person_id") if structured_data else None,
-            "attachment_type": structured_data.get("attachment_type", "none") if structured_data else "none"
+        result=LeaveRuleEngine.evaluate(ctx,self.calendar)
+        record.update(employee_name=ctx.employee_name,department=ctx.department,
+            from_date=facts.from_date,to_date=facts.to_date,workdays=result.requested_working_days or 0,
+            leave_type=facts.leave_type or '',canonical_leave_type=facts.leave_type,reason_category=facts.reason_category,
+            reason=facts.reason,handover_person_id=facts.handover_person_id,handover_person_name=facts.handover_person_name,
+            attachment_type=facts.attachment_type,proof_id=facts.proof_id,facts_json=facts.model_dump(mode='json'),
+            decision=result.decision.value,status=STATES[result.decision.value],
+            requested_calendar_days=result.requested_calendar_days,requested_working_days=result.requested_working_days,
+            deducted_days=0,annual_balance_change=0,target_role=result.target_role,
+            uncertainty_category=result.uncertainty_category,error_code=result.error_code,
+            human_readable_explanation=result.human_readable_explanation,actionable_question=result.actionable_question,
+            quick_action_options=result.quick_action_options,applied_policy_clauses=result.applied_policy_clauses,
+            decision_trace=result.decision_trace,result_json=result.model_dump(mode='json'),policy_version=result.policy_version,
+            updated_at=self.clock().isoformat(),legacy_reconciliation_required=0)
+        # ---- Persist 13 VLM + 1 LLM summary DB columns so Manager panels see real data
+        if vlm_out is not None:
+            record['vlm_analysis_json'] = vlm_out.vlm_analysis_json
+            record['doc_patient_name'] = vlm_out.doc_patient_name
+            record['doc_diagnosis'] = vlm_out.doc_diagnosis
+            record['has_red_stamp'] = vlm_out.has_red_stamp
+            record['has_doctor_signature'] = vlm_out.has_doctor_signature
+            record['is_tampered'] = vlm_out.is_tampered
+            record['ai_edited'] = vlm_out.ai_edited
+            record['days_granted_by_doctor'] = vlm_out.days_granted_by_doctor
+            record['correlation_score'] = vlm_out.correlation_score
+            record['correlation_issues'] = vlm_out.correlation_issues
+            record['persona_role_used'] = vlm_out.persona_role_used
+            record['escalation_reasons_json'] = vlm_out.escalation_reasons_json
+        # LLM summary: văn phong tiếng Việt tự nhiên, dịch các cờ & score thành câu dễ hiểu.
+        def _v_enum(value):
+            if value is None: return ''
+            return str(value.value) if hasattr(value,'value') else str(value)
+        decision_val = _v_enum(result.decision)
+        status_val = STATES.get(result.decision.value, STATES.get('ESCALATE','PENDING_ESCALATION'))
+        error_code = _v_enum(result.error_code)
+        target_role = _v_enum(result.target_role)
+        # ---- human-readable Vietnamese summary ----
+        ROLE_VI = {
+            'DIRECT_MANAGER':'Quản lý trực tiếp',
+            'DEPARTMENT_HEAD':'Trưởng bộ phận',
+            'HR':'Nhân sự (HR)',
+            'HRD':'Giám đốc Nhân sự',
+            'CEO':'Tổng Giám đốc',
+            'EMPLOYEE':'Nhân viên (nộp lại / bổ sung)',
+            'NONE':'—',
+            '':'—',
         }
-
-        # 3. Chuẩn bị nội dung text đưa vào pipeline
-        input_text = raw_text
-        if not input_text and structured_data:
-            input_text = f"Tôi là {employee['name']} ({employee['employee_id']}), xin nghỉ phép từ {structured_data.get('from_date')} đến {structured_data.get('to_date')}. Loại nghỉ: {structured_data.get('leave_type', 'Annual')}. Lý do: {structured_data.get('reason', 'Việc cá nhân')}."
-
-        add_audit_log(request_id, "RECEIVE_REQUEST", "SUBMITTED", f"Nhận đơn từ {employee['name']} ({emp_id}): {input_text}")
-
-        # 4. Chạy toàn bộ pipeline của Agent (Parse -> Validate -> Rule Engine -> Gom vấn đề -> Escalation)
-        result = self.agent.run_full_pipeline(
-            raw_text=input_text,
-            employee_context=context
-        )
-
-        parsed = result.parsed_request
-        esc = result.escalation_payload
-
-        # Tính số ngày làm việc
-        workdays = 0
-        if parsed and parsed.from_date and parsed.to_date:
-            workdays = calculate_workdays(parsed.from_date, parsed.to_date)
-
-        # Trạng thái tổng thể
-        status = "COMPLETED" if result.final_decision == "AUTO_APPROVE" else "PENDING_ESCALATION"
-
-        # 5. Lưu vào Cơ sở dữ liệu SQLite
-        db_record = {
-            "id": request_id,
-            "employee_id": employee["employee_id"],
-            "employee_name": employee["name"],
-            "department": dep,
-            "from_date": parsed.from_date.isoformat() if (parsed and parsed.from_date) else None,
-            "to_date": parsed.to_date.isoformat() if (parsed and parsed.to_date) else None,
-            "workdays": workdays,
-            "leave_type": parsed.leave_type.value if parsed else "Annual",
-            "reason": parsed.reason if parsed else input_text,
-            "handover_person_id": parsed.handover_person_id or context.get("handover_person_id"),
-            "handover_person_name": parsed.handover_person_name,
-            "attachment_type": parsed.attachment_type.value if parsed else "none",
-            "decision": result.final_decision or "UNKNOWN",
-            "uncertainty_category": esc.uncertainty_category if esc else None,
-            "error_code": esc.error_code if esc else None,
-            "target_role": esc.target_role if esc else None,
-            "actionable_question": esc.actionable_question if esc else None,
-            "quick_action_options": json.dumps(esc.quick_action_options if esc else []),
-            "human_readable_explanation": esc.human_readable_explanation if esc else "",
-            "applied_policy_clauses": json.dumps(esc.applied_policy_clauses if esc else []),
-            "human_feedback_text": None,
-            "status": status,
-            "submitted_at": submitted_at.isoformat(),
-            "updated_at": datetime.now().isoformat()
+        DECISION_VI = {
+            'AUTO_APPROVE':'Tự động duyệt (không cần người xem xét)',
+            'ESCALATE':'Chuyển lên người có thẩm quyền phê duyệt',
+            'NEED_CORRECTION':'Yêu cầu nhân viên bổ sung / sửa lại hồ sơ',
+            'AUTO_REJECT':'Từ chối theo quy tắc',
+            'REQUEST_INFO':'Cần thêm thông tin rõ hơn',
+            'NO_LEAVE_REQUIRED':'Không cần ghi nhận phép',
         }
-        save_leave_request(db_record)
-
-        # 6. Ghi nhật ký Audit Trail cho từng bước
-        for log_line in result.history_log:
-            add_audit_log(request_id, "AGENT_STEP", "PIPELINE_EXEC", log_line)
-
-        # Nếu tự duyệt thành công -> Trừ phép năm ngay
-        if result.final_decision == "AUTO_APPROVE" and workdays > 0 and (parsed and parsed.leave_type.value == "Annual"):
-            deduct_employee_leave_days(employee["employee_id"], float(workdays))
-            add_audit_log(request_id, "LEAVE_BALANCE_DEDUCT", "SUCCESS", f"Đã trừ {workdays} ngày phép năm của {employee['name']}.")
-
-        return get_leave_request(request_id)
-
-    def process_human_decision(
-        self,
-        request_id: str,
-        feedback_text: str,
-        approver_id: Optional[str] = "MANAGER"
-    ) -> Dict[str, Any]:
-        """Tiếp nhận phản hồi từ Quản lý / Ban Giám đốc cho đơn đang bị ESCALATE."""
-        req = get_leave_request(request_id)
-        if not req:
-            raise ValueError(f"Không tìm thấy đơn {request_id}")
-
-        if req["status"] != "PENDING_ESCALATION":
-            raise ValueError(f"Đơn {request_id} không ở trạng thái chờ duyệt (Hiện tại: {req['status']})")
-
-        add_audit_log(request_id, "HUMAN_RESPONSE", "RECEIVED", f"Cấp thẩm quyền ({approver_id}) phản hồi: \"{feedback_text}\"")
-
-        # Chuẩn bị context để agent re-check
-        employee = get_employee(req["employee_id"]) or {}
-        context = {
-            "request_id": request_id,
-            "employee_id": req["employee_id"],
-            "employee_name": req["employee_name"],
-            "department": req["department"],
-            "remaining_leave_days": float(employee.get("remaining_leave_days", 10.0)),
-            "submitted_at": req["submitted_at"],
-            "team_absent_count": get_team_absent_count(req["department"], req["from_date"]),
-            "total_team_members": get_department_total_members(req["department"]),
-            "handover_person_id": req["handover_person_id"],
-            "attachment_type": req["attachment_type"]
+        ERROR_VI = {
+            'OK':'—',
+            'NOTICE_PERIOD_VIOLATION':'Thời hạn báo trước chưa đủ theo chính sách',
+            'NOTICE_PERIOD_OPERATIONAL':'Thời hạn báo trước dưới ngưỡng hoạt động, cần Manager ghi nhận',
+            'DOC_ILLEGIBLE':'Chứng từ khó đọc / thiếu nét xác nhận, cần Quản lý xem xét đặc cách',
+            'PROOF_REVIEW_REQUIRED':'Chứng từ cần người có thẩm quyền đối chiếu',
+            'PROOF_MISSING':'Thiếu chứng từ đính kèm (cần bổ sung trước khi duyệt)',
+            'DOC_FIELD_MISSING':'Một số trường trên chứng từ bị thiếu hoặc chưa khớp với yêu cầu nghỉ',
+            'DURATION_OVER_AI_LIMIT':'Số ngày nghỉ vượt ngưỡng tự duyệt → cần cấp trên xem xét',
+            'TEAM_QUOTA_BREACH':'Đội ngũ có nhiều người nghỉ cùng lúc (quá 30%), cần quản lý bộ phận xác nhận',
+            'INSUFFICIENT_BALANCE':'Số dư phép năm không đủ để trừ cho đơn này',
+            'BALANCE_CHECK_REQUIRED':'Cần kiểm tra lại số dư phép trước khi duyệt',
+            'OUT_OF_POLICY':'Ngoài phạm vi quy định hiện hành',
+            'UNCERTAIN_FACTS':'Các facts chưa chắc chắn (vd chẩn đoán / ngày khớp chưa đủ)',
+            'AUTHORITY_REQUIRED':'Cần người có thẩm quyền cao hơn xem xét dựa trên số ngày',
         }
+        def _fmt(d, key, default='—'):
+            v = d.get(key) if isinstance(d,dict) else None
+            if v is None or v == '' or v == 0: return default
+            if isinstance(v, float): return f'{v:.2f}'
+            return v
+        vlm_fields_present = vlm_out is not None
+        corr_score = record.get('correlation_score') or (vlm_out.correlation_score if vlm_out else None)
+        rs = record.get('has_red_stamp') if 'has_red_stamp' in record else (vlm_out.has_red_stamp if vlm_out else None)
+        sig = record.get('has_doctor_signature') if 'has_doctor_signature' in record else (vlm_out.has_doctor_signature if vlm_out else None)
+        tamper = record.get('is_tampered') if 'is_tampered' in record else (vlm_out.is_tampered if vlm_out else None)
+        ai_ed = record.get('ai_edited') if 'ai_edited' in record else (vlm_out.ai_edited if vlm_out else None)
+        diag = record.get('doc_diagnosis') if 'doc_diagnosis' in record else (vlm_out.doc_diagnosis if vlm_out else None)
+        doc_patient = record.get('doc_patient_name') if 'doc_patient_name' in record else (vlm_out.doc_patient_name if vlm_out else None)
+        doctor_days = record.get('days_granted_by_doctor') if 'days_granted_by_doctor' in record else (vlm_out.days_granted_by_doctor if vlm_out else None)
+        requested_wd = result.requested_working_days or 0
+        requested_cd = result.requested_calendar_days or 0
+        emp_n = ctx.employee_name or 'Nhân viên'
+        ltype = _v_enum(facts.leave_type)
+        LTYPE_VI = {
+            'ANNUAL':'Nghỉ phép năm',
+            'SICK_MEDICAL':'Nghỉ ốm đau (có giấy khám bệnh)',
+            'MEDICAL_EMERGENCY':'Nghỉ bệnh cấp cứu',
+            'WORK_ACCIDENT':'Nghỉ tai nạn lao động',
+            'MATERNITY':'Nghỉ thai sản',
+            'SPECIAL_PAID':'Nghỉ đặc cách có lương',
+            'STATUTORY_UNPAID':'Nghỉ phép chế độ không lương',
+            'UNPAID_OTHER':'Nghỉ không lương khác',
+        }
+        ltype_vi = LTYPE_VI.get(ltype, ltype or 'Không xác định')
+        from_d = _v_enum(facts.from_date)
+        to_d = _v_enum(facts.to_date)
+        reason = (getattr(facts,'reason',None) or '').strip()
+        # Build các câu theo template tiếng Việt
+        sentences: list = []
+        sentences.append(f"Nhân viên {emp_n} đăng ký nghỉ hình thức {ltype_vi} từ ngày {from_d} đến ngày {to_d}.")
+        if requested_cd or requested_wd:
+            sentences.append(f"Tổng số ngày: {requested_cd} ngày lịch (tương đương {requested_wd} ngày làm việc).")
+        if reason:
+            sentences.append(f"Lý do khai báo: {reason}.")
+        # VLM findings
+        if vlm_fields_present and doc_patient:
+            sentences.append(f"VLM đọc được tên người khám trên giấy: {doc_patient}.")
+        elif not vlm_fields_present or not doc_patient:
+            if vlm_fields_present:
+                sentences.append("VLM chưa đọc được rõ tên bệnh nhân trên chứng từ.")
+            else:
+                sentences.append("Không có thông tin phân tích VLM (chứng từ dạng none / chưa đính kèm).")
+        if vlm_fields_present and diag:
+            sentences.append(f"Chẩn đoán ghi trên giấy: {diag}.")
+        # Integrity flags
+        integrity_parts = []
+        if rs is True: integrity_parts.append('đã thấy dấu đỏ')
+        elif rs is False: integrity_parts.append('không thấy dấu đỏ')
+        if sig is True: integrity_parts.append('có chữ ký bác sĩ')
+        elif sig is False: integrity_parts.append('thiếu chữ ký bác sĩ')
+        if tamper is True: integrity_parts.append('nghi vấn chỉnh sửa (tampered)')
+        if ai_ed is True: integrity_parts.append('nghi vấn được tạo bởi AI')
+        if integrity_parts:
+            sentences.append("Kết quả kiểm tra tính toàn vẹn chứng từ: " + "; ".join(integrity_parts) + ".")
+        if doctor_days is not None and requested_wd:
+            sentences.append(f"Bác sĩ đề nghị nghỉ {doctor_days} ngày, đơn yêu cầu {requested_wd} ngày làm việc.")
+        # Correlation
+        if corr_score is not None:
+            cs = float(corr_score)
+            if cs >= 0.85:
+                corr_txt = 'rất khớp'
+            elif cs >= 0.7:
+                corr_txt = 'khớp ở mức chấp nhận được'
+            elif cs >= 0.5:
+                corr_txt = 'chưa khớp hoàn toàn'
+            else:
+                corr_txt = 'không khớp nhiều'
+            sentences.append(f"Độ khớp giữa lý do nghỉ + thông tin trên chứng từ (correlation_score = {cs:.2f}): {corr_txt}.")
+        # Decision + rationale
+        decision_vi = DECISION_VI.get(decision_val, decision_val)
+        sentences.append(f"Kết quả của Rule Engine: {decision_vi}.")
+        if error_code:
+            err_vi = ERROR_VI.get(error_code) or (result.human_readable_explanation or error_code)
+            if err_vi and err_vi != '—':
+                sentences.append(f"Lý do chính: {err_vi}.")
+        if target_role and target_role != 'NONE':
+            role_vi = ROLE_VI.get(target_role, target_role)
+            if decision_val == 'NEED_CORRECTION' and target_role == 'EMPLOYEE':
+                sentences.append("Hồ sơ cần được bổ sung hoặc sửa lại; yêu cầu nhân viên nộp lại đầy đủ thông tin.")
+            else:
+                sentences.append(f"Việc này cần được {role_vi} xem xét và phê duyệt tiếp theo.")
+        if (result.applied_policy_clauses or []):
+            clauses = ", ".join(str(x) for x in list(result.applied_policy_clauses)[:3])
+            sentences.append(f"Điều khoản chính sách được áp dụng: {clauses}.")
+        # Final note
+        if result.decision == DecisionType.ESCALATE:
+            sentences.append("Tóm lại: đơn không thuộc diện tự động duyệt, người phê duyệt hãy xem xét kĩ nội dung phân tích bên trên để ra quyết định.")
+        elif result.decision == DecisionType.NEED_CORRECTION:
+            sentences.append("Tóm lại: hồ sơ còn thiếu hoặc có điểm nghi vấn, cần nhân viên cung cấp lại cho đủ quy định.")
+        elif result.decision == DecisionType.AUTO_APPROVE:
+            sentences.append("Tóm lại: đơn đạt tất cả các tiêu chí tự duyệt theo quy định hiện hành.")
+        # Build structured summary
+        vietnamese_summary_full = " ".join(s for s in sentences if s).strip()
+        # Quick actions (Vietnamese)
+        QUICK_VI = {
+            'APPROVE_OVERRIDE':'✅ Duyệt (ghi chú nếu cần)',
+            'REQUEST_MORE_INFO':'❓ Yêu cầu giải thích / bổ sung thêm thông tin',
+            'REJECT':'❌ Từ chối (nêu lý do)',
+            'ESCALATE_FURTHER':'⬆ Chuyển tiếp cấp cao hơn',
+            'WAIVE_NOTICE':'⏳ Bỏ qua quy định báo trước',
+            'WAIVE_QUOTA':'👥 Bỏ qua giới hạn team 30%',
+        }
+        quick_vi = [QUICK_VI.get(str(x), str(x)) for x in list(result.quick_action_options or [])]
+        policy_vi = []
+        for pc in list(result.applied_policy_clauses or []):
+            s = str(pc)
+            if 'SICK' in s and 'AUTHORITY' in s: s = 'Chính sách: Nghỉ ốm đau cần Quản lý xác minh dựa trên số ngày'
+            elif 'ANNUAL' in s and 'AUTHORITY' in s: s = 'Chính sách: Nghỉ phép năm cần cấp trên xem xét dựa trên số ngày'
+            elif 'NOTICE' in s: s = 'Chính sách: Quy định báo trước khi nghỉ'
+            elif 'TEAM' in s: s = 'Chính sách: Tỷ lệ nghỉ đồng thời trong team (30%)'
+            elif 'BALANCE' in s: s = 'Chính sách: Kiểm tra số dư phép năm'
+            elif 'PROOF' in s: s = 'Chính sách: Yêu cầu chứng từ / giấy tờ hợp lệ'
+            policy_vi.append(s)
+        why_escalated_vi = ''
+        if result.decision == DecisionType.ESCALATE:
+            parts = []
+            if err_vi and err_vi != '—': parts.append(err_vi)
+            if target_role and target_role != 'NONE':
+                parts.append('cần ' + ROLE_VI.get(target_role, target_role) + ' xem xét')
+            why_escalated_vi = '. '.join(p for p in parts if p).capitalize()
+        else:
+            why_escalated_vi = 'Không escalate — đơn đã đi theo kết quả quyết định cuối cùng.'
+        warnings_vi = []
+        for w in list(getattr(result,'warnings',[]) or []):
+            s = str(w)
+            if 'NOTICE' in s.upper(): s = 'Cảnh báo: thời hạn báo trước chưa đạt chuẩn, nhưng Manager có thể bỏ qua với ghi chú.'
+            warnings_vi.append(s)
+        # actionable question tiếng Việt (dựa trên error_code + decision)
+        aq_vi = result.actionable_question or ''
+        if not aq_vi or '?' not in aq_vi:
+            if result.decision == DecisionType.ESCALATE and error_code:
+                if 'DOC' in error_code:
+                    aq_vi = 'Nội dung giấy tờ hơi khó xem, bạn có chấp nhận duyệt đặc cách với đơn này hay yêu cầu tải lại bản rõ hơn không?'
+                elif 'NOTICE' in error_code:
+                    aq_vi = 'Thời hạn báo trước chưa đủ, bạn có chấp nhận bỏ qua quy định này và phê duyệt đơn không?'
+                elif 'TEAM' in error_code or 'QUOTA' in error_code:
+                    aq_vi = 'Team hiện tại có nhiều người nghỉ cùng lúc, bạn có chấp nhận phê duyệt đơn này hay sắp xếp lại lịch nghỉ không?'
+                elif 'AUTHORITY' in error_code or 'DURATION' in error_code:
+                    aq_vi = 'Số ngày nghỉ vượt ngưỡng tự duyệt, bạn có xác nhận phê duyệt đơn hay cần chuyển cấp cao hơn xem xét không?'
+                else:
+                    aq_vi = 'Dựa trên các thông tin phân tích bên trên, bạn có phê duyệt đơn này, từ chối, hay cần thêm thông tin nào không?'
+            elif result.decision == DecisionType.NEED_CORRECTION:
+                aq_vi = 'Đơn này còn thiếu thông tin hoặc có điểm nghi vấn, bạn có muốn nhân viên nộp lại hồ sơ đầy đủ hơn không?'
+        llm_summary = {
+            "decision": decision_val,
+            "status": status_val,
+            "summary_version": 2,
+            "language": "vi-VN",
+            "engine": "rule_engine_deterministic + vietnamese_natural_template + llm_parse_extract_fallback_if_text",
+            "error_code": error_code,
+            "error_code_human_vn": ERROR_VI.get(error_code, error_code or '—'),
+            "uncertainty_category": _v_enum(result.uncertainty_category),
+            "target_role": target_role,
+            "target_role_human_vn": ROLE_VI.get(target_role, target_role or '—'),
+            "human_readable_explanation": result.human_readable_explanation,
+            "actionable_question": aq_vi,
+            "quick_action_options": list(result.quick_action_options or []),
+            "quick_action_options_vn": quick_vi,
+            "applied_policy_clauses": list(result.applied_policy_clauses or []),
+            "applied_policy_clauses_vn": policy_vi,
+            "warnings": warnings_vi or list(getattr(result,'warnings',[]) or []),
+            "all_violations_count": len(getattr(result,'all_violations',[]) or []),
+            "authority_granted_roles_so_far": list(granted or []),
+            "waived_operational_errors": [_v_enum(w) for w in list(waived or [])],
+            "why_escalated": why_escalated_vi,
+            "summary_natural_vn": vietnamese_summary_full,
+            "context": {
+                "employee_name": emp_n,
+                "leave_type": ltype,
+                "leave_type_vn": ltype_vi,
+                "from_date": from_d,
+                "to_date": to_d,
+                "requested_calendar_days": int(requested_cd or 0),
+                "requested_working_days": int(requested_wd or 0),
+                "reason": reason,
+            },
+            "vlm_summary": {
+                "fields_extracted": bool(vlm_fields_present),
+                "patient_name": doc_patient,
+                "diagnosis": diag,
+                "doctor_recommended_days": doctor_days,
+                "has_red_stamp": rs,
+                "has_doctor_signature": sig,
+                "is_tampered": tamper,
+                "ai_edited": ai_ed,
+                "correlation_score": corr_score,
+            },
+        }
+        record['llm_summary_json'] = llm_summary
+        if result.decision==DecisionType.AUTO_APPROVE:
+            st.commit_approval(conn,record,result)
+            if granted: record['human_resolution']='APPROVE_OVERRIDE'
+        st.save_record(conn,record)
+        if result.decision==DecisionType.ESCALATE:
+            st.set_steps(conn,record,result.approval_roles)
+        st.audit(conn,record['id'],'EVALUATED',json.dumps(result.model_dump(mode='json'),ensure_ascii=False))
+        return result
 
-        # Gọi Agent để parse câu trả lời và khép kín vòng lặp Re-check
-        result = self.agent.run_full_pipeline(
-            raw_text=req["reason"],
-            employee_context=context,
-            human_feedback_text=feedback_text
-        )
+    def process_new_request(self,raw_text=None,employee_id=None,structured_data=None):
+        data=dict(structured_data or {})
+        emp_id=employee_id or data.pop('employee_id',None)
+        data.pop('employee_id',None)
+        # Never derive identity from LLM. Validate caller before model work.
+        with st.transaction() as conn: st.employee(conn,emp_id)
+        if raw_text:
+            if any(data.get(k) for k in ('from_date','to_date','leave_type')):
+                raise ValueError('Chọn một đầu vào: form hoặc free text.')
+            facts=RequestFacts.model_validate(self.agent.parse_natural_language(raw_text,current_date=self.clock().date()).model_dump())
+            # A model cannot attach another person's document or invent an attachment.
+            facts.proof_id=None; facts.attachment_type='none'
+        else: facts=RequestFacts.model_validate(data)
+        record={'id':'REQ-'+uuid.uuid4().hex[:16].upper(),'employee_id':emp_id,
+                'submitted_at':self.clock().isoformat(),'revision':1,'human_resolution':None}
+        with st.transaction() as conn:
+            self._evaluate(conn,record,facts)
+            return st.serialize(conn,st.read_request(conn,record['id']))
 
-        final_decision = result.final_decision
-        final_status = "COMPLETED" if final_decision == "APPROVED_BY_HUMAN_OVERRIDE" else "REJECTED"
+    def resubmit(self,request_id,actor_id,data):
+        facts=RequestFacts.model_validate(data)
+        with st.transaction() as conn:
+            req=st.read_request(conn,request_id)
+            st.employee(conn,actor_id)
+            if actor_id!=req['employee_id']: raise st.AccessDenied('Chỉ Employee của đơn được sửa.')
+            if req['status']!='WAITING_EMPLOYEE': raise st.Conflict('Chỉ sửa đơn đang chờ Employee.')
+            req.update(revision=req['revision']+1,submitted_at=self.clock().isoformat(),human_resolution=None)
+            self._evaluate(conn,req,facts)
+            st.audit(conn,request_id,'EMPLOYEE_RESUBMIT',actor_id)
+            return st.serialize(conn,st.read_request(conn,request_id))
 
-        # Cập nhật DB
-        req["decision"] = final_decision
-        req["status"] = final_status
-        req["human_feedback_text"] = feedback_text
-        req["updated_at"] = datetime.now().isoformat()
-        
-        # Parse chuỗi JSON lại để save
-        req["quick_action_options"] = json.dumps(req.get("quick_action_options", []))
-        req["applied_policy_clauses"] = json.dumps(req.get("applied_policy_clauses", []))
+    def process_human_decision(self,request_id,feedback_text='',approver_id=None,action_type=None,updated_fields=None):
+        # Read a revision token before extraction, then check under lock afterwards.
+        with st.transaction() as conn:
+            before=st.read_request(conn,request_id)
+            st.require_approver(conn,approver_id,before)
+            token=(before['revision'],before['updated_at'])
+        if action_type:
+            action={'APPROVE':'APPROVE_OVERRIDE','REQUEST_INFO':'REQUEST_MORE_INFO'}.get(action_type,action_type)
+            feedback=HumanFeedbackResolution(action=action,updated_fields=updated_fields or {},feedback_notes=feedback_text)
+        else:
+            feedback=self.agent.process_human_feedback(feedback_text)
+        with st.transaction() as conn:
+            req=st.read_request(conn,request_id)
+            if (req['revision'],req['updated_at'])!=token: raise st.Conflict('Đơn đã thay đổi; vui lòng tải lại.')
+            st.require_approver(conn,approver_id,req)
+            if not req.get('facts_json'): raise st.Conflict('Hồ sơ cũ cần đối soát trước khi xử lý theo policy mới.')
+            req['human_feedback_text']=feedback.feedback_notes
+            req['updated_at']=self.clock().isoformat()
+            if feedback.action in {'REQUEST_MORE_INFO','REJECT'}:
+                req['status']='WAITING_EMPLOYEE' if feedback.action=='REQUEST_MORE_INFO' else 'REJECTED'
+                req['human_resolution']=feedback.action
+                st.save_record(conn,req)
+            elif feedback.action=='MODIFY_CONDITIONAL':
+                changes=feedback.updated_fields.model_dump(mode='json',exclude_unset=True)
+                if not changes: raise ValueError('Không có trường được phép điều chỉnh.')
+                facts=dict(req['facts_json']);facts.update(changes)
+                if 'handover_person_name' in changes and 'handover_person_id' not in changes: facts['handover_person_id']=None
+                req.update(revision=req['revision']+1,human_resolution=None)
+                self._evaluate(conn,req,RequestFacts.model_validate(facts))
+            else:
+                if req['target_role']=='HR':
+                    raise st.Conflict('HR cần xác minh chứng từ/cấu hình; không được duyệt bỏ qua điều kiện chưa xác minh.')
+                steps=[dict(r) for r in conn.execute('SELECT * FROM approval_steps WHERE request_id=? AND revision=? ORDER BY step_index',(request_id,req['revision']))]
+                granted=[s['role'] for s in steps if s['status']=='APPROVED']
+                granted.append(req['target_role'])
+                waive=[ErrorCode.NOTICE_PERIOD_VIOLATED,ErrorCode.TEAM_QUOTA_EXCEEDED]
+                # Re-evaluate before writing this approval. No balance/proof/overlap bypass.
+                st.audit(conn,request_id,'HUMAN_APPROVAL',f'{approver_id}: {req["target_role"]}; {feedback.feedback_notes}')
+                old_target=req['target_role']
+                result=self._evaluate(conn,req,RequestFacts.model_validate(req['facts_json']),granted,waive)
+                if result.decision in {DecisionType.AUTO_APPROVE,DecisionType.ESCALATE} and result.error_code not in {ErrorCode.PROOF_REVIEW_REQUIRED,ErrorCode.LEGAL_REVIEW_REQUIRED,ErrorCode.AUTOMATION_SCOPE_UNSUPPORTED}:
+                    conn.execute("UPDATE approval_steps SET status='APPROVED',approver_id=?,decided_at=? WHERE request_id=? AND revision=? AND role=? AND status='PENDING'",
+                        (approver_id,self.clock().isoformat(),request_id,req['revision'],old_target))
+            st.audit(conn,request_id,feedback.action,approver_id+': '+feedback.feedback_notes)
+            return st.serialize(conn,st.read_request(conn,request_id))
 
-        save_leave_request(req)
-
-        # Ghi log kết quả
-        add_audit_log(request_id, "RECHECK_DECISION", final_status, f"Quyết định cuối cùng: {final_decision}. Ghi nhận ý kiến: {feedback_text}")
-
-        # Nếu được duyệt đặc cách -> Trừ phép năm nếu là Annual
-        if final_decision == "APPROVED_BY_HUMAN_OVERRIDE" and req.get("workdays", 0) > 0 and req.get("leave_type") == "Annual":
-            deduct_employee_leave_days(req["employee_id"], float(req["workdays"]))
-            add_audit_log(request_id, "LEAVE_BALANCE_DEDUCT", "SUCCESS", f"Đã trừ {req['workdays']} ngày phép năm sau khi duyệt đặc cách.")
-
-        return get_leave_request(request_id)
+    def cancel(self,request_id,actor_id,revoke=False,reason=''):
+        with st.transaction() as conn:
+            req=st.read_request(conn,request_id)
+            st.employee(conn,actor_id)
+            if revoke:
+                if actor_id==req['employee_id'] or not any(st.has_role(conn,actor_id,r,req['department']) for r in ('DIRECT_MANAGER','DEPARTMENT_HEAD','HRD','CEO')):
+                    raise st.AccessDenied('Không có quyền thu hồi quyết định.')
+                if req['status']!='COMPLETED' or req['decision']=='NO_LEAVE_REQUIRED': raise st.Conflict('Đơn không thể thu hồi.')
+                if not should_deduct_annual_balance(req.get('canonical_leave_type') or req['leave_type']):
+                    raise st.Conflict('Không thu hồi quyền nghỉ luật định bằng workflow Annual.')
+                if req.get('legacy_reconciliation_required'): raise st.Conflict('Hồ sơ lịch sử cần đối soát debit; không tự hoàn phép.')
+                count=st.refund(conn,req)
+                req.update(status='REJECTED',human_resolution='REVOKED',deducted_days=0,annual_balance_change=req['annual_balance_change']+count)
+            else:
+                if actor_id!=req['employee_id']: raise st.AccessDenied('Chỉ người nộp được hủy.')
+                if req['status'] not in {'WAITING_EMPLOYEE','PENDING_ESCALATION'}: raise st.Conflict('Chỉ hủy đơn đang chờ xử lý.')
+                req.update(status='CANCELLED',human_resolution='CANCELLED')
+            req['updated_at']=self.clock().isoformat()
+            st.save_record(conn,req)
+            st.audit(conn,request_id,'REVOKE' if revoke else 'CANCEL',actor_id+': '+reason)
+            return st.serialize(conn,st.read_request(conn,request_id))

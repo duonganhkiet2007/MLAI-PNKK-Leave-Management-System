@@ -1,377 +1,1071 @@
 [
-    {
-        "id": "TC01",
-        "is_verify_harness": true,
-        "scenario_name": "Nghỉ phép năm 1 ngày tiêu chuẩn (Chuẩn tự duyệt)",
-        "request": {
-            "request_id": "REQ-2026-001",
-            "employee_id": "EMP012",
-            "employee_name": "Nguyễn Văn An",
-            "department": "Engineering",
-            "remaining_leave_days": 8.0,
-            "submitted_at": "2026-09-20T08:00:00",
-            "from_date": "2026-09-23",
-            "to_date": "2026-09-23",
-            "leave_type": "Annual",
-            "reason": "Giải quyết thủ tục hành chính tại UBND địa phương",
-            "handover_person_id": null,
-            "team_absent_count": 0,
-            "total_team_members": 10,
-            "attachment_type": "none"
-        },
-        "expected_decision": "AUTO_APPROVE",
-        "expected_category": null,
-        "expected_error_code": null,
-        "expected_question_fragment": null
+  {
+    "id": "TC01",
+    "scenario_name": "Annual 2 ngày",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
     },
-    {
-        "id": "TC02",
-        "is_verify_harness": true,
-        "scenario_name": "Nghỉ phép năm 2 ngày báo trước 3 ngày (Chuẩn tự duyệt)",
-        "request": {
-            "request_id": "REQ-2026-002",
-            "employee_id": "EMP045",
-            "employee_name": "Trần Thị Bích",
-            "department": "Finance",
-            "remaining_leave_days": 6.5,
-            "submitted_at": "2026-09-21T09:00:00",
-            "from_date": "2026-09-24",
-            "to_date": "2026-09-25",
-            "leave_type": "Annual",
-            "reason": "Về quê ăn cưới người thân trong gia đình",
-            "handover_person_id": null,
-            "team_absent_count": 1,
-            "total_team_members": 8,
-            "attachment_type": "none"
-        },
-        "expected_decision": "AUTO_APPROVE",
-        "expected_category": null,
-        "expected_error_code": null,
-        "expected_question_fragment": null
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "requested_working_days": 2,
+      "deducted_days": 2,
+      "annual_balance_change": -2,
+      "uncertainty_category": null,
+      "error_code": null
     },
-    {
-        "id": "TC03",
-        "is_verify_harness": true,
-        "scenario_name": "Nghỉ ốm 1 ngày báo trước 08:30 sáng (Chuẩn tự duyệt)",
-        "request": {
-            "request_id": "REQ-2026-003",
-            "employee_id": "EMP089",
-            "employee_name": "Phạm Quốc Dũng",
-            "department": "Customer Support",
-            "remaining_leave_days": 10.0,
-            "submitted_at": "2026-09-22T07:15:00",
-            "from_date": "2026-09-22",
-            "to_date": "2026-09-22",
-            "leave_type": "Sick",
-            "reason": "Sốt nhẹ và đau đầu đột xuất sáng sớm",
-            "handover_person_id": null,
-            "team_absent_count": 0,
-            "total_team_members": 6,
-            "attachment_type": "none"
-        },
-        "expected_decision": "AUTO_APPROVE",
-        "expected_category": null,
-        "expected_error_code": null,
-        "expected_question_fragment": null
+    "is_verify_harness": true
+  },
+  {
+    "id": "TC02",
+    "scenario_name": "Annual vượt balance",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 1,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
     },
-    {
-        "id": "TC04",
-        "is_verify_harness": true,
-        "scenario_name": "Nghỉ ốm 3 ngày nhưng nộp toa thuốc thường thay vì mẫu BHXH",
-        "request": {
-            "request_id": "REQ-2026-004",
-            "employee_id": "EMP103",
-            "employee_name": "Võ Minh Khang",
-            "department": "Marketing",
-            "remaining_leave_days": 5.0,
-            "submitted_at": "2026-09-21T08:00:00",
-            "from_date": "2026-09-22",
-            "to_date": "2026-09-24",
-            "leave_type": "Sick",
-            "reason": "Điều trị viêm phế quản cấp",
-            "handover_person_id": "EMP105",
-            "team_absent_count": 0,
-            "total_team_members": 7,
-            "attachment_type": "vague_prescription"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "UNCERTAIN_FACTS",
-        "expected_error_code": "DOC_ILLEGIBLE",
-        "expected_question_fragment": "chứng từ chưa đạt chuẩn BHXH"
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "OUT_OF_POLICY",
+      "error_code": "BALANCE_EXCEEDED"
     },
-    {
-        "id": "TC05",
-        "is_verify_harness": true,
-        "scenario_name": "Nghỉ phép năm 4 ngày hợp lệ (Vượt thẩm quyền AI -> Manager)",
-        "request": {
-            "request_id": "REQ-2026-005",
-            "employee_id": "EMP067",
-            "employee_name": "Đặng Thị Phương",
-            "department": "Engineering",
-            "remaining_leave_days": 11.0,
-            "submitted_at": "2026-09-15T14:00:00",
-            "from_date": "2026-09-22",
-            "to_date": "2026-09-25",
-            "leave_type": "Annual",
-            "reason": "Nghỉ phép thường niên đi du lịch cùng gia đình",
-            "handover_person_id": "EMP012",
-            "team_absent_count": 1,
-            "total_team_members": 10,
-            "attachment_type": "none"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "AUTHORITY_ESCALATION",
-        "expected_error_code": "DURATION_OVER_AI_LIMIT",
-        "expected_question_fragment": "xin nghỉ 4 ngày, hồ sơ đầy đủ hợp lệ và đã bàn giao công việc"
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC03",
+    "scenario_name": "Annual thiếu ngày",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": null,
+      "to_date": "2026-10-06",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
     },
-    {
-        "id": "TC06",
-        "is_verify_harness": false,
-        "scenario_name": "Nghỉ phép năm vượt quá số dư phép hiện có",
-        "request": {
-            "request_id": "REQ-2026-006",
-            "employee_id": "EMP034",
-            "employee_name": "Lê Thu Hà",
-            "department": "HR",
-            "remaining_leave_days": 1.0,
-            "submitted_at": "2026-09-18T10:00:00",
-            "from_date": "2026-09-23",
-            "to_date": "2026-09-24",
-            "leave_type": "Annual",
-            "reason": "Xử lý việc cá nhân",
-            "handover_person_id": null,
-            "team_absent_count": 0,
-            "total_team_members": 5,
-            "attachment_type": "none"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "OUT_OF_POLICY",
-        "expected_error_code": "BALANCE_EXCEEDED",
-        "expected_question_fragment": "quỹ phép chỉ còn 1.0 ngày"
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "requested_working_days": null,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "UNCERTAIN_FACTS",
+      "error_code": "DATE_MISSING"
     },
-    {
-        "id": "TC07",
-        "is_verify_harness": false,
-        "scenario_name": "Nộp đơn vi phạm thời hạn báo trước (Nộp trước 2 giờ)",
-        "request": {
-            "request_id": "REQ-2026-007",
-            "employee_id": "EMP099",
-            "employee_name": "Bùi Văn Nam",
-            "department": "Logistics",
-            "remaining_leave_days": 4.0,
-            "submitted_at": "2026-09-23T06:30:00",
-            "from_date": "2026-09-23",
-            "to_date": "2026-09-23",
-            "leave_type": "Annual",
-            "reason": "Hỏng xe máy dọc đường không kịp đến ca trực sáng",
-            "handover_person_id": null,
-            "team_absent_count": 0,
-            "total_team_members": 8,
-            "attachment_type": "none"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "OUT_OF_POLICY",
-        "expected_error_code": "NOTICE_PERIOD_VIOLATED",
-        "expected_question_fragment": "vi phạm quy định báo trước 24 giờ"
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC04",
+    "scenario_name": "Annual 3–5 ngày",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-07",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
     },
-    {
-        "id": "TC08",
-        "is_verify_harness": false,
-        "scenario_name": "Lỗi logic thời gian: Ngày kết thúc trước ngày bắt đầu",
-        "request": {
-            "request_id": "REQ-2026-008",
-            "employee_id": "EMP112",
-            "employee_name": "Ngô Gia Bảo",
-            "department": "Engineering",
-            "remaining_leave_days": 7.0,
-            "submitted_at": "2026-09-20T10:00:00",
-            "from_date": "2026-09-25",
-            "to_date": "2026-09-23",
-            "leave_type": "Annual",
-            "reason": "Nghỉ ngơi tái tạo sức lao động",
-            "handover_person_id": null,
-            "team_absent_count": 0,
-            "total_team_members": 10,
-            "attachment_type": "none"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "UNCERTAIN_FACTS",
-        "expected_error_code": "DATE_LOGIC_INVALID",
-        "expected_question_fragment": "ngày kết thúc (2026-09-23) trước ngày bắt đầu"
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "requested_working_days": 3,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "DURATION_OVER_AI_LIMIT"
     },
-    {
-        "id": "TC09",
-        "is_verify_harness": false,
-        "scenario_name": "Xung đột lịch làm việc: Vượt trần 30% vắng mặt phòng ban",
-        "request": {
-            "request_id": "REQ-2026-009",
-            "employee_id": "EMP023",
-            "employee_name": "Vũ Đình Trọng",
-            "department": "DevOps",
-            "remaining_leave_days": 5.0,
-            "submitted_at": "2026-09-20T09:00:00",
-            "from_date": "2026-09-24",
-            "to_date": "2026-09-24",
-            "leave_type": "Annual",
-            "reason": "Gia đình có giỗ chạp",
-            "handover_person_id": null,
-            "team_absent_count": 2,
-            "total_team_members": 6,
-            "attachment_type": "none"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "OUT_OF_POLICY",
-        "expected_error_code": "TEAM_QUOTA_EXCEEDED",
-        "expected_question_fragment": "đạt 50.0% > 30%"
+    "is_verify_harness": true
+  },
+  {
+    "id": "TC05",
+    "scenario_name": "Annual 6–19 ngày",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-12",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
     },
-    {
-        "id": "TC10",
-        "is_verify_harness": false,
-        "scenario_name": "Nghỉ phép 3 ngày nhưng quên chỉ định nhân sự nhận bàn giao",
-        "request": {
-            "request_id": "REQ-2026-010",
-            "employee_id": "EMP078",
-            "employee_name": "Dương Mỹ Duyên",
-            "department": "Marketing",
-            "remaining_leave_days": 8.0,
-            "submitted_at": "2026-09-18T11:00:00",
-            "from_date": "2026-09-23",
-            "to_date": "2026-09-25",
-            "leave_type": "Annual",
-            "reason": "Đi công việc gia đình ở tỉnh xa",
-            "handover_person_id": null,
-            "team_absent_count": 0,
-            "total_team_members": 7,
-            "attachment_type": "none"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "UNCERTAIN_FACTS",
-        "expected_error_code": "HANDOVER_INVALID",
-        "expected_question_fragment": "chưa chỉ định người bàn giao"
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DEPARTMENT_HEAD",
+      "requested_working_days": 6,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "DURATION_OVER_MANAGER_LIMIT"
     },
-    {
-        "id": "TC11",
-        "is_verify_harness": false,
-        "scenario_name": "Nghỉ phép dài ngày 7 ngày làm việc (Vượt thẩm quyền -> Director)",
-        "request": {
-            "request_id": "REQ-2026-011",
-            "employee_id": "EMP015",
-            "employee_name": "Đỗ Hoàng Long",
-            "department": "Engineering",
-            "remaining_leave_days": 14.0,
-            "submitted_at": "2026-09-10T09:00:00",
-            "from_date": "2026-09-21",
-            "to_date": "2026-09-29",
-            "leave_type": "Annual",
-            "reason": "Nghỉ phép năm dài ngày kết hợp du lịch nước ngoài",
-            "handover_person_id": "EMP012",
-            "team_absent_count": 1,
-            "total_team_members": 12,
-            "attachment_type": "none"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "AUTHORITY_ESCALATION",
-        "expected_error_code": "DURATION_OVER_MANAGER_LIMIT",
-        "expected_question_fragment": "kéo dài 7 ngày liên tiếp. Giám đốc Khối có phê duyệt"
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC06",
+    "scenario_name": "Annual >=20 ngày",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-30",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
     },
-    {
-        "id": "TC12",
-        "is_verify_harness": false,
-        "scenario_name": "Nghỉ ốm 3 ngày có Giấy chứng nhận nghỉ việc hưởng BHXH hợp lệ",
-        "request": {
-            "request_id": "REQ-2026-012",
-            "employee_id": "EMP051",
-            "employee_name": "Trịnh Hoàng Yến",
-            "department": "Finance",
-            "remaining_leave_days": 4.0,
-            "submitted_at": "2026-09-21T07:30:00",
-            "from_date": "2026-09-21",
-            "to_date": "2026-09-23",
-            "leave_type": "Sick",
-            "reason": "Điều trị ngoại trú sốt xuất huyết Dengue",
-            "handover_person_id": "EMP045",
-            "team_absent_count": 0,
-            "total_team_members": 8,
-            "attachment_type": "valid_bhxh_cert"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "AUTHORITY_ESCALATION",
-        "expected_error_code": "DURATION_OVER_AI_LIMIT",
-        "expected_question_fragment": "xin nghỉ 3 ngày, hồ sơ đầy đủ hợp lệ và đã bàn giao công việc"
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "CEO",
+      "requested_working_days": 20,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "DURATION_OVER_MANAGER_LIMIT"
     },
-    {
-        "id": "TC13",
-        "is_verify_harness": false,
-        "scenario_name": "Khoảng thời gian nghỉ chỉ rơi vào Thứ Bảy, Chủ Nhật (0 ngày công)",
-        "request": {
-            "request_id": "REQ-2026-013",
-            "employee_id": "EMP062",
-            "employee_name": "Lâm Quốc Cường",
-            "department": "Quality Assurance",
-            "remaining_leave_days": 5.0,
-            "submitted_at": "2026-09-22T10:00:00",
-            "from_date": "2026-09-26",
-            "to_date": "2026-09-27",
-            "leave_type": "Annual",
-            "reason": "Nghỉ cuối tuần đi cắm trại",
-            "handover_person_id": null,
-            "team_absent_count": 0,
-            "total_team_members": 6,
-            "attachment_type": "none"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "UNCERTAIN_FACTS",
-        "expected_error_code": "DATE_LOGIC_INVALID",
-        "expected_question_fragment": "số ngày làm việc bằng 0"
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC07",
+    "scenario_name": "Public holiday",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-04-30",
+      "to_date": "2026-04-30",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
     },
-    {
-        "id": "TC14",
-        "is_verify_harness": false,
-        "scenario_name": "Nghỉ việc riêng hưởng nguyên lương (Bản thân kết hôn 3 ngày)",
-        "request": {
-            "request_id": "REQ-2026-014",
-            "employee_id": "EMP088",
-            "employee_name": "Huỳnh Thanh Mai",
-            "department": "Product Design",
-            "remaining_leave_days": 2.0,
-            "submitted_at": "2026-09-14T09:00:00",
-            "from_date": "2026-09-23",
-            "to_date": "2026-09-25",
-            "leave_type": "Special",
-            "reason": "Tổ chức đám cưới bản thân (kèm ảnh thiệp cưới)",
-            "handover_person_id": "EMP091",
-            "team_absent_count": 0,
-            "total_team_members": 5,
-            "attachment_type": "none"
-        },
-        "expected_decision": "ESCALATE",
-        "expected_category": "AUTHORITY_ESCALATION",
-        "expected_error_code": "DURATION_OVER_AI_LIMIT",
-        "expected_question_fragment": "xin nghỉ 3 ngày, hồ sơ đầy đủ hợp lệ và đã bàn giao công việc"
+    "expected": {
+      "decision": "NO_LEAVE_REQUIRED",
+      "target_role": null,
+      "requested_working_days": 0,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": null,
+      "error_code": "DAY_ALREADY_NON_WORKING"
     },
-    {
-        "id": "TC15",
-        "is_verify_harness": false,
-        "scenario_name": "Nghỉ phép năm 1 ngày nộp đúng hạn sát mốc (Hợp lệ tự duyệt)",
-        "request": {
-            "request_id": "REQ-2026-015",
-            "employee_id": "EMP019",
-            "employee_name": "Nguyễn Thị Kim Ngân",
-            "department": "Product Design",
-            "remaining_leave_days": 8.0,
-            "submitted_at": "2026-09-23T08:00:00",
-            "from_date": "2026-09-25",
-            "to_date": "2026-09-25",
-            "leave_type": "Annual",
-            "reason": "Đưa người nhà đi khám sức khỏe",
-            "handover_person_id": null,
-            "team_absent_count": 0,
-            "total_team_members": 5,
-            "attachment_type": "none"
-        },
-        "expected_decision": "AUTO_APPROVE",
-        "expected_category": null,
-        "expected_error_code": null,
-        "expected_question_fragment": null
-    }
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC08",
+    "scenario_name": "Range chứa holiday",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-04-01T08:00:00+07:00",
+      "from_date": "2026-04-29",
+      "to_date": "2026-05-02",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "requested_working_days": 1,
+      "deducted_days": 1,
+      "annual_balance_change": -1,
+      "uncertainty_category": null,
+      "error_code": null
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC09",
+    "scenario_name": "Friday–Monday",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-09",
+      "to_date": "2026-10-12",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "requested_working_days": 2,
+      "deducted_days": 2,
+      "annual_balance_change": -2,
+      "uncertainty_category": null,
+      "error_code": null
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC10",
+    "scenario_name": "Chỉ weekend",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-10",
+      "to_date": "2026-10-11",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "NO_LEAVE_REQUIRED",
+      "target_role": null,
+      "requested_working_days": 0,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": null,
+      "error_code": "DAY_ALREADY_NON_WORKING"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC11",
+    "scenario_name": "Self marriage",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-07",
+      "leave_type": "SPECIAL_PAID",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "reason_category": "SELF_MARRIAGE",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "HR",
+        "issuer": "Hospital",
+        "patient_name": "Nguyễn Văn An",
+        "issue_date": "2026-10-04",
+        "recommended_from_date": "2026-10-05",
+        "recommended_to_date": "2026-10-06",
+        "signature_present": true,
+        "document_readability": "READABLE"
+      }
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "requested_working_days": 3,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": null,
+      "error_code": null
+    },
+    "is_verify_harness": true
+  },
+  {
+    "id": "TC12",
+    "scenario_name": "Child marriage",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-05",
+      "leave_type": "SPECIAL_PAID",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "reason_category": "CHILD_MARRIAGE",
+      "proof": {
+        "proof_type": "WEDDING_INVITATION",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "HR",
+        "issuer": "Hospital",
+        "patient_name": "Nguyễn Văn An",
+        "issue_date": "2026-10-04",
+        "recommended_from_date": "2026-10-05",
+        "recommended_to_date": "2026-10-06",
+        "signature_present": true,
+        "document_readability": "READABLE"
+      }
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "requested_working_days": 1,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": null,
+      "error_code": null
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC13",
+    "scenario_name": "Parent death",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-07",
+      "leave_type": "SPECIAL_PAID",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "reason_category": "PARENT_DEATH",
+      "proof": {
+        "proof_type": "DEATH_CERTIFICATE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "HR",
+        "issuer": "Hospital",
+        "patient_name": "Nguyễn Văn An",
+        "issue_date": "2026-10-04",
+        "recommended_from_date": "2026-10-05",
+        "recommended_to_date": "2026-10-06",
+        "signature_present": true,
+        "document_readability": "READABLE"
+      }
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "requested_working_days": 3,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": null,
+      "error_code": null
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC14",
+    "scenario_name": "Grandparent death",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-05",
+      "leave_type": "STATUTORY_UNPAID",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "reason_category": "GRANDPARENT_DEATH"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "requested_working_days": 1,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": null,
+      "error_code": null
+    },
+    "is_verify_harness": true
+  },
+  {
+    "id": "TC15",
+    "scenario_name": "Sick valid proof",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "SICK_MEDICAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "HR",
+        "issuer": "Hospital",
+        "patient_name": "Nguyễn Văn An",
+        "issue_date": "2026-10-04",
+        "recommended_from_date": "2026-10-05",
+        "recommended_to_date": "2026-10-06",
+        "signature_present": true,
+        "document_readability": "READABLE"
+      }
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": null,
+      "error_code": null
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC16",
+    "scenario_name": "Sick missing proof",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "SICK_MEDICAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "UNCERTAIN_FACTS",
+      "error_code": "PROOF_MISSING"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC17",
+    "scenario_name": "Unreadable proof",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "SICK_MEDICAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "HR",
+        "issuer": "Hospital",
+        "patient_name": "Nguyễn Văn An",
+        "issue_date": "2026-10-04",
+        "recommended_from_date": "2026-10-05",
+        "recommended_to_date": "2026-10-06",
+        "signature_present": true,
+        "document_readability": "ILLEGIBLE"
+      }
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "UNCERTAIN_FACTS",
+      "error_code": "DOC_ILLEGIBLE"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC18",
+    "scenario_name": "Medical period mismatch",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "SICK_MEDICAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "HR",
+        "issuer": "Hospital",
+        "patient_name": "Nguyễn Văn An",
+        "issue_date": "2026-10-04",
+        "recommended_from_date": "2026-10-05",
+        "recommended_to_date": "2026-10-05",
+        "signature_present": true,
+        "document_readability": "READABLE"
+      }
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "UNCERTAIN_FACTS",
+      "error_code": "MEDICAL_DAYS_MISMATCH"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC19",
+    "scenario_name": "Handover missing",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-07",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": null,
+      "handover": null,
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "requested_working_days": 3,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "UNCERTAIN_FACTS",
+      "error_code": "HANDOVER_REQUIRED"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC20",
+    "scenario_name": "Handover invalid",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "E",
+      "handover": {
+        "employee_id": "E",
+        "department": "Engineering",
+        "status": "ACTIVE"
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "UNCERTAIN_FACTS",
+      "error_code": "HANDOVER_INVALID"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC21",
+    "scenario_name": "Quota exceeded",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "team_absent_count": 4
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "OUT_OF_POLICY",
+      "error_code": "TEAM_QUOTA_EXCEEDED"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC22",
+    "scenario_name": "Duplicate",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "approved_working_dates": [
+        "2026-10-05",
+        "2026-10-06"
+      ]
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "OUT_OF_POLICY",
+      "error_code": "REQUEST_ALREADY_COVERED"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC23",
+    "scenario_name": "Partial overlap",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "approved_working_dates": [
+        "2026-10-05"
+      ]
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "UNCERTAIN_FACTS",
+      "error_code": "OVERLAPPING_REQUEST"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC24",
+    "scenario_name": "Maternity",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "MATERNITY",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "OUT_OF_POLICY",
+      "error_code": "AUTOMATION_SCOPE_UNSUPPORTED"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC25",
+    "scenario_name": "Work accident",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "WORK_ACCIDENT",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "OUT_OF_POLICY",
+      "error_code": "AUTOMATION_SCOPE_UNSUPPORTED"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC26",
+    "scenario_name": "Probation employee",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "ANNUAL",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12,
+      "employment_status": "PROBATION"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "UNCERTAIN_FACTS",
+      "error_code": "PROBATION_ANNUAL_RESTRICTED"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC27",
+    "scenario_name": "Annual chán đi làm",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "ANNUAL",
+      "reason": "Em nghỉ 2 ngày vì chán đi làm.",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "requested_working_days": 2,
+      "deducted_days": 2,
+      "annual_balance_change": -2,
+      "uncertainty_category": null,
+      "error_code": null
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC28",
+    "scenario_name": "Unpaid Other <=5",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-06",
+      "leave_type": "UNPAID_OTHER",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "requested_working_days": 2,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "LONG_TERM_UNPAID"
+    },
+    "is_verify_harness": true
+  },
+  {
+    "id": "TC29",
+    "scenario_name": "Unpaid Other 6–19",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-12",
+      "leave_type": "UNPAID_OTHER",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DEPARTMENT_HEAD",
+      "requested_working_days": 6,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "LONG_TERM_UNPAID"
+    },
+    "is_verify_harness": false
+  },
+  {
+    "id": "TC30",
+    "scenario_name": "Unpaid Other >=20",
+    "request": {
+      "employee_id": "E",
+      "employee_name": "Nguyễn Văn An",
+      "department": "Engineering",
+      "remaining_leave_days": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-10-30",
+      "leave_type": "UNPAID_OTHER",
+      "reason": "Việc riêng",
+      "handover_person_id": "B",
+      "handover": {
+        "employee_id": "B",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "total_team_members": 12
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DEPARTMENT_HEAD",
+      "requested_working_days": 20,
+      "deducted_days": 0,
+      "annual_balance_change": 0,
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "LONG_TERM_UNPAID"
+    },
+    "is_verify_harness": false
+  }
 ]

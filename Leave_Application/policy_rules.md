@@ -35,9 +35,24 @@ Chế độ này không khấu trừ vào quỹ phép năm, doanh nghiệp trả
 * **b) Con đẻ, con nuôi kết hôn:** Được nghỉ 01 ngày làm việc (yêu cầu đính kèm bản sao Giấy chứng nhận kết hôn của con hoặc Thiệp cưới).
 * **c) Thân nhân qua đời** *(bao gồm: cha đẻ, mẹ đẻ, cha nuôi, mẹ nuôi; cha/mẹ đẻ, cha/mẹ nuôi của vợ hoặc chồng; vợ hoặc chồng; con đẻ, con nuôi)*: Được nghỉ 03 ngày làm việc (yêu cầu đính kèm Giấy chứng tử hoặc Giấy báo tử).
 
-#### 2.4. Chế độ nghỉ việc riêng không hưởng lương
-* **a) Nghỉ theo luật định:** Người lao động được nghỉ 01 ngày không hưởng lương và phải thông báo trước cho Quản lý trong các trường hợp: Ông/bà nội, ông/bà ngoại, anh/chị/em ruột qua đời; cha hoặc mẹ kết hôn; anh/chị/em ruột kết hôn.
-* **b) Nghỉ việc riêng khác:** Áp dụng cho các trường hợp vắng mặt vì lý do cá nhân sau khi người lao động đã sử dụng hết số dư phép năm. Người nộp đơn phải lập giải trình rõ lý do và chỉ được nghỉ khi có sự phê duyệt đặc cách của Cấp có thẩm quyền.
+#### 2.4. Chế độ nghỉ thai sản (Hưởng trợ cấp Quỹ BHXH)
+Chế độ nghỉ thai sản là quyền lợi luật định độc lập, tuân thủ Luật Bảo hiểm xã hội 2014 và Điều 139 - 140 Bộ luật Lao động 2019 (do Quỹ BHXH chi trả trợ cấp thai sản, KHÔNG trừ quỹ phép năm và KHÔNG tính vào nghỉ không lương):
+* **a) Lao động nữ sinh con:** Được nghỉ **06 tháng** thai sản theo quy định. Trường hợp sinh đôi trở lên, tính từ con thứ 2 trở đi, cứ mỗi con người mẹ được nghỉ thêm 01 tháng. Yêu cầu đính kèm bản sao Giấy chứng sinh hoặc Giấy khai sinh hợp lệ có mộc đỏ của Bệnh viện/Cơ sở y tế.Thời hạn báo trước tối thiểu 15 ngày làm việc trước ngày dự sinh.
+* **b) Lao động nam có vợ sinh con:** Được nghỉ hưởng chế độ thai sản trong vòng 30 ngày đầu kể từ ngày vợ sinh con:
+  * Nghỉ **05 ngày làm việc** đối với trường hợp sinh thường 01 con.
+  * Nghỉ **07 ngày làm việc** đối với trường hợp vợ sinh mổ hoặc sinh con dưới 32 tuần tuổi.
+  * Nghỉ **10 ngày làm việc** đối với trường hợp vợ sinh đôi (từ sinh ba trở lên, cứ thêm mỗi con được nghỉ thêm 03 ngày làm việc).
+  * Nghỉ **14 ngày làm việc** đối với trường hợp vợ sinh đôi trở lên mà phải phẫu thuật/sinh mổ.
+  * **Yêu cầu chứng từ:** Bắt buộc đính kèm Giấy chứng sinh/Giấy khai sinh của con và Giấy ra viện/xác nhận phẫu thuật sinh mổ của vợ (đối với mức nghỉ từ 07 ngày trở lên).
+* **c) Quy trình kiểm định & Duyệt đơn thai sản trên hệ thống:**
+  * **Xác minh Giai đoạn nghỉ & Chứng từ:** VLM kiểm tra tính hợp lệ của Giấy chứng sinh/Giấy khai sinh, thời điểm sinh/dự sinh và số ngày được hưởng chế độ theo luật.
+  * **Không trừ phép năm & Miễn trừ trần phòng ban 30%:** Nghỉ thai sản là quyền lợi luật định, không khấu trừ số dư phép năm hiện có và không bị chặn bởi hạn mức vắng mặt 30% phòng ban.
+  * **Phê duyệt & Điều phối:** Đơn thai sản đủ chứng từ hợp lệ được phê duyệt ghi nhận chế độ, đồng thời gửi thông báo cho Trưởng phòng và Chuyên viên HR Ops để làm thủ tục trợ cấp Quỹ BHXH.
+
+#### 2.5. Chế độ nghỉ việc riêng không hưởng lương (Unpaid Leave)
+Áp dụng riêng biệt đối với các trường hợp vắng mặt việc riêng cá nhân không thuộc chế độ có lương hoặc thai sản:
+* **a) Nghỉ theo luật định (01 ngày không lương):** Người lao động được nghỉ 01 ngày không hưởng lương và phải thông báo trước cho Quản lý trong các trường hợp: Ông/bà nội, ông/bà ngoại, anh/chị/em ruột qua đời; cha hoặc mẹ kết hôn; anh/chị/em ruột kết hôn.
+* **b) Nghỉ việc riêng khác không hưởng lương:** Áp dụng khi người lao động đã sử dụng hết số dư phép năm hoặc xin vắng mặt vì lý do cá nhân ngoài quy định. Người nộp đơn phải lập giải trình rõ lý do và chỉ được nghỉ khi có sự phê duyệt đặc cách của Trưởng phòng / Cấp Giám đốc.
 
 ---
 

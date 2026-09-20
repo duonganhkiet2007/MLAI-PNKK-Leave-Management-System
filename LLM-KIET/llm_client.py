@@ -116,7 +116,7 @@ class LocalQwenEngine:
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
-                max_new_tokens=1024,
+                max_new_tokens=256,
                 do_sample=False,
                 temperature=None,
                 top_p=None
@@ -153,9 +153,6 @@ class LLMClient:
     """Lớp giao tiếp chính, đóng gói In-Process Local Qwen Engine."""
     def __init__(self, model: Optional[str] = None):
         self.engine = get_qwen_engine()
-        # Trigger load model ngay khi khởi tạo nếu chưa load
-        if not self.engine.is_ready and not self.engine.is_loading:
-            self.engine.load_model()
 
     def generate_json(
         self,

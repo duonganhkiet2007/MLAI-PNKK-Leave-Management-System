@@ -11,7 +11,9 @@ Ghép nối toàn bộ:
 import os
 import sys
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 # Thêm đường dẫn module
@@ -23,6 +25,8 @@ for p in [current_dir, os.path.join(root_dir, "LLM-KIET"), os.path.join(root_dir
 
 
 from database import init_db
+from storage import AccessDenied, Conflict
+from agent_orchestrator import ModelUnavailable
 from routers.leave_router import router as leave_router
 from routers.verify_router import router as verify_router
 from routers.meta_router import router as meta_router
@@ -33,16 +37,6 @@ async def lifespan(app: FastAPI):
     # Khởi tạo Database và nạp dữ liệu nhân viên
     init_db()
     print("✅ [BACKEND INIT] Cơ sở dữ liệu SQLite đã sẵn sàng.")
-    # Khởi động nạp model Qwen 2.5 7B trực tiếp trong RAM GPU (Port 8000 duy nhất)
-    try:
-        root_dir = os.path.dirname(current_dir)
-        llm_dir = os.path.join(root_dir, "LLM-KIET")
-        if llm_dir not in sys.path:
-            sys.path.insert(0, llm_dir)
-        from llm_client import get_qwen_engine
-        get_qwen_engine().load_model()
-    except Exception as e:
-        print(f"⚠️ [STARTUP] Chưa nạp model: {e}")
     yield
 
 
@@ -53,6 +47,26 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+@app.exception_handler(AccessDenied)
+async def access_error(request: Request, exc):
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+@app.exception_handler(Conflict)
+async def conflict_error(request: Request, exc):
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+@app.exception_handler(ModelUnavailable)
+async def model_error(request: Request, exc):
+    return JSONResponse(status_code=503, content={"detail": str(exc), "error_code": "MODEL_UNAVAILABLE"})
+
+@app.exception_handler(LookupError)
+async def missing_error(request: Request, exc):
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+@app.exception_handler(ValueError)
+async def input_error(request: Request, exc):
+    return JSONResponse(status_code=422, content={"detail": str(exc)})
 
 # Cấu hình CORS để Frontend (Vite/React/Next.js hoặc HTML thuần) gọi API không bị chặn
 app.add_middleware(

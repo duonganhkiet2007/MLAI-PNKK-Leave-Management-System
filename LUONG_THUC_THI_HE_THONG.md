@@ -1,7 +1,11 @@
 # TÀI LIỆU LUỒNG THỰC THI HỆ THỐNG (SYSTEM EXECUTION WORKFLOW)
 ## THE ESCALATION REFEREE — HỆ THỐNG ĐIỀU PHỐI PHÊ DUYỆT NGHỈ PHÉP AI (TRACK A)
 
-> **Mã tài liệu:** DOC-WORKFLOW-2026  
+> [!WARNING]
+> **TRẠNG THÁI TÀI LIỆU: LEGACY / DEPRECATED**  
+> Tài liệu này mô tả kiến trúc ban đầu. Nguồn chân lý duy nhất (Authoritative Business Policy) của hệ thống là `Leave_Application/policy_rules.md`. Các quy định nghiệp vụ về thẩm quyền duyệt, routing chứng từ y tế, báo trước và chống lạm dụng được thực thi trực tiếp bởi `Leave_Application/rule_engine.py` và `backend/services/orchestration.py`.
+
+> **Mã tài liệu:** DOC-WORKFLOW-2026 (LEGACY)  
 > **Phiên bản:** 2.0 (Kiến trúc In-Process GPU Port 8000 Duy Nhất)  
 > **Áp dụng cho:** Toàn bộ kiến trúc phối hợp giữa Rule Engine (Kim), LLM Agent Orchestrator (Kiệt), Backend FastAPI & Frontend Web SPA.  
 > **Mô hình AI:** Qwen/Qwen2.5-7B-Instruct chạy trực tiếp trong RAM GPU RTX 4090 (~14.9 GB VRAM, `bfloat16`), 100% AI thực thi không fallback.

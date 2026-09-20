@@ -40,7 +40,7 @@ def submit_leave_request(payload: NewLeaveRequestInput, actor_id=Depends(actor))
 
 @router.get('/requests')
 def list_leave_requests(status: str | None=None,actor_id=Depends(actor)):
-    with st.transaction() as conn:
+    with st.readonly_connection() as conn:
         st.employee(conn,actor_id)
         rows=[]
         for r in conn.execute('SELECT * FROM leave_requests ORDER BY submitted_at DESC').fetchall():
@@ -53,7 +53,7 @@ def list_leave_requests(status: str | None=None,actor_id=Depends(actor)):
 
 @router.post('/proofs')
 async def upload_proof(file: UploadFile=File(...),proof_type: ProofType=Form(ProofType.OTHER),actor_id=Depends(actor)):
-    with st.transaction() as conn: st.employee(conn,actor_id)
+    with st.readonly_connection() as conn: st.employee(conn,actor_id)
     if proof_type==ProofType.NONE: raise ValueError('Chọn loại chứng từ.')
     content=await file.read(10*1024*1024+1)
     if len(content)>10*1024*1024: raise HTTPException(413,'Tệp tối đa 10 MB.')
@@ -77,7 +77,7 @@ async def upload_proof(file: UploadFile=File(...),proof_type: ProofType=Form(Pro
 
 @router.get('/proofs/{proof_id}')
 def get_proof(proof_id,actor_id=Depends(actor)):
-    with st.transaction() as conn:
+    with st.readonly_connection() as conn:
         row=conn.execute('SELECT * FROM proof_documents WHERE id=?',(proof_id,)).fetchone()
         if not row: raise LookupError('Không tìm thấy chứng từ.')
         st.employee(conn,actor_id)
@@ -120,14 +120,14 @@ def verify_proof(proof_id,payload: ProofVerificationInput,actor_id=Depends(actor
 
 @router.get('/{request_id}')
 def get_single_request(request_id,actor_id=Depends(actor)):
-    with st.transaction() as conn:
+    with st.readonly_connection() as conn:
         req=st.read_request(conn,request_id);st.require_view(conn,actor_id,req)
         logs=[dict(r) for r in conn.execute('SELECT * FROM audit_logs WHERE request_id=? ORDER BY id',(request_id,))]
         return {'success':True,'data':st.serialize(conn,req),'audit_trail':logs}
 
 @router.get('/{request_id}/analysis')
 def get_request_analysis(request_id,actor_id=Depends(actor)):
-    with st.transaction() as conn:
+    with st.readonly_connection() as conn:
         req=st.read_request(conn,request_id);st.require_view(conn,actor_id,req)
         proof={}
         proof_storage={}

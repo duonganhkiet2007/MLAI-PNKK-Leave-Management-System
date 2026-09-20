@@ -116,7 +116,7 @@ class LocalQwenEngine:
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
-                max_new_tokens=256,
+                max_new_tokens=320,
                 do_sample=False,
                 temperature=None,
                 top_p=None
@@ -134,7 +134,12 @@ class LocalQwenEngine:
         if json_match:
             raw_content = json_match.group(0)
 
-        parsed_data = json.loads(raw_content)
+        try:
+            parsed_data = json.loads(raw_content)
+        except Exception:
+            # Clean common syntax errors in LLM generated json
+            cleaned = re.sub(r",\s*([\]}])", r"\1", raw_content)
+            parsed_data = json.loads(cleaned)
 
         if response_model:
             validated = response_model.model_validate(parsed_data)

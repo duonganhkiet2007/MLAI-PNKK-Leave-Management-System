@@ -11,6 +11,8 @@ for name in ('Leave_Application','LLM-KIET','backend','tests'): sys.path.insert(
 _collection_tmp=tempfile.TemporaryDirectory(prefix='mlai-collection-')
 os.environ['LEAVE_DB_PATH']=str(Path(_collection_tmp.name)/'collection.db')
 os.environ['LEAVE_UPLOAD_DIR']=str(Path(_collection_tmp.name)/'uploads')
+os.environ['SEED_DEMO_DATA']='false'
+os.environ['APP_ENV']='test'
 
 @pytest.fixture(autouse=True)
 def prohibit_live_models(monkeypatch):
@@ -21,12 +23,16 @@ def prohibit_live_models(monkeypatch):
 
 @pytest.fixture
 def isolated_db(tmp_path,monkeypatch):
+    monkeypatch.setenv('SEED_DEMO_DATA', 'false')
+    monkeypatch.setenv('APP_ENV', 'test')
     import database as db
     monkeypatch.setattr(db,'DB_PATH',str(tmp_path/'leave.db'))
     monkeypatch.setenv('LEAVE_UPLOAD_DIR',str(tmp_path/'uploads'))
     db.init_db()
     c=db.get_db_connection()
     c.execute('DELETE FROM actor_roles');c.execute('DELETE FROM employees')
+    c.execute('DELETE FROM leave_requests');c.execute('DELETE FROM approval_steps')
+    c.execute('DELETE FROM audit_logs');c.execute('DELETE FROM proof_documents')
     people=[('E','Nguyễn Văn An','Engineering'),('B','Bàn Giao','Engineering')]+[(f'E{i}',f'Person {i}','Engineering') for i in range(8)]
     people += [('M','Manager','Engineering'),('H','Head','Engineering'),('HR','HR Officer','HR'),('HRD','HR Director','HR'),('CEO','Chief','Board')]
     for id,name,dept in people:

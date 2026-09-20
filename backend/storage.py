@@ -24,6 +24,13 @@ def transaction():
         conn.rollback(); raise
     finally: conn.close()
 
+@contextmanager
+def readonly_connection():
+    conn=db.get_db_connection()
+    try:
+        yield conn
+    finally: conn.close()
+
 def employee(conn, actor_id):
     row=conn.execute('SELECT * FROM employees WHERE employee_id=?',(actor_id,)).fetchone()
     if not row or row['status'] != 'ACTIVE': raise AccessDenied('Nhân sự không tồn tại hoặc không active.')
@@ -162,6 +169,37 @@ def load_context(conn, employee_id, facts, submitted_at, request_id, granted_rol
                 except (ValueError, TypeError):
                     pass
                 proof.signature_present = True if 'clean' in att else (False if 'fake' in att else None)
+    has_abuse_pattern = False
+    ltype = facts.leave_type.value if hasattr(facts.leave_type, 'value') else str(facts.leave_type or '')
+    if ltype == 'ANNUAL':
+        try:
+            from_dt = date.fromisoformat(facts.from_date)
+            cal_month_str = f"{from_dt.year:04d}-{from_dt.month:02d}"
+            accumulated_month_days = 0
+            for r in approved:
+                if r['employee_id'] == employee_id:
+                    r_type = (r.get('canonical_leave_type') or r.get('leave_type') or '').upper()
+                    if r_type == 'ANNUAL':
+                        r_data = r.get('result_json')
+                        if isinstance(r_data, str):
+                            try: r_data = json.loads(r_data)
+                            except Exception: r_data = {}
+                        if isinstance(r_data, dict) and 'working_dates' in r_data:
+                            wds = [d for d in r_data['working_dates'] if str(d).startswith(cal_month_str)]
+                            accumulated_month_days += len(wds)
+                        else:
+                            r_from = r.get('from_date')
+                            r_to = r.get('to_date')
+                            if r_from and r_to:
+                                try:
+                                    wds = [d.isoformat() for d in cal.working_dates(date.fromisoformat(r_from), date.fromisoformat(r_to)) if d.isoformat().startswith(cal_month_str)]
+                                    accumulated_month_days += len(wds)
+                                except Exception:
+                                    pass
+            if accumulated_month_days > 0 and (accumulated_month_days + len(candidates)) > 2:
+                has_abuse_pattern = True
+        except Exception:
+            pass
     members=conn.execute("SELECT COUNT(*) FROM employees WHERE department=? AND status='ACTIVE'",(emp['department'],)).fetchone()[0]
     return LeaveRequest(**facts.model_dump(),request_id=request_id,employee_id=employee_id,
         employee_name=emp['name'],department=emp['department'],remaining_leave_days=emp['remaining_leave_days'],
@@ -170,6 +208,7 @@ def load_context(conn, employee_id, facts, submitted_at, request_id, granted_rol
         probation_end_date=emp.get('probation_end_date'),calendar_review_required=bool(emp.get('calendar_review_required')),
         total_team_members=max(members,1),team_absences_by_date={d:len(v) for d,v in absences.items()},
         handover=handover,approved_working_dates=sorted(covered),proof=proof,
+        has_abuse_pattern=has_abuse_pattern,
         granted_roles=granted_roles or [],waived_errors=waived_errors or [])
 
 def save_record(conn, record):

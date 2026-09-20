@@ -34,6 +34,66 @@ const DECISION_LABELS = {
   AUTO_REJECT: 'Từ chối tự động', NEED_CORRECTION: 'Cần bổ sung / sửa đơn', ESCALATE: 'Chờ người có thẩm quyền'
 };
 
+const ROLE_LABELS = {
+  DIRECT_MANAGER: 'Quản lý trực tiếp',
+  DEPARTMENT_HEAD: 'Trưởng bộ phận',
+  HR: 'Nhân sự (HR)',
+  HRD: 'Giám đốc Nhân sự',
+  CEO: 'Tổng Giám đốc',
+  EMPLOYEE: 'Nhân viên (nộp lại / bổ sung)',
+  NONE: '—',
+};
+
+const ERROR_CODE_LABELS = {
+  OK: 'Hợp lệ',
+  DURATION_OVER_AI_LIMIT: 'Vượt ngưỡng tự duyệt của AI',
+  DURATION_OVER_MANAGER_LIMIT: 'Vượt hạn mức duyệt của Quản lý',
+  LONG_TERM_UNPAID: 'Nghỉ không lương cần xem xét',
+  NOTICE_PERIOD_VIOLATED: 'Vi phạm thời hạn báo trước',
+  TEAM_QUOTA_EXCEEDED: 'Vượt tỷ lệ nghỉ đồng thời phòng ban (30%)',
+  BALANCE_EXCEEDED: 'Vượt quá số dư phép năm',
+  PROOF_MISSING: 'Thiếu chứng từ',
+  DOC_ILLEGIBLE: 'Chứng từ mờ / không đọc được',
+  PROOF_REVIEW_REQUIRED: 'Cần HR xác minh chứng từ',
+  DOC_FIELD_MISSING: 'Thiếu thông tin bắt buộc trên chứng từ',
+  NAME_MISMATCH: 'Tên trên chứng từ không khớp',
+  MEDICAL_DAYS_MISMATCH: 'Ngày nghỉ ngoài chỉ định bác sĩ',
+  FLAG_ABUSE_PATTERN: 'Gắn cờ nghi vấn chia nhỏ phép (Anti-Abuse)',
+  LEAVE_TYPE_MISSING: 'Thiếu loại nghỉ phép',
+  REASON_REQUIRED: 'Yêu cầu nêu rõ lý do',
+  ENTITLEMENT_EXCEEDED: 'Vượt định mức chế độ',
+  HANDOVER_REQUIRED: 'Cần người nhận bàn giao',
+  HANDOVER_INVALID: 'Người nhận bàn giao không hợp lệ',
+  OVERLAPPING_REQUEST: 'Trùng một phần ngày nghỉ đã duyệt',
+  REQUEST_ALREADY_COVERED: 'Toàn bộ ngày nghỉ đã được duyệt trước đó',
+  PROBATION_ANNUAL_RESTRICTED: 'Nhân viên thử việc chưa được dùng phép năm',
+  AUTOMATION_SCOPE_UNSUPPORTED: 'Chưa hỗ trợ tự động duyệt chế độ này',
+  LEGAL_REVIEW_REQUIRED: 'Cần bộ phận Pháp chế / Nhân sự xem xét',
+};
+
+const CATEGORY_LABELS = {
+  UNCERTAIN_FACTS: 'Thông tin chưa rõ',
+  OUT_OF_POLICY: 'Ngoài chính sách',
+  AUTHORITY_ESCALATION: 'Thẩm quyền phê duyệt'
+};
+
+function getRoleLabel(role) {
+  return ROLE_LABELS[role] || role || 'Tác tử AI';
+}
+
+function getCategoryLabel(cat) {
+  return CATEGORY_LABELS[cat] || cat || 'Thường quy';
+}
+
+function getDecisionLabel(dec) {
+  return DECISION_LABELS[dec] || dec || 'Chưa có';
+}
+
+function getErrorCodeLabel(code) {
+  return ERROR_CODE_LABELS[code] || code || '—';
+}
+
+
 // i18n Translation Dictionary
 const I18N = {
   vi: {
@@ -322,6 +382,53 @@ function initModeSwitcher() {
       populateManagerDeptFilter();
       renderWeeklyCalendar();
       updateBadgesAndCounters();
+    });
+  }
+
+  // ── NÚT RESET TOÀN BỘ DATABASE TRÊN THANH TOPBAR ──
+  const btnResetDb = document.getElementById("btn-reset-database");
+  if (btnResetDb) {
+    btnResetDb.addEventListener("click", async () => {
+      const confirmed = window.confirm("⚠️ BẠN CÓ CHẮC CHẮN MUỐN RESET TOÀN BỘ DATABASE?\n\n- Toàn bộ đơn xin nghỉ đã nộp và các thao tác duyệt/bổ sung sẽ được khôi phục về mặc định.\n- Số dư ngày phép của nhân viên sẽ được reset về ban đầu (12 ngày).\n- 5 đơn mẫu demo sẽ được nạp lại.");
+      if (!confirmed) return;
+
+      const originalHtml = btnResetDb.innerHTML;
+      btnResetDb.disabled = true;
+      btnResetDb.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:0.75rem;height:0.75rem;" role="status"></span><span>Đang reset...</span>`;
+
+      try {
+        const res = await apiFetch(`${API_BASE}/api/meta/reset-database`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+          showToast(result.message || "Đã reset database về trạng thái ban đầu thành công!", "success");
+          editingRequestId = null;
+          currentProofId = null;
+          document.getElementById('form-staff-standard')?.reset();
+          await loadEmployees();
+          await loadAllRequests();
+          if (currentMode === "staff") {
+            renderStaffDashboard();
+            renderStaffRequests();
+          } else {
+            renderManagerBanner();
+            renderManagerOverviewKPIs();
+            renderManagerQueue();
+            renderAutoApprovedLogs();
+            renderManagerAllRequests();
+          }
+          renderWeeklyCalendar();
+        } else {
+          showToast("Lỗi khi reset database: " + (result.detail || "Không rõ nguyên nhân"), "error");
+        }
+      } catch (err) {
+        showToast("Lỗi kết nối tới máy chủ khi reset database: " + err.message, "error");
+      } finally {
+        btnResetDb.disabled = false;
+        btnResetDb.innerHTML = originalHtml;
+      }
     });
   }
 }
@@ -1182,10 +1289,61 @@ function initStaffForm() {
     }
   };
 
+  const MANDATORY_PROOF_TYPES = ['SICK_MEDICAL', 'MEDICAL_EMERGENCY', 'SPECIAL_PAID', 'WORK_ACCIDENT', 'MATERNITY'];
+
+  const updateAttachmentRequirement = () => {
+    const leaveType = document.getElementById('staff-leave-type')?.value || 'ANNUAL';
+    const label = document.getElementById('staff-attachment-label');
+    const hint = document.getElementById('staff-attachment-hint');
+    const dropzone = document.getElementById('file-dropzone');
+    const dropTitle = document.getElementById('dropzone-title');
+    const dropSub = document.getElementById('dropzone-sub');
+
+    if (MANDATORY_PROOF_TYPES.includes(leaveType)) {
+      if (label) {
+        label.innerHTML = `Chứng từ xác minh <span class="badge" style="background:#fee2e2;color:#991b1b;font-weight:700;font-size:0.75rem;padding:2px 8px;border-radius:4px;margin-left:4px;">BẮT BUỘC</span>`;
+      }
+      if (hint) {
+        hint.innerHTML = `<span style="color:#dc2626;font-weight:600;">Yêu cầu chứng từ y tế / hành chính hợp lệ</span>`;
+      }
+      if (dropzone) {
+        dropzone.style.borderColor = '#f87171';
+        dropzone.style.background = '#fef2f225';
+      }
+      if (dropTitle) {
+        dropTitle.innerHTML = `Bấm để tải <strong style="color:#b91c1c;">giấy khám / giấy tờ xác nhận</strong> hoặc kéo thả vào đây`;
+      }
+      if (dropSub) {
+        dropSub.innerText = `Chấp nhận PDF, PNG, JPG (VLM sẽ đọc và đối soát)`;
+      }
+    } else {
+      if (label) {
+        label.innerHTML = `Chứng từ xác minh <span class="badge" style="background:#f1f5f9;color:#64748b;font-weight:500;font-size:0.75rem;padding:2px 8px;border-radius:4px;margin-left:4px;">Không bắt buộc / Tùy chọn</span>`;
+      }
+      if (hint) {
+        hint.innerHTML = `<span style="color:#64748b;">Nghỉ phép năm / không lương không bắt buộc chứng từ (bỏ qua VLM)</span>`;
+      }
+      if (dropzone) {
+        dropzone.style.borderColor = '#cbd5e1';
+        dropzone.style.background = '#ffffff';
+      }
+      if (dropTitle) {
+        dropTitle.innerHTML = `Bấm để tải tệp lên hoặc kéo thả vào đây (nếu có)`;
+      }
+      if (dropSub) {
+        dropSub.innerText = `PDF, PNG, JPG (tối đa 10MB)`;
+      }
+    }
+  };
+
   if (fromInput) fromInput.addEventListener("change", updateDuration);
   if (toInput) toInput.addEventListener("change", updateDuration);
-  document.getElementById("staff-leave-type")?.addEventListener("change", updateDuration);
+  document.getElementById("staff-leave-type")?.addEventListener("change", () => {
+    updateDuration();
+    updateAttachmentRequirement();
+  });
   updateDuration();
+  updateAttachmentRequirement();
 
   if (btnModeStd && btnModeNlp) {
     btnModeStd.addEventListener("click", () => {
@@ -1333,41 +1491,245 @@ function initFileUploadDropzone() {
   }
 }
 
+/* ── THANH TIẾN TRÌNH XỬ LÝ ĐƠN (PIPELINE PROGRESS) ──────────────────────── */
+let _progressInterval = null;
+
+function showSubmitProgress(hasFile = false) {
+  const modal = document.getElementById("modal-submit-progress");
+  if (!modal) return;
+  modal.style.display = "block";
+
+  const bar = document.getElementById("submit-progress-bar");
+  const pLabel = document.getElementById("progress-percent-label");
+  const sLabel = document.getElementById("progress-step-label");
+
+  if (bar) {
+    bar.style.width = "12%";
+    bar.style.background = "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)";
+  }
+  if (pLabel) pLabel.innerText = "12%";
+  if (sLabel) sLabel.innerText = "Bước 1: Tiếp nhận dữ liệu...";
+
+  _setStepState(1, "processing", "Đang xử lý");
+  _setStepState(2, "waiting", "Chờ");
+  _setStepState(3, "waiting", "Chờ");
+  _setStepState(4, "waiting", "Chờ");
+  _setStepState(5, "waiting", "Chờ");
+
+  let currentPct = 10;
+  let subStepCounter = 0;
+  clearInterval(_progressInterval);
+  _progressInterval = setInterval(() => {
+    subStepCounter++;
+    if (currentPct < 96) {
+      if (hasFile) {
+        // ĐƠN CÓ ẢNH: Chạy 2 mô hình AI (VLM ~2-3s + LLM ~2s = Tổng ~5s)
+        if (currentPct < 18) {
+          currentPct += 4; // Bước 1: Upload (0.4s)
+        } else if (currentPct < 55) {
+          currentPct += 2.2; // Bước 2: VLM OCR ảnh (mất ~2.5 giây)
+        } else if (currentPct < 62) {
+          currentPct += 4.5; // Bước 3: Rule Engine (nhanh)
+        } else {
+          // Bước 4: LLM Qwen 7B tổng hợp (mất ~1.5 giây)
+          currentPct += (currentPct < 85 ? 2.0 : currentPct < 92 ? 1.0 : 0.4);
+        }
+      } else {
+        // ĐƠN KHÔNG ẢNH / KHÔNG CẦN CHỨNG TỪ: Bỏ qua VLM, chỉ chạy Rule Engine & LLM (~1.5s)
+        if (currentPct < 30) {
+          currentPct += 14;
+        } else if (currentPct < 60) {
+          currentPct += 12;
+        } else {
+          currentPct += (currentPct < 85 ? 3.0 : currentPct < 92 ? 1.5 : 0.5);
+        }
+      }
+
+      const displayPct = Math.min(96, Math.round(currentPct));
+      if (bar) bar.style.width = `${displayPct}%`;
+      if (pLabel) pLabel.innerText = `${displayPct}%`;
+
+      if (displayPct >= 18 && displayPct < 55) {
+        _setStepState(1, "done", "Xong ✓");
+        if (hasFile) {
+          _setStepState(2, "processing", "Đang OCR & trích xuất");
+          const dots = ".".repeat((subStepCounter % 4) + 1);
+          if (sLabel) sLabel.innerText = `Bước 2: VLM đang OCR & phân tích chứng từ${dots}`;
+        } else {
+          _setStepState(2, "done", "Bỏ qua (Không cần chứng từ)");
+          if (sLabel) sLabel.innerText = "Bước 2: Bỏ qua VLM (Loại nghỉ không yêu cầu chứng từ)...";
+        }
+      } else if (displayPct >= 55 && displayPct < 65) {
+        _setStepState(2, "done", hasFile ? "Xong ✓" : "Bỏ qua (Không cần chứng từ)");
+        _setStepState(3, "processing", "Đang đối soát");
+        if (sLabel) sLabel.innerText = "Bước 3: Rule Engine đang đối soát chính sách...";
+      } else if (displayPct >= 65) {
+        _setStepState(3, "done", "Xong ✓");
+        _setStepState(4, "processing", "Đang suy luận");
+        const dots = ".".repeat((subStepCounter % 4) + 1);
+        if (sLabel) sLabel.innerText = `Bước 4: LLM Qwen 2.5 7B đang tổng hợp báo cáo${dots}`;
+      }
+    }
+  }, 160);
+}
+
+function finishSubmitProgress(success = true, callback) {
+  clearInterval(_progressInterval);
+  const bar = document.getElementById("submit-progress-bar");
+  const pLabel = document.getElementById("progress-percent-label");
+  const sLabel = document.getElementById("progress-step-label");
+
+  if (bar) {
+    bar.style.width = "100%";
+    bar.style.background = success ? "#10b981" : "#ef4444";
+  }
+  if (pLabel) pLabel.innerText = "100%";
+  if (sLabel) sLabel.innerText = success ? "Hoàn tất thẩm định!" : "Xử lý thất bại";
+
+  _setStepState(1, "done", "Xong ✓");
+  _setStepState(2, "done", "Xong ✓");
+  _setStepState(3, "done", "Xong ✓");
+  _setStepState(4, "done", "Xong ✓");
+  _setStepState(5, success ? "done" : "error", success ? "Hoàn tất ✓" : "Lỗi");
+
+  setTimeout(() => {
+    const modal = document.getElementById("modal-submit-progress");
+    if (modal) modal.style.display = "none";
+    if (bar) {
+      bar.style.background = "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)";
+    }
+    if (callback) callback();
+  }, 400);
+}
+
+function _setStepState(stepNum, state, text) {
+  const stepEl = document.getElementById(`p-step-${stepNum}`);
+  if (!stepEl) return;
+  const badge = stepEl.querySelector(".step-status");
+  const stepText = stepEl.querySelector(".step-text");
+
+  if (state === "processing") {
+    stepEl.style.background = "#eff6ff";
+    stepEl.style.borderColor = "#bfdbfe";
+    if (badge) {
+      badge.className = "step-status badge bg-primary text-white";
+      badge.innerHTML = `<span class="spinner-border spinner-border-sm me-1" style="width:0.65rem;height:0.65rem;" role="status"></span>${text}`;
+    }
+    if (stepText) {
+      stepText.className = "step-text small fw-bold text-primary";
+    }
+  } else if (state === "done") {
+    stepEl.style.background = "#f0fdf4";
+    stepEl.style.borderColor = "#bbf7d0";
+    if (badge) {
+      badge.className = "step-status badge bg-success-lt text-success fw-bold";
+      badge.innerText = text;
+    }
+    if (stepText) {
+      stepText.className = "step-text small fw-semibold text-dark";
+    }
+  } else if (state === "error") {
+    stepEl.style.background = "#fef2f2";
+    stepEl.style.borderColor = "#fecaca";
+    if (badge) {
+      badge.className = "step-status badge bg-danger text-white";
+      badge.innerText = text;
+    }
+    if (stepText) {
+      stepText.className = "step-text small fw-semibold text-danger";
+    }
+  } else {
+    // waiting
+    stepEl.style.background = "#f8fafc";
+    stepEl.style.borderColor = "#e2e8f0";
+    if (badge) {
+      badge.className = "step-status badge bg-secondary-lt text-secondary";
+      badge.innerText = text;
+    }
+    if (stepText) {
+      stepText.className = "step-text small fw-semibold text-secondary";
+    }
+  }
+}
+
 async function handleStandardFormSubmit() {
-  const file = document.getElementById('staff-file-input').files[0];
+  const file = document.getElementById('staff-file-input')?.files[0];
+  const leaveType = document.getElementById('staff-leave-type')?.value || 'ANNUAL';
+  const mandatoryProofTypes = ['SICK_MEDICAL', 'MEDICAL_EMERGENCY', 'SPECIAL_PAID', 'WORK_ACCIDENT', 'MATERNITY'];
+
+  // Cảnh báo nếu loại nghỉ yêu cầu chứng từ nhưng nhân viên chưa đính kèm
+  if (mandatoryProofTypes.includes(leaveType) && !file && !currentProofId) {
+    const leaveName = document.getElementById('staff-leave-type')?.selectedOptions[0]?.text || leaveType;
+    showToast(`Loại nghỉ "${leaveName}" BẮT BUỘC có chứng từ đính kèm (giấy khám bệnh, giấy ra viện, giấy tờ xác nhận...). Vui lòng tải chứng từ trước khi gửi!`, 'error');
+    const dropzone = document.getElementById('file-dropzone');
+    if (dropzone) {
+      dropzone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      dropzone.style.animation = 'pulse 1s ease-in-out';
+      setTimeout(() => dropzone.style.animation = '', 1000);
+    }
+    return;
+  }
+
+  showSubmitProgress(!!file);
+
   if (file) {
-    const form = new FormData(); form.append('file',file);
-    form.append('proof_type',document.getElementById('staff-proof-type').value);
-    const response = await apiFetch(`${API_BASE}/api/leave/proofs`,{method:'POST',body:form});
-    const result=await response.json();
-    if(!response.ok) {showToast(JSON.stringify(result.detail),'error');return;}
-    currentProofId=result.data.proof_id;
+    try {
+      const form = new FormData(); form.append('file',file);
+      form.append('proof_type',document.getElementById('staff-proof-type')?.value || 'MEDICAL_LEAVE_CERTIFICATE');
+      const response = await apiFetch(`${API_BASE}/api/leave/proofs`,{method:'POST',body:form});
+      const result=await response.json();
+      if(!response.ok) {
+        finishSubmitProgress(false, () => showToast(JSON.stringify(result.detail),'error'));
+        return;
+      }
+      currentProofId=result.data.proof_id;
+    } catch(err) {
+      finishSubmitProgress(false, () => showToast('Lỗi tải file: ' + err.message, 'error'));
+      return;
+    }
   }
   const payload={
-    leave_type:document.getElementById('staff-leave-type').value || null,
-    reason_category:document.getElementById('staff-reason-category').value || null,
-    from_date:document.getElementById('staff-from-date').value || null,
-    to_date:document.getElementById('staff-to-date').value || null,
-    reason:document.getElementById('staff-reason').value,
-    handover_person_id:document.getElementById('staff-handover-select').value || null,
+    leave_type:document.getElementById('staff-leave-type')?.value || null,
+    reason_category:document.getElementById('staff-reason-category')?.value || null,
+    from_date:document.getElementById('staff-from-date')?.value || null,
+    to_date:document.getElementById('staff-to-date')?.value || null,
+    reason:document.getElementById('staff-reason')?.value || '',
+    handover_person_id:document.getElementById('staff-handover-select')?.value || null,
     proof_id:currentProofId
   };
-  await submitLeaveToBackend(payload);
+  await submitLeaveToBackend(payload, !!file);
 }
-async function submitLeaveToBackend(payload) {
+
+async function submitLeaveToBackend(payload, hasFile = false) {
   try {
+    if (!document.getElementById("modal-submit-progress") || document.getElementById("modal-submit-progress").style.display === "none") {
+      showSubmitProgress(hasFile || !!payload.proof_id);
+    }
     const url=editingRequestId ? `/api/leave/${editingRequestId}/resubmit` : '/api/leave/request';
     const res=await apiFetch(API_BASE+url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const result=await res.json();
-    if(!res.ok) {showToast(JSON.stringify(result.detail),'error');return false;}
-    showToast(`${DECISION_LABELS[result.data.decision]}: ${result.data.human_readable_explanation}`,'info');
-    editingRequestId=null; currentProofId=null;
-    document.getElementById('form-staff-standard')?.reset();
-    document.getElementById('correction-banner').textContent='';
-    await loadAllRequests(); await loadEmployees();
-    switchStaffTab('tab-staff-requests');
+    if(!res.ok) {
+      finishSubmitProgress(false, () => showToast(JSON.stringify(result.detail),'error'));
+      return false;
+    }
+    finishSubmitProgress(true, async () => {
+      showToast(`${DECISION_LABELS[result.data.decision] || result.data.decision}: ${result.data.human_readable_explanation}`,'info');
+      editingRequestId=null; currentProofId=null;
+      document.getElementById('form-staff-standard')?.reset();
+      const attachTypeVal = document.getElementById("staff-attachment-type");
+      if (attachTypeVal) attachTypeVal.value = "none";
+      const proofPreview = document.getElementById("staff-proof-preview");
+      if (proofPreview) proofPreview.classList.add("d-none");
+      const banner = document.getElementById('correction-banner');
+      if (banner) banner.textContent='';
+      await loadAllRequests(); await loadEmployees();
+      switchStaffTab('tab-staff-requests');
+    });
     return true;
-  } catch(err) {showToast('Không gửi được đơn: '+err.message,'error');return false;}
+  } catch(err) {
+    finishSubmitProgress(false, () => showToast('Không gửi được đơn: '+err.message,'error'));
+    return false;
+  }
 }
 function correctRequest(id) {
   const r=activeRequests.find(r=>r.id===id); if(!r) return;
@@ -1628,35 +1990,180 @@ function openRequestDetailModal(requestId) {
   }
 
   let cleanReason = rawText
-    .replace(/^Hệ thống chuyển tiếp do:\s*/i, "")
-    .replace(/^Minh bạch AI & Căn cứ xử lý:\s*/i, "")
+    .replace(/^H\u1ec7 th\u1ed1ng chuy\u1ec3n ti\u1ebfp do:\s*/i, "")
+    .replace(/^Minh b\u1ea1ch AI & C\u0103n c\u1ee9 x\u1eed l\u00fd:\s*/i, "")
     .trim();
+
+  // ── VLM extracted data (Technical facts only) ─────────────────────────────
+  const _vlm = req.vlm_analysis_json || {};
+  const _vlmDoc = _vlm.document_summary || {};
+  const _vlmFlags = _vlm.flags || {};
+  const _vlmCorr = _vlm.correlation_analysis || {};
+  const _vlmMode = _vlm.inspection_mode || "";
+  const _vlmErr = _vlm.vlm_error || "";
+  const _hasVlm = !!(req.vlm_analysis_json);
+
+  function _boolBadge(val, trueL, falseL) {
+    if (val === true)  return '<span style="background:#dcfce7;color:#166534;padding:2px 9px;border-radius:5px;font-size:0.78rem;font-weight:600;">\u2713 ' + trueL + '</span>';
+    if (val === false) return '<span style="background:#fee2e2;color:#991b1b;padding:2px 9px;border-radius:5px;font-size:0.78rem;font-weight:600;">\u2717 ' + falseL + '</span>';
+    return '<span style="background:#f1f5f9;color:#64748b;padding:2px 9px;border-radius:5px;font-size:0.78rem;">\u2014 Ch\u01b0a x\u00e1c \u0111\u1ecbnh</span>';
+  }
+  function _nv(v, fallback) {
+    return v ? '<span style="font-weight:600;color:#0f172a;">' + escapeHtml(String(v)) + '</span>' : '<span style="color:#94a3b8;">\u2014 ' + fallback + '</span>';
+  }
+
+  let _vlmModeBadge = '';
+  if (_vlmMode === 'OLLAMA_REAL_QWEN25_VL_3B' || _vlmMode.startsWith('OLLAMA_REAL')) _vlmModeBadge = '<span style="background:#dcfce7;color:#166534;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">\uD83E\uDD16 VLM Th\u1eadt</span>';
+  else if (_vlmMode.includes('UNAVAILABLE') || _vlmMode.includes('ERROR')) _vlmModeBadge = '<span style="background:#fee2e2;color:#991b1b;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">\u26a0 VLM L\u1ed7i / Ch\u01b0a c\u00f3 model</span>';
+  else if (_vlmMode) _vlmModeBadge = '<span style="background:#f1f5f9;color:#475569;font-size:0.72rem;padding:2px 8px;border-radius:4px;">' + escapeHtml(_vlmMode) + '</span>';
+
+  let _vlmSection = '';
+  if (_hasVlm) {
+    const _dr = _vlmDoc.doctor_recommended_range || {};
+
+    _vlmSection = '<div class="col-12" style="margin-top:4px;">'
+      + '<div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#ffffff;">'
+      + '<div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);padding:10px 16px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+      + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:1rem;">\uD83E\uDD16</span><span style="font-weight:700;color:#0f172a;font-size:0.9rem;">Th\u00f4ng tin tr\u00edch xu\u1ea5t t\u1eeb ch\u1ee9ng t\u1eeb (VLM)</span>' + _vlmModeBadge + '</div>'
+      + (_vlmErr ? '<span style="background:#fee2e2;color:#991b1b;font-size:0.72rem;padding:2px 8px;border-radius:4px;" title="' + escapeHtml(_vlmErr) + '">\u26a0 ' + escapeHtml(_vlmErr.substring(0,75)) + (_vlmErr.length>75?'\u2026':'') + '</span>' : '')
+      + '</div>'
+      + '<div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">'
+      + '<div><div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:2px;">T\u00ean tr\u00ean ch\u1ee9ng t\u1eeb</div><div style="font-size:0.86rem;">' + _nv(_vlmDoc.patient_name, 'Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c') + '</div></div>'
+      + '<div><div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:2px;">N\u01a1i c\u1ea5p gi\u1ea5y</div><div style="font-size:0.86rem;">' + _nv(_vlmDoc.issuer, 'Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c') + '</div></div>'
+      + '<div style="grid-column:span 2;"><div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Ch\u1ea9n \u0111o\u00e1n / L\u00fd do gi\u1ea5y</div><div style="font-size:0.86rem;">' + _nv(_vlmDoc.diagnosis, 'Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c') + '</div></div>'
+      + '<div><div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Ng\u00e0y c\u1ea5p</div><div style="font-size:0.86rem;">' + _nv(_vlmDoc.issue_date, 'Kh\u00f4ng c\u00f3') + '</div></div>'
+      + '<div><div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Kho\u1ea3ng ng\u00e0y b\u00e1c s\u0129 ch\u1ec9 \u0111\u1ecbnh</div><div style="font-size:0.86rem;">' + (_dr.from && _dr.to ? '<span style="font-weight:600;color:#0f172a;">' + escapeHtml(_dr.from) + ' \u2192 ' + escapeHtml(_dr.to) + '</span>' + (_dr.days !== null && _dr.days !== undefined ? ' <span style="color:#2563eb;font-size:0.8rem;">(' + _dr.days + ' ng\u00e0y)</span>' : '') : '<span style="color:#94a3b8;">\u2014 Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c</span>') + '</div></div>'
+      + '</div>'
+      + '<div style="padding:0 16px 10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">'
+      + _boolBadge(_vlmFlags.has_red_stamp, 'C\u00f3 d\u1ea5u \u0111\u1ecf', 'Thi\u1ebfu d\u1ea5u \u0111\u1ecf')
+      + _boolBadge(_vlmFlags.has_doctor_signature !== undefined ? _vlmFlags.has_doctor_signature : _vlmFlags.signature_present_on_scan, 'C\u00f3 ch\u1eef k\u00fd', 'Thi\u1ebfu ch\u1eef k\u00fd')
+      + (_vlmFlags.is_tampered === true ? '<span style="background:#fef3c7;color:#92400e;padding:2px 9px;border-radius:5px;font-size:0.78rem;font-weight:600;">\u26a0 Nghi gi\u1ea3 m\u1ea1o</span>' : '')
+      + (_vlmFlags.ai_generated_or_edited === true ? '<span style="background:#fef3c7;color:#92400e;padding:2px 9px;border-radius:5px;font-size:0.78rem;font-weight:600;">\u26a0 Nghi AI ch\u1ec9nh s\u1eeda</span>' : '')
+      + (_vlmFlags.document_readability ? '<span style="background:#f1f5f9;color:#475569;padding:2px 9px;border-radius:5px;font-size:0.78rem;">\u0110\u1ed9 r\u00f5: ' + escapeHtml(_vlmFlags.document_readability) + '</span>' : '')
+      + '</div>'
+      + '</div></div>';
+  }
+
+  // ── LLM Summary & Synthesis data (Core Reasoning) ──────────────────────────
+  const _llm = req.llm_summary_json || {};
+  const _hasLlm = !!(req.llm_summary_json);
+  let _llmSection = '';
+  if (_hasLlm) {
+    const _sumTxt = _llm.summary_natural_vn || '';
+    const _whyEsc = _llm.why_escalated || '';
+    const _tier = _llm.correlation_tier_vn || '';
+    const _aq = _llm.actionable_question || '';
+    const _pvn = _llm.applied_policy_clauses_vn || [];
+    const _qvn = _llm.quick_action_options_vn || [];
+    const _warns = _llm.warnings || [];
+    const _engine = _llm.engine || '';
+    const _isReal = _engine.includes('qwen_2.5_7b');
+    const _isRule = _engine.includes('decision_tree');
+    const _tierC = _tier === 'RẤT KHỚP' ? '#059669' : _tier === 'KHỚP' ? '#2563eb' : _tier === 'CHƯA KHỚP' ? '#d97706' : _tier === 'KHÔNG KHỚP' ? '#dc2626' : '#059669';
+
+    // Đủ & thiếu thông tin do LLM / Rule Engine tổng hợp
+    let _infoSuf = _llm.info_sufficient_vn || [];
+    let _infoMis = _llm.info_missing_vn || [];
+
+    // Fallback thông minh nếu cả 2 mảng rỗng
+    if (_infoSuf.length === 0 && _infoMis.length === 0) {
+      if (req.employee_name) _infoSuf.push('Nhân viên nộp đơn: ' + req.employee_name);
+      if (req.from_date && req.to_date) _infoSuf.push('Thời gian xin nghỉ: ' + req.from_date + ' → ' + req.to_date);
+      if (_hasAttachment && _vlmDoc.diagnosis) _infoSuf.push('Chẩn đoán trên giấy: ' + _vlmDoc.diagnosis);
+
+      if (_hasAttachment) {
+        if (_vlmFlags.has_red_stamp === false) _infoMis.push('Thiếu dấu mộc đỏ bệnh viện/phòng khám');
+        if (_vlmFlags.has_doctor_signature === false) _infoMis.push('Thiếu chữ ký bác sĩ / người cấp giấy');
+        if (!_vlmDoc.patient_name) _infoMis.push('Chưa đọc được tên trên chứng từ');
+      } else {
+        _infoSuf.push('Không yêu cầu chứng từ đối với loại nghỉ này');
+      }
+    }
+
+    _llmSection = '<div class="col-12" style="margin-top:4px;">'
+      + '<div style="border:1px solid #c084fc;border-radius:12px;overflow:hidden;background:#ffffff;box-shadow:0 2px 8px rgba(147,51,234,0.06);">'
+      + '<div style="background:linear-gradient(135deg,#faf5ff,#f3e8ff);padding:12px 16px;border-bottom:1px solid #e9d5ff;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+      + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.1rem;">🧠</span><span style="font-weight:700;color:#4c1d95;font-size:0.95rem;">Tổng hợp &amp; Đề xuất xử lý (HR Copilot)</span>'
+      + (_isReal ? '<span style="background:#dcfce7;color:#166534;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">✓ Qwen 7B Copilot</span>' : '<span style="background:#f3e8ff;color:#6b21a8;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">✓ Decision Tree Engine</span>')
+      + '</div>'
+      + (_tier && _tier !== '—' ? '<span style="background:' + _tierC + '20;color:' + _tierC + ';font-size:0.78rem;padding:3px 10px;border-radius:5px;font-weight:700;">' + escapeHtml(_tier) + '</span>' : '')
+      + '</div>'
+      
+      // 1. Tóm tắt súc tích tách từng ý rõ ràng
+      + (_sumTxt ? (function() {
+          const _rawLines = _sumTxt.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
+          let _linesContent = '';
+          if (_rawLines.length > 1) {
+            _linesContent = _rawLines.map(function(line) {
+              let clean = line.replace(/^[•\-\*]\s*/, '');
+              let colonIdx = clean.indexOf(':');
+              if (colonIdx > 0 && colonIdx < 30) {
+                let title = clean.substring(0, colonIdx);
+                let rest = clean.substring(colonIdx + 1);
+                return '<div style="font-size:0.85rem;color:#1e293b;line-height:1.55;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px;">'
+                  + '<span style="color:#7c3aed;font-weight:700;font-size:1rem;line-height:1.2;">&bull;</span>'
+                  + '<span><strong style="color:#581c87;font-weight:600;">' + escapeHtml(title) + ':</strong>' + escapeHtml(rest) + '</span>'
+                  + '</div>';
+              }
+              return '<div style="font-size:0.85rem;color:#1e293b;line-height:1.55;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px;">'
+                + '<span style="color:#7c3aed;font-weight:700;font-size:1rem;line-height:1.2;">&bull;</span>'
+                + '<span>' + escapeHtml(clean) + '</span>'
+                + '</div>';
+            }).join('');
+          } else {
+            _linesContent = '<div style="font-size:0.86rem;color:#1e293b;line-height:1.6;white-space:pre-line;">' + escapeHtml(_sumTxt) + '</div>';
+          }
+          return '<div style="padding:12px 16px;border-bottom:1px solid #f3e8ff;">'
+            + '<div style="font-size:0.73rem;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Tóm tắt cốt lõi &amp; Đối soát</div>'
+            + _linesContent
+            + '</div>';
+        })() : '')
+      
+      // 2. Phân tách rõ ràng: Đủ vs Thiếu
+      + '<div style="padding:12px 16px;border-bottom:1px solid #f3e8ff;display:grid;grid-template-columns:1fr 1fr;gap:16px;background:#faf5ff50;">'
+      + '<div><div style="font-size:0.74rem;color:#059669;font-weight:700;text-transform:uppercase;margin-bottom:6px;">\u2713 Th\u00f4ng tin \u0111\u00e3 \u0111\u1ea7y \u0111\u1ee7 (' + _infoSuf.length + ')</div>' + (_infoSuf.length > 0 ? _infoSuf.map(function(s){ return '<div style="font-size:0.81rem;color:#166534;padding:2px 0;">&bull; ' + escapeHtml(String(s)) + '</div>'; }).join('') : '<div style="font-size:0.8rem;color:#94a3b8;">\u2014 Ch\u01b0a c\u00f3 th\u00f4ng tin h\u1ee3p l\u1ec7</div>') + '</div>'
+      + '<div><div style="font-size:0.74rem;color:#dc2626;font-weight:700;text-transform:uppercase;margin-bottom:6px;">\u2717 Th\u00f4ng tin c\u00f2n thi\u1ebfu / C\u1ea7n l\u00e0m r\u00f5 (' + _infoMis.length + ')</div>' + (_infoMis.length > 0 ? _infoMis.map(function(m){ return '<div style="font-size:0.81rem;color:#991b1b;padding:2px 0;">&bull; ' + escapeHtml(String(m)) + '</div>'; }).join('') : '<div style="font-size:0.8rem;color:#059669;">\u2014 H\u1ed3 s\u01a1 \u0111\u1ea7y \u0111\u1ee7 kh\u00f4ng thi\u1ebfu g\u00ec</div>') + '</div>'
+      + '</div>'
+
+      // 3. Câu hỏi & Đề xuất giải quyết cho Manager
+      + ((_aq || _whyEsc || _qvn.length > 0) ? '<div style="padding:12px 16px;background:#f8fafc;border-top:1px solid #f1f5f9;">'
+          + (_whyEsc ? '<div style="font-size:0.8rem;color:#475569;margin-bottom:6px;"><span style="font-weight:600;color:#6b21a8;">C\u0103n c\u1ee9 chuy\u1ec3n duy\u1ec7t:</span> ' + escapeHtml(_whyEsc) + '</div>' : '')
+          + (_aq ? '<div style="font-size:0.88rem;color:#1e1b4b;font-weight:600;padding:8px 12px;background:#ede9fe;border-radius:8px;border-left:4px solid #7c3aed;margin-bottom:8px;">\u2753 ' + escapeHtml(_aq) + '</div>' : '')
+          + (_qvn.length > 0 ? '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;"><span style="font-size:0.75rem;color:#64748b;font-weight:600;">G\u1ee3i \u00fd th\u00e1o t\u00e1c:</span>' + _qvn.map(function(q){ return '<span style="background:#ffffff;border:1px solid #cbd5e1;color:#334155;font-size:0.76rem;padding:2px 8px;border-radius:5px;font-weight:500;">' + escapeHtml(String(q)) + '</span>'; }).join('') + '</div>' : '')
+          + '</div>' : '')
+
+      + ((_pvn.length > 0 || _warns.length > 0) ? '<div style="padding:8px 16px;border-top:1px solid #f1f5f9;font-size:0.76rem;color:#64748b;display:flex;flex-wrap:wrap;gap:12px;">'
+          + (_pvn.length > 0 ? '<div><span style="font-weight:600;color:#7c3aed;">Ch\u00ednh s\u00e1ch:</span> ' + _pvn.map(function(p){ return escapeHtml(String(p)); }).join('; ') + '</div>' : '')
+          + (_warns.length > 0 ? '<div><span style="font-weight:600;color:#dc2626;">C\u1ea3nh b\u00e1o:</span> ' + _warns.map(function(w){ return escapeHtml(String(w)); }).join('; ') + '</div>' : '')
+          + '</div>' : '')
+      + '</div></div>';
+  }
 
   body.innerHTML = `
     <div class="row g-3">
       <div class="col-6">
-        <label class="form-label text-secondary small fw-semibold mb-1">Loại nghỉ phép</label>
+        <label class="form-label text-secondary small fw-semibold mb-1">Lo\u1ea1i ngh\u1ec9 ph\u00e9p</label>
         <div class="modal-readonly-field">
           <span class="text-dark fw-semibold">${getLeaveTypeLabel(req.leave_type)}</span>
         </div>
       </div>
 
       <div class="col-6">
-        <label class="form-label text-secondary small fw-semibold mb-1">Người nhận bàn giao</label>
+        <label class="form-label text-secondary small fw-semibold mb-1">Ng\u01b0\u1eddi nh\u1eadn b\u00e0n giao</label>
         <div class="modal-readonly-field">
           <span class="text-dark">${handoverDisplayName}</span>
         </div>
       </div>
 
       <div class="col-6">
-        <label class="form-label text-secondary small fw-semibold mb-1">Từ ngày</label>
+        <label class="form-label text-secondary small fw-semibold mb-1">T\u1eeb ng\u00e0y</label>
         <div class="modal-readonly-field">
           <span class="text-dark">${formatSimpleDate(req.from_date)}</span>
         </div>
       </div>
 
       <div class="col-6">
-        <label class="form-label text-secondary small fw-semibold mb-1">Đến ngày</label>
+        <label class="form-label text-secondary small fw-semibold mb-1">\u0110\u1ebfn ng\u00e0y</label>
         <div class="modal-readonly-field">
           <span class="text-dark">${formatSimpleDate(req.to_date)}</span>
         </div>
@@ -1669,8 +2176,8 @@ function openRequestDetailModal(requestId) {
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            <span class="text-secondary small">Thời lượng vắng mặt:</span>
-            <span class="fw-bold text-dark">${req.requested_working_days ?? req.workdays ?? 0} ngày làm việc</span>
+            <span class="text-secondary small">Th\u1eddi l\u01b0\u1ee3ng v\u1eafng m\u1eb7t:</span>
+            <span class="fw-bold text-dark">${req.requested_working_days ?? req.workdays ?? 0} ng\u00e0y l\u00e0m vi\u1ec7c</span>
           </div>
           <div>
             ${getStatusBadgeHtml(req)}
@@ -1679,12 +2186,12 @@ function openRequestDetailModal(requestId) {
       </div>
 
       <div class="col-12">
-        <label class="form-label text-secondary small fw-semibold mb-1">Lý do nghỉ</label>
-        <div class="modal-readonly-textarea">${req.reason || 'Không có mô tả chi tiết'}</div>
+        <label class="form-label text-secondary small fw-semibold mb-1">L\u00fd do ngh\u1ec9</label>
+        <div class="modal-readonly-textarea">${req.reason || 'Kh\u00f4ng c\u00f3 m\u00f4 t\u1ea3 chi ti\u1ebft'}</div>
       </div>
 
       <div class="col-12">
-        <label class="form-label text-secondary small fw-semibold mb-1">Chứng từ xác minh</label>
+        <label class="form-label text-secondary small fw-semibold mb-1">Ch\u1ee9ng t\u1eeb x\u00e1c minh</label>
         <div class="modal-attached-file d-flex align-items-center justify-content-between">
           <div class="d-flex align-items-center gap-2">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -1696,20 +2203,23 @@ function openRequestDetailModal(requestId) {
             </svg>
             <div>
               <div class="fw-semibold text-dark small">${attachLabel}</div>
-              <div class="text-secondary" style="font-size: 0.75rem;">${hasAttachment ? 'Tài liệu đính kèm hồ sơ' : 'Không có chứng từ đính kèm'}</div>
+              <div class="text-secondary" style="font-size: 0.75rem;">${hasAttachment ? 'T\u00e0i li\u1ec7u \u0111\u00ednh k\u00e8m h\u1ed3 s\u01a1' : 'Kh\u00f4ng c\u00f3 ch\u1ee9ng t\u1eeb \u0111\u00ednh k\u00e8m'}</div>
             </div>
           </div>
           ${hasAttachment ? `
             <button type="button" class="btn btn-sm btn-outline-primary px-3" onclick="openAttachmentModal('${req.id}', '${req.attachment_type}', '${req.employee_name}')" style="font-size: 0.8rem; font-weight: 500;">
-              Xem file chứng từ
+              Xem file ch\u1ee9ng t\u1eeb
             </button>
           ` : ''}
         </div>
       </div>
 
-      <!-- ĐÁNH GIÁ AI / QUẢN LÝ -->
+      ${_vlmSection}
+      ${_llmSection}
+
+      <!-- K\u1ebft qu\u1ea3 \u0111\u00e1nh gi\u00e1 AI / Qu\u1ea3n l\u00fd -->
       <div class="col-12">
-        <label class="form-label text-secondary small fw-semibold mb-1">Kết quả đánh giá & Xử lý</label>
+        <label class="form-label text-secondary small fw-semibold mb-1">K\u1ebft qu\u1ea3 \u0111\u00e1nh gi\u00e1 & X\u1eed l\u00fd</label>
         <div class="req-ai-box ${boxType} m-0">
           <span class="req-ai-label">${boxLabel}</span>
           <span class="req-ai-text">${cleanReason}</span>
@@ -1846,61 +2356,70 @@ function renderManagerQueue() {
 
     return `
       <div class="escalation-inbox-card" id="esc-card-${r.id}">
-        <!-- Dòng Header: Tên nhân sự & Trạng thái (đã bỏ mã đơn) -->
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-          <div class="d-flex align-items-center gap-3">
-            <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); color: #334155; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.05rem; flex-shrink: 0; border: 1px solid #e2e8f0;">
-              ${escapeHtml(r.employee_name ? r.employee_name.trim().charAt(0) : 'N')}
-            </div>
-            <div>
-              <div class="d-flex align-items-center gap-2 flex-wrap">
-                <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a; letter-spacing: -0.01em;">
-                  ${escapeHtml(r.employee_name || 'Nhân viên')}
-                </span>
-                ${r.department ? `<span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.76rem; border-radius: 6px;">${escapeHtml(r.department)}</span>` : ''}
-              </div>
-            </div>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            ${getStatusBadgeHtml(r)}
-          </div>
+        <!-- Dòng Header: Tên nhân sự (Đã bỏ huy hiệu chờ người có thẩm quyền) -->
+        <div class="d-flex align-items-center mb-3">
+          <span style="font-size: 1.25rem; font-weight: 700; color: #0f172a; letter-spacing: -0.015em;">
+            ${escapeHtml(r.employee_name || 'Nhân viên')}
+          </span>
         </div>
 
-        <!-- Khối Thông Tin: Thoáng đãng, điểm nhấn tinh tế, chỉ ghi số ngày nghỉ -->
-        <div class="d-flex align-items-center flex-wrap gap-4 py-3 my-2" style="border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
-          <div class="d-flex align-items-center gap-2">
-            <span class="text-secondary small fw-medium">Loại nghỉ:</span>
-            <span class="badge fw-semibold px-2.5 py-1" style="background: ${typeBg}; color: ${typeColor}; border: 1px solid ${typeBorder}; border-radius: 6px; font-size: 0.82rem;">
+        <!-- Khối Thông Tin: 3 thẻ pill riêng biệt theo hình mẫu -->
+        <div class="esc-pills-row">
+          <div class="esc-info-pill">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 7H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+              <rect x="9" y="3" width="6" height="4" rx="1"></rect>
+              <line x1="12" y1="11" x2="12" y2="15"></line>
+              <line x1="10" y1="13" x2="14" y2="13"></line>
+            </svg>
+            <span class="esc-pill-label">Loại nghỉ:</span>
+            <span class="badge fw-semibold px-2 py-0.5" style="background: ${typeBg}; color: ${typeColor}; border: 1px solid ${typeBorder}; border-radius: 6px; font-size: 0.82rem;">
               ${escapeHtml(leaveLabel)}
             </span>
           </div>
-          <div class="d-flex align-items-center gap-2">
-            <span class="text-secondary small fw-medium">Ngày nộp:</span>
-            <span class="fw-semibold text-dark" style="font-size: 0.88rem;">${escapeHtml(submitDate)}</span>
+
+          <div class="esc-info-pill">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span class="esc-pill-label">Ngày nộp:</span>
+            <span class="esc-pill-value">${escapeHtml(submitDate)}</span>
           </div>
-          <div class="d-flex align-items-center gap-2">
-            <span class="text-secondary small fw-medium">Số ngày nghỉ:</span>
-            <span class="fw-bold" style="color: #0f172a; font-size: 0.95rem;">${workDays} ngày</span>
+
+          <div class="esc-info-pill">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span class="esc-pill-label">Số ngày nghỉ:</span>
+            <span class="esc-pill-value">${workDays} ngày</span>
           </div>
         </div>
 
-        <!-- Khối Lý Do Nghỉ: Nhẹ nhàng, dễ đọc, không viền đứt -->
-        <div class="py-2.5 px-3 mb-3" style="background: #f8fafc; border-radius: 10px;">
-          <div class="d-flex align-items-baseline gap-2">
-            <span class="text-secondary small fw-semibold" style="white-space: nowrap;">Lý do nghỉ:</span>
-            <span class="text-dark fw-medium" style="font-size: 0.9rem; line-height: 1.55;">
-              ${escapeHtml(r.reason || 'Không có mô tả chi tiết')}
-            </span>
-          </div>
+        <!-- Khối Lý Do Nghỉ: Thanh ngang nền xám nhạt kèm icon tài liệu -->
+        <div class="esc-reason-bar mb-3">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span class="esc-reason-label">Lý do nghỉ:</span>
+          <span class="esc-reason-text">${escapeHtml(r.reason || 'Không có mô tả chi tiết')}</span>
         </div>
 
-        <!-- Khu vực Xử lý của Quản lý & Nút Chi tiết -->
+        <!-- Khu vực Xử lý của Quản lý & Nút bấm theo đúng hình mẫu -->
         <div class="d-flex flex-column gap-2 pt-1">
           <div>
-            <input type="text" id="esc-feedback-${r.id}" class="form-control form-control-sm" placeholder="Nhập ý kiến chỉ đạo / phản hồi (nếu có)..." style="border-radius: 8px; font-size: 0.85rem; padding: 8px 14px; border: 1px solid #e2e8f0; background: #ffffff;">
+            <input type="text" id="esc-feedback-${r.id}" class="form-control" placeholder="Nhập ý kiến chỉ đạo / phản hồi (nếu có)..." style="border-radius: 8px; font-size: 0.88rem; padding: 10px 16px; border: 1px solid #cbd5e1; background: #ffffff;">
           </div>
-          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2">
-            <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5" onclick="openRequestDetailModal('${r.id}')" style="border-radius: 7px; font-size: 0.82rem;">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
+            <!-- Nút Chi tiết bên trái -->
+            <button type="button" class="btn btn-action-detail d-inline-flex align-items-center gap-1.5" onclick="openRequestDetailModal('${r.id}')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
                 <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -1908,21 +2427,23 @@ function renderManagerQueue() {
               </svg>
               Chi tiết
             </button>
+
+            <!-- Cụm nút hành động bên phải: Duyệt -> Yêu cầu bổ sung -> Từ chối (Tone màu hài hòa, dịu mắt) -->
             <div class="d-flex align-items-center gap-2">
-              <button type="button" class="btn btn-sm px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5" onclick="submitManagerDecision('${r.id}','REQUEST_MORE_INFO')" style="border-radius: 7px; font-size: 0.82rem; background: #f59e0b; border-color: #f59e0b; color: #ffffff;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-                Yêu cầu bổ sung
-              </button>
-              <button type="button" class="btn btn-sm px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5" onclick="submitManagerDecision('${r.id}','REJECT')" style="border-radius: 7px; font-size: 0.82rem; background: #ef4444; border-color: #ef4444; color: #ffffff;">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                Từ chối
-              </button>
               ${r.target_role !== 'HR' ? `
-                <button type="button" class="btn btn-sm px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5" onclick="submitManagerDecision('${r.id}','APPROVE')" style="border-radius: 7px; font-size: 0.82rem; background: #10b981; border-color: #10b981; color: #ffffff;">
+                <button type="button" class="btn btn-action-approve d-inline-flex align-items-center gap-1.5" onclick="submitManagerDecision('${r.id}','APPROVE')">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   Duyệt
                 </button>
               ` : ''}
+              <button type="button" class="btn btn-action-warn d-inline-flex align-items-center gap-1.5" onclick="submitManagerDecision('${r.id}','REQUEST_MORE_INFO')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                Yêu cầu bổ sung
+              </button>
+              <button type="button" class="btn btn-action-reject d-inline-flex align-items-center gap-1.5" onclick="submitManagerDecision('${r.id}','REJECT')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                Từ chối
+              </button>
             </div>
           </div>
         </div>
@@ -2494,10 +3015,10 @@ function initVerifyHarness() {
             <tr>
               <td><b>${r.test_id}</b></td>
               <td>${r.scenario_name}</td>
-              <td><span class="badge bg-blue-lt fw-bold">${r.expected_decision}</span></td>
-              <td><span class="badge ${r.actual_decision === 'AUTO_APPROVE' ? 'bg-success-lt' : 'bg-warning-lt'} fw-bold">${r.actual_decision}</span></td>
-              <td>${r.actual_category || r.expected_category || 'Thường quy'}</td>
-              <td>${r.target_role || 'Tác tử AI'}</td>
+              <td><span class="badge bg-blue-lt fw-bold">${getDecisionLabel(r.expected_decision)}</span></td>
+              <td><span class="badge ${r.actual_decision === 'AUTO_APPROVE' ? 'bg-success-lt' : 'bg-warning-lt'} fw-bold">${getDecisionLabel(r.actual_decision)}</span></td>
+              <td>${getCategoryLabel(r.actual_category || r.expected_category)}</td>
+              <td>${getRoleLabel(r.target_role)}</td>
               <td class="small text-secondary">${r.actionable_question || r.plain_reason || ''}</td>
               <td><span class="badge ${r.is_passed ? 'bg-success text-white' : 'bg-danger text-white'} fw-bold">${r.is_passed ? 'ĐẠT' : 'CHƯA ĐẠT'}</span></td>
             </tr>

@@ -1,5 +1,6 @@
 """Deterministic leave evaluation. Caller supplies authoritative DB context only."""
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 from pydantic import Field
 from domain import RequestFacts, VerifiedProof, LeaveType, should_deduct_annual_balance
 from calendar_service import CalendarService, CalendarUnavailable, calculate_workdays
@@ -26,6 +27,7 @@ class LeaveRequest(RequestFacts):
     granted_roles: list[R] = Field(default_factory=list)
     waived_errors: list[E] = Field(default_factory=list)
     calendar_review_required: bool = False
+    has_abuse_pattern: bool = False
 
 PAID_ENTITLEMENTS = {'SELF_MARRIAGE': 3, 'CHILD_MARRIAGE': 1,
                      'PARENT_DEATH': 3, 'SPOUSE_PARENT_DEATH': 3, 'SPOUSE_DEATH': 3, 'CHILD_DEATH': 3}
@@ -117,21 +119,12 @@ class LeaveRuleEngine:
             p = q.proof
             pt = p.proof_type.value if hasattr(p.proof_type,'value') else str(p.proof_type)
             if pt == 'NONE': return correction(E.PROOF_MISSING,'Vui lòng tải chứng từ phù hợp.','PROOF-01')
-            # ILLEGIBLE/UNREADABLE → Manager review NOT direct employee correction
-            # (Manager can either accept partial proof OR send back re-upload)
-            if p.document_readability == 'ILLEGIBLE' and p.proof_verification_status not in ('REJECTED',):
-                # downgrade to UNVERIFIED with note → escalate DIRECT_MANAGER next branch
-                object.__setattr__(p,'proof_verification_status','UNVERIFIED')
-                object.__setattr__(p,'verification_notes',
-                    (p.verification_notes + ' — ' if p.verification_notes else '') +
-                    '[PROOF-AUDIT] Document ILLEGIBLE / low readability; Manager xác minh có chấp nhận được không hoặc yêu cầu tải lại bản rõ hơn.')
-            if p.proof_verification_status == 'REJECTED': return correction(E.DOC_FIELD_MISSING,'Chứng từ chưa đạt yêu cầu: ' + (p.verification_notes or 'Vui lòng bổ sung.'),'PROOF-01')
+            if p.document_readability == 'ILLEGIBLE':
+                return correction(E.DOC_ILLEGIBLE,'Chứng từ mờ / không đọc được; vui lòng tải lại bản rõ hơn.','PROOF-01')
+            if p.proof_verification_status == 'REJECTED':
+                return correction(E.DOC_FIELD_MISSING,'Chứng từ chưa đạt yêu cầu: ' + (p.verification_notes or 'Vui lòng bổ sung.'),'PROOF-01')
             if p.proof_verification_status != 'VERIFIED':
-                if p.proof_verification_status == 'NEEDS_HR_REVIEW' or q.leave_type in {'WORK_ACCIDENT','MATERNITY','MEDICAL_EMERGENCY'}:
-                    return finish(D.ESCALATE,E.PROOF_REVIEW_REQUIRED,'Đã nhận chứng từ; cần HR xác minh facts trước khi ghi nhận chế độ.',C.OUT_OF_POLICY,R.HR,'PROOF-01',[R.HR])
-                note = p.verification_notes or 'Chứng từ chưa được xác minh đầy đủ; cần Quản lý xem xét duyệt đặc cách.'
-                return finish(D.ESCALATE,E.DOC_ILLEGIBLE if p.document_readability != 'READABLE' else E.PROOF_REVIEW_REQUIRED,
-                              note,C.UNCERTAIN_FACTS,R.DIRECT_MANAGER,'PROOF-01',list(dict.fromkeys(roles or [R.DIRECT_MANAGER])))
+                return finish(D.ESCALATE,E.PROOF_REVIEW_REQUIRED,'Đã nhận chứng từ; cần HR xác minh facts trước khi ghi nhận chế độ.',C.OUT_OF_POLICY,R.HR,'PROOF-01',[R.HR])
             allowed = MEDICAL_PROOFS if q.leave_type in MEDICAL else (
                 {'MARRIAGE_CERTIFICATE'} if (hasattr(q.reason_category,'value') and q.reason_category.value == 'SELF_MARRIAGE') else
                 {'MARRIAGE_CERTIFICATE','WEDDING_INVITATION'} if (hasattr(q.reason_category,'value') and q.reason_category.value == 'CHILD_MARRIAGE') else {'DEATH_CERTIFICATE'})
@@ -157,13 +150,30 @@ class LeaveRuleEngine:
         trace('BALANCE')
         operational = []
         if q.leave_type in OPERATIONAL:
-            required = 7 if q.leave_type == 'UNPAID_OTHER' or n > 5 else 3 if n >= 4 else 1
+            if q.leave_type == 'UNPAID_OTHER' or n > 5:
+                required = 7
+            elif n >= 4:
+                required = 3
+            else:
+                required = 1
             try: actual = cal.notice_days(q.submitted_at,dates[0])
             except CalendarUnavailable as exc:
                 return finish(D.ESCALATE,E.LEGAL_REVIEW_REQUIRED,str(exc),C.OUT_OF_POLICY,R.HR,'CAL-01',[R.HR])
             if actual < required:
                 operational.append((E.NOTICE_PERIOD_VIOLATED,f'Báo trước {actual}/{required} ngày làm việc.','NOTICE-01'))
             trace('NOTICE','FAIL' if actual < required else 'PASS',f'{actual}/{required}')
+        elif q.leave_type in MEDICAL and q.submitted_at:
+            tz = ZoneInfo('Asia/Ho_Chi_Minh')
+            sub_dt = q.submitted_at.astimezone(tz) if q.submitted_at.tzinfo else q.submitted_at.replace(tzinfo=tz)
+            cutoff = datetime(dates[0].year, dates[0].month, dates[0].day, 8, 30, tzinfo=tz)
+            if sub_dt > cutoff:
+                operational.append((E.NOTICE_PERIOD_VIOLATED,'Báo nghỉ ốm sau 08:30 sáng của ngày vắng mặt đầu tiên.','NOTICE-01'))
+                trace('NOTICE','FAIL','Sau 08:30')
+            else:
+                trace('NOTICE','PASS','Trước 08:30')
+        if q.leave_type == 'ANNUAL' and getattr(q, 'has_abuse_pattern', False):
+            operational.append((E.FLAG_ABUSE_PATTERN, 'Nhiều đơn phép năm rời rạc trong cùng tháng dương lịch vượt hạn mức tự duyệt của AI.', 'ABUSE-01'))
+            trace('ANTI_ABUSE', 'FAIL', 'Gắn cờ FLAG_ABUSE_PATTERN')
         quota_dates = [d for d in result.working_dates if (q.team_absences_by_date.get(d,q.team_absent_count)+1)/q.total_team_members > .30]
         if quota_dates:
             message = 'Vượt quota 30% vào: ' + ', '.join(quota_dates)
@@ -183,8 +193,10 @@ class LeaveRuleEngine:
         roles = []
         if q.leave_type == 'ANNUAL': roles = [R.CEO] if n >= 20 else [R.DEPARTMENT_HEAD] if n >= 6 else [R.DIRECT_MANAGER] if n >= 3 else []
         if q.leave_type == 'UNPAID_OTHER': roles = [R.DEPARTMENT_HEAD,R.HRD,R.CEO] if n >= 20 else [R.DEPARTMENT_HEAD,R.HRD] if n >= 6 else [R.DIRECT_MANAGER]
-        if q.leave_type in MEDICAL: roles = [R.CEO] if n >= 20 else [R.DEPARTMENT_HEAD] if n >= 7 else [R.DIRECT_MANAGER] if n >= 3 else []
-        if q.leave_type in {'SPECIAL_PAID', 'STATUTORY_UNPAID'}: roles = [R.DEPARTMENT_HEAD] if n >= 3 else [R.DIRECT_MANAGER] if n >= 1 else []
+        if q.leave_type in MEDICAL:
+            roles = [R.DIRECT_MANAGER] if n >= 2 else []
+        if q.leave_type in {'SPECIAL_PAID', 'STATUTORY_UNPAID'}:
+            roles = [R.DIRECT_MANAGER]
         if operational and not roles: roles = [R.DIRECT_MANAGER]
         remaining = [r for r in roles if r not in q.granted_roles]
         for code, message, clause in operational:

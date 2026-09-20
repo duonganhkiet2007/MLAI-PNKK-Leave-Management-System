@@ -1,8 +1,12 @@
 # DANH MỤC TOÀN BỘ CÁC TRƯỜNG HỢP PHẢI ĐƯA RA CHO CON NGƯỜI (HUMAN ESCALATION)
 ## THE ESCALATION REFEREE — HỆ THỐNG ĐIỀU PHỐI PHÊ DUYỆT NGHỈ PHÉP AI (TRACK A)
 
-> **Mã tài liệu:** TAXONOMY-ESCALATION-2026  
-> **Căn cứ pháp lý & quy chế:** `Leave_Application/policy_rules.md` (POL-HR-2026-01) & `Leave_Application/taxonomy.py`  
+> [!WARNING]
+> **TRẠNG THÁI TÀI LIỆU: LEGACY / DEPRECATED**  
+> Tài liệu này mô tả các tiêu chí của phiên bản cũ. Nguồn chân lý duy nhất (Authoritative Business Policy / Sole Source of Truth) của hệ thống là `Leave_Application/policy_rules.md`. Mọi thẩm quyền phê duyệt, routing chứng từ, quy chuẩn báo trước và cờ chống lạm dụng `FLAG_ABUSE_PATTERN` được điều phối độc quyền bởi `Leave_Application/rule_engine.py` theo phiên bản policy mới nhất.
+
+> **Mã tài liệu:** TAXONOMY-ESCALATION-2026 (LEGACY)  
+> **Căn cứ pháp lý & quy chế:** `Leave_Application/policy_rules.md` (Authoritative Policy) & `Leave_Application/taxonomy.py`  
 > **Kiến trúc vận hành:** Local LLM Qwen 2.5 7B Instruct (In-Process trên GPU RTX 4090, duy nhất 1 Port 8000, 100% AI thực thi không fallback).  
 > **Nguyên tắc an toàn (Guardrail):** Hệ thống AI chỉ được tự động duyệt (`AUTO_APPROVE`) khi đơn thỏa mãn đồng thời 100% điều kiện an toàn. **Tất cả các trường hợp còn lại bắt buộc phải chuyển tiếp (`ESCALATE`) cho con người.**
 

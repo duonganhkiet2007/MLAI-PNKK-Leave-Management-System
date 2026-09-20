@@ -20,10 +20,6 @@ def health_check(): return {'status':'ok','service':'Leave Approval Backend API'
 @router.get('/employees')
 def list_employees():
     # Public demo actor directory. Not production authentication.
-    try:
-        db.seed_demo_request()
-    except Exception as _e:
-        pass
     with st.transaction() as conn:
         rows=[dict(r) for r in conn.execute('SELECT * FROM employees')]
         for row in rows:
@@ -97,7 +93,7 @@ def get_decision_tree():
               when_pass='Sang kiểm tra thời gian báo trước',
               when_fail='Từ chối tự động (yêu cầu giảm ngày hoặc chọn nghỉ không lương riêng)'),
             n('ANN_NOTICE', 'Báo trước đủ thời gian',
-              'Nhỏ hơn 4 ngày → 1 ngày trước, 4–5 ngày → 3 ngày, 6 ngày trở lên → 7 ngày.',
+              '≤ 3 ngày → 1 ngày làm việc, 4–5 ngày → 3 ngày làm việc, > 5 ngày → 7 ngày làm việc.',
               when_pass='Sang kiểm tra năng lực đội nhóm',
               when_fail='Chuyển quản lý xem xét đặc cách',
               waivable=True, hint='Quản lý có thể bỏ qua nếu việc gấp'),
@@ -106,11 +102,14 @@ def get_decision_tree():
               when_pass='Sang bước bàn giao công việc',
               when_fail='Chuyển quản lý xem xét, tổ chức hỗ trợ',
               waivable=True, hint='Quản lý có thể chấp nhận với lý do đặc biệt'),
+            n('ANN_ABUSE', 'Chống lạm dụng tách đơn phép năm (FLAG_ABUSE_PATTERN)',
+              'Tổng ngày phép năm cộng dồn trong cùng tháng dương lịch > 2 ngày → chuyển Quản lý xem xét.',
+              when_fail='Chuyển Quản lý trực tiếp xem xét (ESCALATE / DIRECT_MANAGER)'),
             n('ANN_HO', 'Bàn giao công việc (khi nghỉ ≥ 3 ngày)',
               'Phải có người cùng phòng, đang làm việc, không tự mình, không nghỉ trùng.',
               when_fail='Yêu cầu chỉ định lại người nhận bàn giao'),
         ],
-        next_steps='Nhỏ hơn 3 ngày → duyệt tự động | 3–5 ngày → Quản lý trực tiếp | 6–19 ngày → Trưởng bộ phận | 20 ngày trở lên → Tổng giám đốc')
+        next_steps='1–2 ngày → duyệt tự động | 3–5 ngày → Quản lý trực tiếp | 6–19 ngày → Trưởng bộ phận | 20 ngày trở lên → Tổng giám đốc')
 
     br_unpaid = branch(
         'UNPAID_OTHER', 'Nghỉ không lương (thỏa thuận)', '#f59e0b', '💸',
@@ -160,7 +159,7 @@ def get_decision_tree():
               when_pass='Sang bước chung cuối (không trùng, phân cấp duyệt)',
               when_fail='Chuyển quản lý xem xét, chấp nhận hoặc yêu cầu bản rõ hơn'),
         ],
-        next_steps='Con cưới 1 ngày → duyệt tự động | 3 ngày (tự cưới / tang sự trực hệ 4 loại / vợ chồng / con mất) → Quản lý trực tiếp | Thừa ngày → Trưởng bộ phận')
+        next_steps='Tất cả sự kiện hưởng lương → Quản lý trực tiếp phê duyệt (kèm chứng từ hợp lệ)')
 
     br_statutory = branch(
         'STATUTORY_UNPAID', 'Nghỉ luật định (không hưởng lương)', '#06b6d4', '⚰️',
@@ -210,7 +209,7 @@ def get_decision_tree():
             n('SK_WARN', 'Ghi chú tiền lương từ BHXH',
               'Thêm ghi chú cho nhân viên: tiền trợ cấp ốm đau nhân sự xử lý hồ sơ bảo hiểm riêng.'),
         ],
-        next_steps='1–2 ngày (đủ chứng từ hợp lệ) → duyệt tự động | 3–6 ngày → Quản lý trực tiếp | 7–19 ngày → Trưởng bộ phận | 20 ngày trở lên → Tổng giám đốc')
+        next_steps='1 ngày (đủ chứng từ hợp lệ, báo trước 08:30) → duyệt tự động | 2 ngày trở lên → Quản lý trực tiếp')
 
     br_emergency = branch(
         'MEDICAL_EMERGENCY', 'Nghỉ cấp cứu / nhập viện', '#ef4444', '🚑',
@@ -450,6 +449,14 @@ def get_gpu_status():
 @router.get('/debug-llm')
 @router.get('/check-env')
 def debug_status(): return get_llm_status()
+
+@router.post('/reset-database')
+def reset_database():
+    try:
+        db.reset_all_data()
+        return {'success': True, 'message': 'Đã khôi phục toàn bộ database về trạng thái demo ban đầu.'}
+    except Exception as e:
+        raise HTTPException(500, f'Lỗi khi reset database: {str(e)}')
 
 @router.get('/cleanup-files')
 @router.get('/kill-tmux')

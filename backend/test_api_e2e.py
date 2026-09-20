@@ -150,11 +150,12 @@ def upload(client,owner='E'):
 
 def test_upload_hr_verification_medical_workflow(client,isolated_db):
     pid=upload(client)
-    created=client.post('/api/leave/request',headers={'X-Actor-ID':'E'},json=payload(leave_type='SICK_MEDICAL',proof_id=pid)).json()['data']
+    created=client.post('/api/leave/request',headers={'X-Actor-ID':'E'},json=payload(leave_type='SICK_MEDICAL',proof_id=pid,to_date='2026-10-05')).json()['data']
+    print("DEBUG CREATED:", created)
     assert created['target_role']=='HR' and created['error_code']=='PROOF_REVIEW_REQUIRED'
     assert client.get('/api/leave/proofs/'+pid,headers={'X-Actor-ID':'B'}).status_code==403
     assert client.get('/api/leave/proofs/'+pid,headers={'X-Actor-ID':'HR'}).content==PDF
-    verify={k:v for k,v in PROOF.items() if k!='verified_by'};verify['verification_notes']='Đã đối chiếu với chứng từ gốc.'
+    verify={k:v for k,v in PROOF.items() if k!='verified_by'};verify['verification_notes']='Đã đối chiếu với chứng từ gốc.';verify['recommended_to_date']='2026-10-05'
     assert client.post('/api/leave/proofs/'+pid+'/verify',headers={'X-Actor-ID':'E'},json=verify).status_code==403
     r=client.post('/api/leave/proofs/'+pid+'/verify',headers={'X-Actor-ID':'HR'},json=verify)
     assert r.status_code==200,r.text

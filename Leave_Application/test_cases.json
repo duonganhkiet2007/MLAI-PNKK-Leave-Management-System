@@ -294,7 +294,7 @@
       "uncertainty_category": null,
       "error_code": null
     },
-    "is_verify_harness": false
+    "is_verify_harness": true
   },
   {
     "id": "TC10",
@@ -365,15 +365,15 @@
       }
     },
     "expected": {
-      "decision": "AUTO_APPROVE",
-      "target_role": null,
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
       "requested_working_days": 3,
       "deducted_days": 0,
       "annual_balance_change": 0,
-      "uncertainty_category": null,
-      "error_code": null
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "DURATION_OVER_AI_LIMIT"
     },
-    "is_verify_harness": true
+    "is_verify_harness": false
   },
   {
     "id": "TC12",
@@ -411,13 +411,13 @@
       }
     },
     "expected": {
-      "decision": "AUTO_APPROVE",
-      "target_role": null,
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
       "requested_working_days": 1,
       "deducted_days": 0,
       "annual_balance_change": 0,
-      "uncertainty_category": null,
-      "error_code": null
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "DURATION_OVER_AI_LIMIT"
     },
     "is_verify_harness": false
   },
@@ -457,13 +457,13 @@
       }
     },
     "expected": {
-      "decision": "AUTO_APPROVE",
-      "target_role": null,
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
       "requested_working_days": 3,
       "deducted_days": 0,
       "annual_balance_change": 0,
-      "uncertainty_category": null,
-      "error_code": null
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "DURATION_OVER_AI_LIMIT"
     },
     "is_verify_harness": false
   },
@@ -491,15 +491,15 @@
       "reason_category": "GRANDPARENT_DEATH"
     },
     "expected": {
-      "decision": "AUTO_APPROVE",
-      "target_role": null,
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
       "requested_working_days": 1,
       "deducted_days": 0,
       "annual_balance_change": 0,
-      "uncertainty_category": null,
-      "error_code": null
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "DURATION_OVER_AI_LIMIT"
     },
-    "is_verify_harness": true
+    "is_verify_harness": false
   },
   {
     "id": "TC15",
@@ -536,13 +536,13 @@
       }
     },
     "expected": {
-      "decision": "AUTO_APPROVE",
-      "target_role": null,
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
       "requested_working_days": 2,
       "deducted_days": 0,
       "annual_balance_change": 0,
-      "uncertainty_category": null,
-      "error_code": null
+      "uncertainty_category": "AUTHORITY_ESCALATION",
+      "error_code": "DURATION_OVER_AI_LIMIT"
     },
     "is_verify_harness": false
   },
@@ -967,7 +967,7 @@
       "uncertainty_category": null,
       "error_code": null
     },
-    "is_verify_harness": false
+    "is_verify_harness": true
   },
   {
     "id": "TC28",

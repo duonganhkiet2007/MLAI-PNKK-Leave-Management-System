@@ -45,10 +45,10 @@ def test_quota_checks_later_days():
 
 def test_statutory_and_medical_only_warn_about_operations():
     r=evaluate(leave_type='SPECIAL_PAID',reason_category='SELF_MARRIAGE',proof={**PROOF,'proof_type':'MARRIAGE_CERTIFICATE'},to_date='2026-10-07',handover_person_id=None,team_absent_count=10)
-    assert r.decision=='AUTO_APPROVE' and len(r.warnings)==2
+    assert r.decision=='ESCALATE' and r.target_role=='DIRECT_MANAGER' and len(r.warnings)==2
 
 def test_medical_digital_signature_and_no_stamp():
-    assert evaluate(leave_type='SICK_MEDICAL',proof={**PROOF,'signature_present':False,'digital_signature_present':True}).decision=='AUTO_APPROVE'
+    assert evaluate(leave_type='SICK_MEDICAL',to_date='2026-10-05',proof={**PROOF,'recommended_to_date':'2026-10-05','signature_present':False,'digital_signature_present':True}).decision=='AUTO_APPROVE'
 
 def test_missing_type_does_not_default_to_annual():
     assert evaluate(leave_type=None).error_code=='LEAVE_TYPE_MISSING'
@@ -75,3 +75,42 @@ def test_date_ambiguity_and_bad_ranges():
     assert evaluate(date_ambiguous=True).error_code=='DATE_AMBIGUOUS'
     assert evaluate(from_date='bad').error_code=='DATE_RANGE_INVALID'
     assert evaluate(from_date='2026-10-08').error_code=='DATE_RANGE_INVALID'
+
+def test_annual_reason_chan_di_lam_auto_approves():
+    r = evaluate(leave_type='ANNUAL', from_date='2026-10-05', to_date='2026-10-06',
+                 remaining_leave_days=10, reason='chán đi làm', team_absent_count=0)
+    assert r.decision == 'AUTO_APPROVE'
+    assert r.error_code is None
+    assert r.deducted_days == 2
+    assert r.annual_balance_change == -2
+
+def test_sick_authority_1d_vs_2d():
+    r1 = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-05',
+                  proof={**PROOF, 'recommended_to_date': '2026-10-05'})
+    assert r1.decision == 'AUTO_APPROVE'
+    r2 = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-06',
+                  proof=PROOF)
+    assert r2.decision == 'ESCALATE'
+    assert r2.target_role == 'DIRECT_MANAGER'
+    assert r2.error_code == 'DURATION_OVER_AI_LIMIT'
+
+def test_sick_emergency_cutoff():
+    r_pass = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-05',
+                      submitted_at='2026-10-05T08:15:00+07:00',
+                      proof={**PROOF, 'recommended_to_date': '2026-10-05'})
+    assert r_pass.decision == 'AUTO_APPROVE'
+
+    r_late = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-05',
+                      submitted_at='2026-10-05T09:00:00+07:00',
+                      proof={**PROOF, 'recommended_to_date': '2026-10-05'})
+    assert r_late.decision == 'ESCALATE'
+    assert r_late.target_role == 'DIRECT_MANAGER'
+    assert r_late.error_code == 'NOTICE_PERIOD_VIOLATED'
+
+def test_anti_abuse_pattern_flag():
+    r = evaluate(leave_type='ANNUAL', from_date='2026-10-05', to_date='2026-10-05',
+                 remaining_leave_days=10, has_abuse_pattern=True)
+    assert r.decision == 'ESCALATE'
+    assert r.target_role == 'DIRECT_MANAGER'
+    assert r.error_code == 'FLAG_ABUSE_PATTERN'
+    assert r.uncertainty_category == 'OUT_OF_POLICY'

@@ -24,7 +24,7 @@ from domain import ProofExtraction, ProofType
 
 VLM_OLLAMA_BASE = os.getenv("VLM_OLLAMA_BASE", "http://localhost:11434")
 VLM_TARGET_MODEL = os.getenv("VLM_TARGET_MODEL", "qwen2.5-vl:3b")
-VLM_TIMEOUT_SEC = float(os.getenv("VLM_TIMEOUT_SEC", "60.0"))
+VLM_TIMEOUT_SEC = float(os.getenv("VLM_TIMEOUT_SEC", "180.0"))
 VLM_FORCE_MOCK = os.getenv("VLM_FORCE_MOCK", "0").strip().casefold() in ("1", "true", "yes", "on")
 VLM_MOCK_FALLBACK_ALLOWED = os.getenv("VLM_ALLOW_MOCK_FALLBACK", "0").strip().casefold() in ("1", "true", "yes", "on")
 
@@ -351,6 +351,20 @@ class VLMInspectionOutput:
     proof_extraction: ProofExtraction  # what gets injected into the rule engine
     vlm_error: Optional[str] = None
 
+    @property
+    def patient_name(self):
+        return self.proof_extraction.patient_name if self.proof_extraction else None
+
+    @property
+    def signature_present(self):
+        return self.proof_extraction.signature_present if self.proof_extraction else None
+
+    @property
+    def proof_type(self):
+        if not self.proof_extraction: return 'NONE'
+        pt = self.proof_extraction.proof_type
+        return pt.value if hasattr(pt, 'value') else str(pt)
+
 
 def _score_correlation(
     employee_name: str,
@@ -446,21 +460,26 @@ def _build_proof_extraction(
         try: return date.fromisoformat(str(v))
         except Exception: return default
 
-    rec_fr = _as_date(_gf("recommended_from","recommended_from_date","from_date"), from_date)
-    rec_to = _as_date(_gf("recommended_to","recommended_to_date","to_date"), to_date)
+    is_none = (pt == ProofType.NONE or profile.get("persona_role_used") == "VLM_UNAVAILABLE")
+    rec_fr = _as_date(_gf("recommended_from","recommended_from_date","from_date"), None if is_none else from_date)
+    rec_to = _as_date(_gf("recommended_to","recommended_to_date","to_date"), None if is_none else to_date)
 
-    patient_name = profile.get("doc_patient_name") or employee_name
+    patient_name = profile.get("doc_patient_name") or (None if is_none else employee_name)
+
+    sig = _gf("signature_present")
+    if sig is None and profile.get("has_doctor_signature") is not None:
+        sig = bool(profile.get("has_doctor_signature"))
 
     p = ProofExtraction(
         proof_type=pt,
         issuer=_gf("issuer"),
         patient_name=patient_name,
-        issue_date=_as_date(_gf("issue_date"), issue_day),
+        issue_date=_as_date(_gf("issue_date"), None if is_none else issue_day),
         recommended_from_date=rec_fr,
         recommended_to_date=rec_to,
-        signature_present=_gf("signature_present") or bool(profile.get("has_doctor_signature")),
+        signature_present=sig,
         digital_signature_present=_gf("digital_signature_present"),
-        document_readability=_gf("document_readability") or "READABLE",
+        document_readability=_gf("document_readability") or ("UNKNOWN" if is_none else "READABLE"),
         fields_detected=list(_gf("fields_detected") or []),
     )
     return p
@@ -543,7 +562,31 @@ def inspect_document_with_vlm(
                 profile_raw = dict(_MOCK_PROFILES.get(key, _MOCK_PROFILES["clean_prescription"]))
                 mode_used = "PERSONA_MOCK_FALLBACK_AFTER_VLM_FAIL"
             else:
-                raise VLMUnavailableError(vlm_error)
+                profile_raw = {
+                    "doc_patient_name": None,
+                    "doc_diagnosis": None,
+                    "has_red_stamp": None,
+                    "has_doctor_signature": None,
+                    "is_tampered": None,
+                    "ai_edited": None,
+                    "days_granted_by_doctor": None,
+                    "correlation_score": 0.0,
+                    "correlation_issues": [vlm_error],
+                    "persona_role_used": "VLM_UNAVAILABLE",
+                    "escalation_reasons": ["VLM_UNAVAILABLE"],
+                    "proof_extra": {
+                        "proof_type": ProofType.NONE,
+                        "issuer": None,
+                        "issue_date": None,
+                        "recommended_from_date": None,
+                        "recommended_to_date": None,
+                        "signature_present": None,
+                        "digital_signature_present": None,
+                        "document_readability": "UNKNOWN",
+                        "fields_detected": [],
+                    },
+                }
+                mode_used = "VLM_UNAVAILABLE"
 
     # ---- doctor-granted days: try explicit or derive from profile + recommended range
     days_explicit = profile_raw.get("days_granted_by_doctor")
@@ -675,12 +718,23 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str]) -> tuple[Optiona
             f"Không thể kết nối tới Ollama tại {VLM_OLLAMA_BASE}. "
             "Hãy chạy: `ollama serve` hoặc kiểm tra biến môi trường VLM_OLLAMA_BASE."
         )
-    # 2. Kiểm tra model qwen2.5-vl:3b đã được pull chưa
+    # 2. Kiểm tra model VLM có sẵn trong Ollama
     loaded = _ollama_loaded_models()
-    if not any(VLM_TARGET_MODEL in m for m in loaded):
+    matched_model = None
+    for m in loaded:
+        if VLM_TARGET_MODEL in m:
+            matched_model = m
+            break
+    if not matched_model:
+        for m in loaded:
+            m_low = m.lower()
+            if any(k in m_low for k in ("vl", "vision", "llava", "minicpm", "bakllava", "moondream")):
+                matched_model = m
+                break
+    if not matched_model:
         return None, (
             f"Model VLM '{VLM_TARGET_MODEL}' chưa có trong Ollama (hiện có: {loaded or '<none>'}). "
-            f"Hãy chạy: `ollama pull {VLM_TARGET_MODEL}`"
+            f"Hãy chọn đúng model hoặc pull: `ollama pull {VLM_TARGET_MODEL}`"
         )
     # 3. Kiểm tra đường dẫn file ảnh thật có tồn tại không
     path = attachment_path_or_type or ""
@@ -692,15 +746,33 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str]) -> tuple[Optiona
             )
         return None, (
             f"File chứng từ '{path}' không tồn tại trên đĩa. "
-            "Không thể gọi VLM (qwen2.5-vl:3b) khi không có file thật để OCR."
+            f"Không thể gọi VLM ({matched_model}) khi không có file thật để OCR."
         )
-    # 4. Đọc + encode ảnh
+    # 4. Đọc + encode ảnh (Tối ưu resize ảnh lớn để VLM inference siêu nhanh ~2s)
     import base64
+    import io
+    img = ""
     try:
-        with open(path, "rb") as f:
-            img = base64.b64encode(f.read()).decode("ascii")
-    except OSError as e:
-        return None, f"Lỗi đọc file '{path}': {type(e).__name__}: {e}"
+        from PIL import Image
+        with Image.open(path) as pil_img:
+            max_dim = 1280
+            w, h = pil_img.size
+            if max(w, h) > max_dim:
+                scale = max_dim / max(w, h)
+                new_size = (int(w * scale), int(h * scale))
+                pil_img = pil_img.resize(new_size, Image.Resampling.LANCZOS)
+            if pil_img.mode in ("RGBA", "P"):
+                pil_img = pil_img.convert("RGB")
+            buf = io.BytesIO()
+            pil_img.save(buf, format="JPEG", quality=85)
+            img = base64.b64encode(buf.getvalue()).decode("ascii")
+    except Exception:
+        try:
+            with open(path, "rb") as f:
+                img = base64.b64encode(f.read()).decode("ascii")
+        except OSError as e:
+            return None, f"Lỗi đọc file '{path}': {type(e).__name__}: {e}"
+
     # 5. Gọi Ollama /api/generate
     _PROOF_TYPE_TAXONOMY = (
         "MAPPING proof_type ĐƯỢC PHÉP CHỌN 1 GIÁ TRỊ DUY NHẤT (enums tiếng Anh, dịch nghĩa tiếng Việt kèm):\n"
@@ -720,10 +792,14 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str]) -> tuple[Optiona
         "  OTHER_ADMINISTRATIVE       → Giấy tờ hành chính khác (hợp đồng mua nhà, quyết định thưởng, giấy phép thi cử...)\n"
     )
     payload = {
-        "model": VLM_TARGET_MODEL,
+        "model": matched_model,
         "stream": False,
         "format": "json",
         "images": [img],
+        "options": {
+            "num_predict": 1024,
+            "temperature": 0.0,
+        },
         "prompt": (
             VLM_SYSTEM_PROMPT + "\n\n" +
             _PROOF_TYPE_TAXONOMY +

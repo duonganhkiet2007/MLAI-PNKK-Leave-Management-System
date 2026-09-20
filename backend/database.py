@@ -19,11 +19,12 @@ EMPLOYEES_JSON_PATH = os.path.join(
 
 
 def get_db_connection() -> sqlite3.Connection:
-    """Tạo kết nối tới SQLite DB với row_factory dạng dict-like."""
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=30)
+    """Tạo kết nối tới SQLite DB với row_factory dạng dict-like và bật WAL mode cho đa luồng."""
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=60)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA busy_timeout=30000")
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=60000")
     return conn
 
 
@@ -126,11 +127,83 @@ def _init_legacy_schema():
                 ))
 
     conn.commit()
+
+    # ============================================================
+    # AUTO-MIGRATION: thêm các cột VLM + LLM nếu DB cũ chưa có
+    # (Trường hợp file leave.db tạo từ schema cũ, chưa có 11 cột VLM
+    #  + cột llm_summary_json → save_record sẽ bỏ lặng các field
+    #  này đi, Manager panel thấy None/null toàn bộ.)
+    # ============================================================
+    AUTO_MIGRATE_LEAVE_COLUMNS = [
+        ("vlm_analysis_json",        "TEXT"),
+        ("llm_summary_json",         "TEXT"),
+        ("doc_patient_name",         "TEXT"),
+        ("doc_diagnosis",            "TEXT"),
+        ("has_red_stamp",            "INTEGER"),
+        ("has_doctor_signature",     "INTEGER"),
+        ("is_tampered",              "INTEGER"),
+        ("ai_edited",                "INTEGER"),
+        ("days_granted_by_doctor",   "INTEGER"),
+        ("correlation_score",        "REAL"),
+        ("correlation_issues",       "TEXT"),
+        ("persona_role_used",        "TEXT"),
+        ("escalation_reasons_json",  "TEXT"),
+        ("facts_json",               "TEXT"),
+        ("result_json",              "TEXT"),
+        ("decision_trace",           "TEXT"),
+        ("canonical_leave_type",     "TEXT"),
+        ("reason_category",          "TEXT"),
+        ("proof_id",                 "TEXT"),
+        ("requested_calendar_days",  "INTEGER"),
+        ("requested_working_days",   "INTEGER"),
+        ("deducted_days",            "INTEGER DEFAULT 0"),
+        ("annual_balance_change",    "INTEGER DEFAULT 0"),
+        ("policy_version",           "TEXT"),
+        ("legacy_reconciliation_required", "INTEGER DEFAULT 1"),
+        ("revision",                 "INTEGER DEFAULT 1"),
+        ("human_resolution",         "TEXT"),
+    ]
+    existing_cols = {r[1].lower() for r in conn.execute("PRAGMA table_info(leave_requests)").fetchall()}
+    for (col_name, col_type) in AUTO_MIGRATE_LEAVE_COLUMNS:
+        if col_name.lower() not in existing_cols:
+            try:
+                conn.execute(f"ALTER TABLE leave_requests ADD COLUMN {col_name} {col_type}")
+                print(f"[AUTO-MIGRATION DB] Đã thêm cột {col_name} ({col_type}) vào leave_requests.")
+            except Exception as e:
+                print(f"[AUTO-MIGRATION DB][WARNING] Không thêm được cột {col_name}: {e}")
+    conn.commit()
+
+    # Tương tự migration cho bảng proof_documents (nếu chưa có cột storage_path / file_real_path)
+    AUTO_MIGRATE_PROOF_COLUMNS = [
+        ("storage_path",         "TEXT"),
+        ("file_real_path",       "TEXT"),
+        ("original_filename",    "TEXT"),
+        ("mime_type",            "TEXT"),
+        ("file_size_bytes",      "INTEGER"),
+        ("uploaded_by",          "TEXT"),
+        ("document_readability", "TEXT"),
+        ("signature_present",    "INTEGER"),
+        ("digital_signature_present", "INTEGER"),
+    ]
+    try:
+        existing_proof_cols = {r[1].lower() for r in conn.execute("PRAGMA table_info(proof_documents)").fetchall()}
+        for (col_name, col_type) in AUTO_MIGRATE_PROOF_COLUMNS:
+            if col_name.lower() not in existing_proof_cols:
+                try:
+                    conn.execute(f"ALTER TABLE proof_documents ADD COLUMN {col_name} {col_type}")
+                except Exception:
+                    pass
+        conn.commit()
+    except Exception:
+        pass
+
     conn.close()
 
 
 def seed_demo_request():
     """Tự động nạp 5 đơn demo cho 5 nhân viên khác nhau nếu bảng leave_requests còn trống."""
+    if os.getenv("SEED_DEMO_DATA", "true").lower() in ("false", "0", "no") or os.getenv("APP_ENV") == "test":
+        return
     conn = get_db_connection()
     try:
         count = conn.execute("SELECT COUNT(*) FROM leave_requests").fetchone()[0]
@@ -241,6 +314,68 @@ def seed_demo_request():
             print("✅ [DEMO SEED] Đã nạp thành công 5 đơn mẫu cho 5 nhân viên.")
     finally:
         conn.close()
+
+
+def reset_all_data(include_demo: bool = False):
+    """Reset toàn bộ dữ liệu database về trạng thái sạch 100%:
+    - Xóa toàn bộ đơn leave_requests, proof_documents, audit_logs, approval_steps, leave_transactions, leave_bookings
+    - Xóa các file upload tạm thời
+    - Khôi phục danh sách nhân viên từ employees.json (reset số dư phép về mặc định 12.0 ngày)
+    - Đưa số lượng đơn về 0 (trắng tinh hoàn toàn)
+    """
+    conn = get_db_connection()
+    try:
+        tables_to_clear = [
+            "leave_requests", "proof_documents", "audit_logs", 
+            "approval_steps", "leave_transactions", "leave_bookings"
+        ]
+        for tbl in tables_to_clear:
+            try:
+                conn.execute(f"DELETE FROM {tbl}")
+            except Exception:
+                pass
+        
+        # Reset lại bảng employees
+        conn.execute("DELETE FROM employees")
+        if os.path.exists(EMPLOYEES_JSON_PATH):
+            with open(EMPLOYEES_JSON_PATH, "r", encoding="utf-8") as f:
+                employees_data = json.load(f)
+                for emp in employees_data:
+                    conn.execute("""
+                        INSERT OR REPLACE INTO employees (
+                            employee_id, name, email, department, role, 
+                            manager_id, remaining_leave_days, status, hire_date
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        emp.get("employee_id"),
+                        emp.get("name"),
+                        emp.get("email"),
+                        emp.get("department"),
+                        emp.get("role"),
+                        emp.get("manager_id"),
+                        float(emp.get("remaining_leave_days", 12.0)),
+                        emp.get("status", "ACTIVE"),
+                        emp.get("hire_date")
+                    ))
+        conn.commit()
+
+        # Dọn dẹp thư mục uploads nếu có
+        uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+        if os.path.exists(uploads_dir):
+            for fname in os.listdir(uploads_dir):
+                fpath = os.path.join(uploads_dir, fname)
+                try:
+                    if os.path.isfile(fpath) and not fname.startswith('.'):
+                        os.remove(fpath)
+                except Exception:
+                    pass
+
+    finally:
+        conn.close()
+
+    if include_demo:
+        seed_demo_request()
+    print("✅ [DATABASE RESET] Đã xóa sạch toàn bộ đơn nghỉ phép và khôi phục database về 0 đơn.")
 
 
 def init_db():

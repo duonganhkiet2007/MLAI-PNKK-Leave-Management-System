@@ -93,7 +93,7 @@ class LeaveOrchestratorService:
                     proof_type_hint=proof_type_hint,
                     document_readability_hint=readability_hint,
                     doc_flags=doc_flags,
-                    allow_mock_fallback=True,
+                    allow_mock_fallback=False,
                 )
             except Exception as _vlm_exc:
                 # Nếu VLM hỏng nghiêm trọng: gắn vlm_error trực tiếp vào record VLM column
@@ -134,13 +134,16 @@ class LeaveOrchestratorService:
                 )
             # Inject VLM proof fields into context so rule engine PROOF stage uses REAL VLM extraction
             # and not just storage heuristics.
-            if vlm_out.proof_extraction:
+            if vlm_out.proof_extraction and getattr(ctx.proof, 'proof_verification_status', 'UNVERIFIED') != 'VERIFIED':
                 proof_dict = vlm_out.proof_extraction.model_dump(mode='python')
                 existing_ver_status = getattr(ctx.proof, 'proof_verification_status', 'UNVERIFIED')
                 existing_notes = getattr(ctx.proof, 'verification_notes', None)
                 # Preserve storage-provided verification status; otherwise default to UNVERIFIED
-                proof_dict.setdefault('proof_verification_status', existing_ver_status)
-                proof_dict.setdefault('verification_notes', existing_notes)
+                proof_dict['proof_verification_status'] = existing_ver_status
+                proof_dict['verification_notes'] = existing_notes
+                if (not proof_dict.get('proof_type') or str(proof_dict['proof_type']) in ('NONE', 'ProofType.NONE')) and getattr(ctx.proof, 'proof_type', None):
+                    pt = ctx.proof.proof_type
+                    proof_dict['proof_type'] = pt.value if hasattr(pt, 'value') else pt
                 try:
                     ctx.proof = VerifiedProof.model_validate(proof_dict)
                 except Exception:
@@ -250,6 +253,14 @@ class LeaveOrchestratorService:
             'UNCERTAIN_FACTS':'Các facts chưa chắc chắn (vd chẩn đoán / ngày khớp chưa đủ)',
             'AUTHORITY_REQUIRED':'Cần người có thẩm quyền cao hơn xem xét dựa trên số ngày',
         }
+        DECISION_VI = {
+            'AUTO_APPROVE':'Tự động duyệt',
+            'ESCALATE':'Chuyển cấp thẩm quyền xem xét',
+            'NEED_CORRECTION':'Cần nhân viên bổ sung thông tin',
+            'AUTO_REJECT':'Tự động từ chối',
+            'NO_LEAVE_REQUIRED':'Không cần nghỉ phép',
+        }
+        decision_vi = DECISION_VI.get(decision_val, decision_val)
         def _fmt(d, key, default='—'):
             v = d.get(key) if isinstance(d,dict) else None
             if v is None or v == '' or v == 0: return default
@@ -264,6 +275,14 @@ class LeaveOrchestratorService:
         diag = record.get('doc_diagnosis') if 'doc_diagnosis' in record else (vlm_out.doc_diagnosis if vlm_out else None)
         doc_patient = record.get('doc_patient_name') if 'doc_patient_name' in record else (vlm_out.doc_patient_name if vlm_out else None)
         doctor_days = record.get('days_granted_by_doctor') if 'days_granted_by_doctor' in record else (vlm_out.days_granted_by_doctor if vlm_out else None)
+        proof_extraction = getattr(ctx, 'proof', None)
+        dfd = getattr(proof_extraction, 'recommended_from_date', None)
+        dtd = getattr(proof_extraction, 'recommended_to_date', None)
+        vlm_analysis_data = record.get('vlm_analysis_json') or (getattr(vlm_out, 'vlm_analysis_json', None) if vlm_out else {}) or {}
+        if not dfd and isinstance(vlm_analysis_data, dict):
+            dr = (vlm_analysis_data.get('document_summary') or {}).get('doctor_recommended_range') or {}
+            dfd = dr.get('from')
+            dtd = dr.get('to')
         requested_wd = result.requested_working_days or 0
         requested_cd = result.requested_calendar_days or 0
         emp_n = ctx.employee_name or 'Nhân viên'
@@ -281,67 +300,41 @@ class LeaveOrchestratorService:
         ltype_vi = LTYPE_VI.get(ltype, ltype or 'Không xác định')
         from_d = _v_enum(facts.from_date)
         to_d = _v_enum(facts.to_date)
-        reason = (getattr(facts,'reason',None) or '').strip()
-        # ---- Build template text (dùng làm fallback + context cho LLM) ----
-        sentences: list = []
-        sentences.append(f"Nhân viên {emp_n} đăng ký nghỉ hình thức {ltype_vi} từ ngày {from_d} đến ngày {to_d}.")
-        if requested_cd or requested_wd:
-            sentences.append(f"Tổng số ngày: {requested_cd} ngày lịch (tương đương {requested_wd} ngày làm việc).")
-        if reason:
-            sentences.append(f"Lý do khai báo: {reason}.")
-        if vlm_fields_present and doc_patient:
-            sentences.append(f"VLM đọc được tên người khám trên giấy: {doc_patient}.")
-        elif not vlm_fields_present or not doc_patient:
-            if vlm_fields_present:
-                sentences.append("VLM chưa đọc được rõ tên bệnh nhân trên chứng từ.")
-            else:
-                sentences.append("Không có thông tin phân tích VLM (chứng từ dạng none / chưa đính kèm).")
-        if vlm_fields_present and diag:
-            sentences.append(f"Chẩn đoán ghi trên giấy: {diag}.")
-        integrity_parts = []
-        if rs is True: integrity_parts.append('đã thấy dấu đỏ')
-        elif rs is False: integrity_parts.append('không thấy dấu đỏ')
-        if sig is True: integrity_parts.append('có chữ ký bác sĩ')
-        elif sig is False: integrity_parts.append('thiếu chữ ký bác sĩ')
-        if tamper is True: integrity_parts.append('nghi vấn chỉnh sửa (tampered)')
-        if ai_ed is True: integrity_parts.append('nghi vấn được tạo bởi AI')
-        if integrity_parts:
-            sentences.append("Kết quả kiểm tra tính toàn vẹn chứng từ: " + "; ".join(integrity_parts) + ".")
-        if doctor_days is not None and requested_wd:
-            sentences.append(f"Bác sĩ đề nghị nghỉ {doctor_days} ngày, đơn yêu cầu {requested_wd} ngày làm việc.")
-        if corr_score is not None:
-            cs = float(corr_score)
-            if cs >= 0.85:
-                corr_txt = 'rất khớp'
-            elif cs >= 0.7:
-                corr_txt = 'khớp ở mức chấp nhận được'
-            elif cs >= 0.5:
-                corr_txt = 'chưa khớp hoàn toàn'
-            else:
-                corr_txt = 'không khớp nhiều'
-            sentences.append(f"Độ khớp giữa lý do nghỉ + thông tin trên chứng từ (correlation_score = {cs:.2f}): {corr_txt}.")
-        decision_vi = DECISION_VI.get(decision_val, decision_val)
-        sentences.append(f"Kết quả của Rule Engine: {decision_vi}.")
-        if error_code:
-            err_vi = ERROR_VI.get(error_code) or (result.human_readable_explanation or error_code)
-            if err_vi and err_vi != '—':
-                sentences.append(f"Lý do chính: {err_vi}.")
-        if target_role and target_role != 'NONE':
-            role_vi = ROLE_VI.get(target_role, target_role)
-            if decision_val == 'NEED_CORRECTION' and target_role == 'EMPLOYEE':
-                sentences.append("Hồ sơ cần được bổ sung hoặc sửa lại; yêu cầu nhân viên nộp lại đầy đủ thông tin.")
-            else:
-                sentences.append(f"Việc này cần được {role_vi} xem xét và phê duyệt tiếp theo.")
-        if (result.applied_policy_clauses or []):
-            clauses = ", ".join(str(x) for x in list(result.applied_policy_clauses)[:3])
-            sentences.append(f"Điều khoản chính sách được áp dụng: {clauses}.")
-        if result.decision == DecisionType.ESCALATE:
-            sentences.append("Tóm lại: đơn không thuộc diện tự động duyệt, người phê duyệt hãy xem xét kĩ nội dung phân tích bên trên để ra quyết định.")
+        reason = (getattr(facts, 'reason', None) or '').strip()
+        # ---- Build template text theo định dạng Bullet Points (•) chuẩn mực ----
+        handover_name = getattr(facts, 'handover_person_name', None) or 'Đồng nghiệp trong bộ phận'
+        clauses_str = ", ".join(str(x) for x in list(result.applied_policy_clauses or [])) or "AUTH-01"
+        err_vi = ERROR_VI.get(error_code) or (result.human_readable_explanation or error_code or '—')
+        role_vi = ROLE_VI.get(target_role, target_role or 'Cấp quản lý')
+
+        bullet_lines = [
+            f"• Đơn xin nghỉ: Nhân viên {emp_n} nộp đơn {ltype_vi} {requested_wd or requested_cd or 1} ngày làm việc (từ {from_d} đến {to_d}) với lý do \"{reason or 'Nghỉ theo kế hoạch cá nhân'}\".",
+            f"• Bàn giao & Quỹ phép: Người nhận bàn giao là {handover_name}; số dư quỹ phép đủ điều kiện.",
+        ]
+
+        if vlm_fields_present:
+            doc_parts = []
+            if doc_patient: doc_parts.append(f"Tên trên giấy: {doc_patient}")
+            if diag: doc_parts.append(f"Chẩn đoán: {diag}")
+            if doctor_days: doc_parts.append(f"Bác sĩ cho nghỉ: {doctor_days} ngày")
+            if rs is True: doc_parts.append("Có dấu đỏ")
+            if sig is True: doc_parts.append("Có chữ ký")
+            bullet_lines.append(f"• Chứng từ y tế: {', '.join(doc_parts) if doc_parts else 'Đã đính kèm chứng từ hợp lệ'}.")
+        else:
+            bullet_lines.append("• Tình trạng chứng từ: Không yêu cầu chứng từ đối với loại nghỉ này.")
+
+        if result.decision == DecisionType.AUTO_APPROVE:
+            bullet_lines.append(f"• Kết quả thẩm định: Hệ thống Tự động duyệt (AUTO_APPROVE) — đạt đầy đủ tiêu chí theo chính sách ({clauses_str}).")
+            bullet_lines.append("• Kết luận: Đã tự động duyệt, không cần chuyển cấp quản lý xem xét.")
         elif result.decision == DecisionType.NEED_CORRECTION:
-            sentences.append("Tóm lại: hồ sơ còn thiếu hoặc có điểm nghi vấn, cần nhân viên cung cấp lại cho đủ quy định.")
-        elif result.decision == DecisionType.AUTO_APPROVE:
-            sentences.append("Tóm lại: đơn đạt tất cả các tiêu chí tự duyệt theo quy định hiện hành.")
-        template_summary_full = " ".join(s for s in sentences if s).strip()
+            bullet_lines.append(f"• Kết quả đối soát: Hồ sơ chưa đủ điều kiện tự duyệt ({err_vi}).")
+            bullet_lines.append("• Kết luận: Cần nhân viên bổ sung hoặc sửa lại thông tin trước khi duyệt.")
+        else:
+            bullet_lines.append(f"• Kết quả đối soát: Cần người có thẩm quyền phê duyệt ({err_vi}).")
+            bullet_lines.append(f"• Kết luận: Chuyển {role_vi} xem xét và quyết định.")
+
+        template_summary_full = "\n".join(bullet_lines)
+
         # ---- Quick actions (Vietnamese - template fallback) ----
         QUICK_VI = {
             'APPROVE_OVERRIDE':'✅ Duyệt (ghi chú nếu cần)',
@@ -370,8 +363,10 @@ class LeaveOrchestratorService:
             if target_role and target_role != 'NONE':
                 parts.append('cần ' + ROLE_VI.get(target_role, target_role) + ' xem xét')
             why_escalated_vi = '. '.join(p for p in parts if p).capitalize()
+        elif result.decision == DecisionType.AUTO_APPROVE:
+            why_escalated_vi = 'Không escalate — đơn đã tự động duyệt thành công theo chính sách.'
         else:
-            why_escalated_vi = 'Không escalate — đơn đã đi theo kết quả quyết định cuối cùng.'
+            why_escalated_vi = 'Cần bổ sung thông tin hồ sơ.'
         warnings_vi = []
         for w in list(getattr(result,'warnings',[]) or []):
             s = str(w)
@@ -392,117 +387,175 @@ class LeaveOrchestratorService:
                     aq_vi = 'Dựa trên các thông tin phân tích bên trên, bạn có phê duyệt đơn này, từ chối, hay cần thêm thông tin nào không?'
             elif result.decision == DecisionType.NEED_CORRECTION:
                 aq_vi = 'Đơn này còn thiếu thông tin hoặc có điểm nghi vấn, bạn có muốn nhân viên nộp lại hồ sơ đầy đủ hơn không?'
+            elif result.decision == DecisionType.AUTO_APPROVE:
+                aq_vi = ''
 
         # ============================================================
-        # 🔥 GỌI LLM (QWEN 2.5 7B) THẬT ĐỂ TẠO SUMMARY CHUYÊN NGHIỆP
+        # 🔥 QUẢN LÝ XỬ LÝ: AUTO_APPROVE THÌ BỎ QUA LLM, ESCALATE THÌ GỌI LLM
         # ============================================================
-        llm_engine_used = "deterministic_template_fallback (LLM chưa sẵn sàng)"
+        llm_engine_used = "deterministic_template_fallback"
         llm_call_error: Optional[str] = None
         llm_parsed: Optional[Dict[str, Any]] = None
-        # Context string cho LLM (tất cả facts đã có)
+
         cs = float(corr_score) if corr_score is not None else -1.0
         if cs >= 0.85: correlation_tier = "RẤT KHỚP"
         elif cs >= 0.7: correlation_tier = "KHỚP"
         elif cs >= 0.5: correlation_tier = "CHƯA KHỚP"
         elif cs >= 0: correlation_tier = "KHÔNG KHỚP"
+        elif result.decision == DecisionType.AUTO_APPROVE: correlation_tier = "TỰ ĐỘNG DUYỆT (HỢP LỆ)"
         else: correlation_tier = "—"
-        integrity_assess = "; ".join(integrity_parts) if integrity_parts else "Không có điểm nghi vấn về toàn vẹn chứng từ."
-        raw_context = {
-            "context_employee": {
-                "employee_name": emp_n,
-                "employee_id": getattr(ctx, 'employee_id', None),
-                "department": getattr(ctx, 'department', None),
-            },
-            "leave_request": {
-                "leave_type_enum": ltype,
-                "leave_type_vi": ltype_vi,
-                "from_date": from_d,
-                "to_date": to_d,
-                "requested_calendar_days": int(requested_cd or 0),
-                "requested_working_days": int(requested_wd or 0),
-                "reason": reason,
-            },
-            "vlm_analysis": {
-                "ran_vlm": bool(vlm_fields_present),
-                "patient_name_on_doc": doc_patient,
-                "diagnosis": diag,
-                "doctor_recommended_days": doctor_days,
-                "has_red_stamp": rs,
-                "has_doctor_signature": sig,
-                "is_tampered": tamper,
-                "ai_edited": ai_ed,
-                "correlation_score": corr_score,
-                "correlation_tier": correlation_tier,
-                "integrity_flags_text": integrity_assess,
-            },
-            "rule_engine_result": {
-                "decision": decision_val,
-                "decision_vi": decision_vi,
-                "status": status_val,
-                "error_code": error_code,
-                "error_code_vi_fallback": ERROR_VI.get(error_code, error_code or '—'),
-                "uncertainty_category": _v_enum(result.uncertainty_category),
-                "target_role": target_role,
-                "target_role_vi_fallback": ROLE_VI.get(target_role, target_role or '—'),
-                "human_readable_explanation": result.human_readable_explanation or '',
-                "quick_action_options_enum": list(result.quick_action_options or []),
-                "applied_policy_clauses_enum": [str(x) for x in list(result.applied_policy_clauses or [])],
-                "warnings_enum": [str(x) for x in list(getattr(result,'warnings',[]) or [])],
-                "why_escalated_template": why_escalated_vi,
-                "actionable_question_template": aq_vi,
-                "summary_template_text": template_summary_full,
+        integrity_parts = []
+        if rs is True: integrity_parts.append('đã thấy dấu đỏ')
+        elif rs is False: integrity_parts.append('không thấy dấu đỏ')
+        if sig is True: integrity_parts.append('có chữ ký bác sĩ')
+        elif sig is False: integrity_parts.append('thiếu chữ ký bác sĩ')
+        if tamper is True: integrity_parts.append('nghi vấn chỉnh sửa (tampered)')
+        if ai_ed is True: integrity_parts.append('nghi vấn được tạo bởi AI')
+
+        integrity_assess = "; ".join(integrity_parts) if integrity_parts else ("Hồ sơ hợp lệ theo quy định." if not vlm_fields_present else "Chứng từ hợp lệ.")
+
+        # Pre-calculated deterministic facts for LLM
+        if vlm_fields_present:
+            name_match = (emp_n.strip().casefold() == str(doc_patient or '').strip().casefold()) if (emp_n and doc_patient) else None
+            name_status = (
+                f"Trùng khớp: '{emp_n}'" if name_match is True
+                else f"BẤT THƯỜNG / KHÔNG KHỚP TÊN: Nhân viên nộp là '{emp_n}', nhưng chứng từ đứng tên '{doc_patient}'" if name_match is False
+                else "Chưa đọc được tên trên chứng từ"
+            )
+            diag_status = f"Đơn khai: '{reason}' | Giấy ghi: '{diag}'" if (reason or diag) else "—"
+            date_status = f"Đơn xin: {from_d} đến {to_d} ({requested_wd} ngày làm việc) | Bác sĩ chỉ định: {dfd} đến {dtd} ({doctor_days} ngày)"
+            stamp_sig_status = f"Dấu đỏ: {'Có' if rs is True else 'Thiếu' if rs is False else 'Chưa rõ'}, Chữ ký: {'Có' if sig is True else 'Thiếu' if sig is False else 'Chưa rõ'}"
+        else:
+            name_status = f"Không có chứng từ đính kèm (loại nghỉ '{ltype_vi}' không bắt buộc chứng từ)"
+            diag_status = f"Lý do nhân viên khai: '{reason}'"
+            date_status = f"Thời gian xin nghỉ: {from_d} đến {to_d} ({requested_wd} ngày làm việc)"
+            stamp_sig_status = "Không áp dụng (đơn không có chứng từ)"
+
+        # NẾU LÀ TỰ ĐỘNG DUYỆT (AUTO_APPROVE): FAST-PATH KHÔNG GỌI LLM ĐỂ TIẾT KIỆM THỜI GIAN
+        if result.decision == DecisionType.AUTO_APPROVE:
+            llm_engine_used = "decision_tree_engine (Tự động duyệt - Không cần LLM)"
+            llm_parsed = {
+                "summary_natural_vn": template_summary_full,
+                "info_sufficient_vn": [
+                    f"Thời lượng xin nghỉ ({requested_wd} ngày) trong hạn mức quỹ phép",
+                    f"Đúng quy định về thời hạn báo trước ({clauses_str})",
+                    f"Đã có người nhận bàn giao công việc ({handover_name})",
+                ],
+                "info_missing_vn": [],
+                "why_escalated": "Không escalate — đơn đã tự động duyệt theo chính sách.",
+                "actionable_question": "",
+                "quick_action_options_vn": ["✅ Đã tự động duyệt"],
+                "applied_policy_clauses_vn": [str(x) for x in list(result.applied_policy_clauses or [])],
+                "correlation_tier_vn": "TỰ ĐỘNG DUYỆT (HỢP LỆ)",
+                "integrity_assessment_vn": "Hồ sơ hợp lệ, không yêu cầu xác minh thêm.",
             }
-        }
-        try:
-            from llm_client import LLMClient
-            from prompts import SUMMARY_MANAGER_SYSTEM_PROMPT
-            from schemas import ManagerSummaryLLMResponse
-            import json
-            _llm = LLMClient()
-            user_prompt = (
-                "Dưới đây là context đầy đủ của đơn nghỉ phép (JSON). "
-                "Hãy tổng hợp thành bản báo cáo theo schema ManagerSummaryLLMResponse.\n\n"
-                "CONTEXT_JSON_BEGIN\n"
-                + json.dumps(raw_context, ensure_ascii=False, indent=2)
-                + "\nCONTEXT_JSON_END\n\n"
-                "QUY TẮC NHẚ LẠI:\n"
-                "- decision, error_code, target_role (gốc tiếng Anh) KHÔNG được trả về, chỉ trả về các field VIETNAMESE trong schema.\n"
-                "- quick_action_options_enum gốc là: "
-                + json.dumps(list(result.quick_action_options or []), ensure_ascii=False)
-                + "; hãy dịch sang tiếng Việt kèm icon (APPROVE_OVERRIDE=✅, REQUEST_MORE_INFO=❓, REJECT=❌, v.v.).\n"
-                "- Tất cả text trả về đều là TIẾNG VIỆT.\n"
-            )
-            llm_out = _llm.generate_json(
-                system_prompt=SUMMARY_MANAGER_SYSTEM_PROMPT,
-                user_prompt=user_prompt,
-                response_model=ManagerSummaryLLMResponse,
-            )
-            llm_parsed = llm_out
-            # 🏆 Ghi đè các trường từ LLM thật lên template fallback
-            llm_engine_used = "qwen_2.5_7b_inprocess_gpu (Real LLM inference)"
-            # merge những gì LLM trả về; giữ các enum gốc không đụng tới
-            if llm_parsed.get('summary_natural_vn'):
-                template_summary_full = llm_parsed['summary_natural_vn']
-            if llm_parsed.get('why_escalated'):
-                why_escalated_vi = llm_parsed['why_escalated']
-            if llm_parsed.get('actionable_question') and '?' in llm_parsed['actionable_question']:
-                aq_vi = llm_parsed['actionable_question']
-            if llm_parsed.get('quick_action_options_vn'):
-                quick_vi = list(llm_parsed['quick_action_options_vn'])
-            if llm_parsed.get('applied_policy_clauses_vn'):
-                policy_vi = list(llm_parsed['applied_policy_clauses_vn'])
-            if llm_parsed.get('warnings'):
-                warnings_vi = list(llm_parsed['warnings'])
-            if llm_parsed.get('correlation_tier_vn'):
-                correlation_tier = llm_parsed['correlation_tier_vn']
-            if llm_parsed.get('integrity_assessment_vn'):
-                integrity_assess = llm_parsed['integrity_assessment_vn']
-            if llm_parsed.get('leave_type_vn'):
-                ltype_vi = llm_parsed['leave_type_vn']
-        except Exception as e:
-            # Fallback: giữ nguyên template đã tạo, nhưng ghi lại lỗi
-            llm_call_error = f"{type(e).__name__}: {e}"
-            llm_engine_used += f" | llm_call_failed: {llm_call_error[:160]}"
+        else:
+            # CHỈ GỌI LLM QWEN 2.5 7B KHI CẦN ESCALATE HOẶC NEED_CORRECTION
+            raw_context = {
+                "context_employee": {
+                    "employee_name": emp_n,
+                    "employee_id": getattr(ctx, 'employee_id', None),
+                    "department": getattr(ctx, 'department', None),
+                },
+                "leave_request": {
+                    "leave_type_enum": ltype,
+                    "leave_type_vi": ltype_vi,
+                    "from_date": from_d,
+                    "to_date": to_d,
+                    "requested_calendar_days": int(requested_cd or 0),
+                    "requested_working_days": int(requested_wd or 0),
+                    "reason": reason,
+                },
+                "vlm_analysis": {
+                    "ran_vlm": bool(vlm_fields_present),
+                    "patient_name_on_doc": doc_patient,
+                    "issuer": getattr(proof_extraction, 'issuer', None) or (vlm_analysis_data.get('document_summary') or {}).get('issuer'),
+                    "issue_date": getattr(proof_extraction, 'issue_date', None).isoformat() if getattr(proof_extraction, 'issue_date', None) else None,
+                    "diagnosis": diag,
+                    "doctor_recommended_range": {
+                        "from": dfd.isoformat() if dfd else None,
+                        "to": dtd.isoformat() if dtd else None,
+                        "days": doctor_days,
+                    },
+                    "has_red_stamp": rs,
+                    "has_doctor_signature": sig,
+                    "is_tampered": tamper,
+                    "ai_edited": ai_ed,
+                    "correlation_score": corr_score,
+                    "correlation_tier": correlation_tier,
+                    "integrity_flags_text": integrity_assess,
+                },
+                "facts_comparison_summary": {
+                    "name_comparison": name_status,
+                    "diagnosis_comparison": diag_status,
+                    "date_comparison": date_status,
+                    "stamp_and_signature": stamp_sig_status,
+                },
+                "rule_engine_result": {
+                    "decision": decision_val,
+                    "decision_vi": decision_vi,
+                    "status": status_val,
+                    "error_code": error_code,
+                    "error_code_vi_fallback": ERROR_VI.get(error_code, error_code or '—'),
+                    "uncertainty_category": _v_enum(result.uncertainty_category),
+                    "target_role": target_role,
+                    "target_role_vi_fallback": ROLE_VI.get(target_role, target_role or '—'),
+                    "human_readable_explanation": result.human_readable_explanation or '',
+                    "quick_action_options_enum": list(result.quick_action_options or []),
+                    "applied_policy_clauses_enum": [str(x) for x in list(result.applied_policy_clauses or [])],
+                    "warnings_enum": [str(x) for x in list(getattr(result,'warnings',[]) or [])],
+                    "why_escalated_template": why_escalated_vi,
+                    "actionable_question_template": aq_vi,
+                    "summary_template_text": template_summary_full,
+                }
+            }
+            try:
+                from llm_client import LLMClient
+                from prompts import SUMMARY_MANAGER_SYSTEM_PROMPT
+                from schemas import ManagerSummaryLLMResponse
+                _llm = LLMClient()
+                user_prompt = (
+                    "Dưới đây là context đầy đủ của đơn nghỉ phép và kết quả đối soát chứng từ (JSON).\n"
+                    "Hãy tổng hợp thành bản báo cáo trung thực, chính xác theo schema ManagerSummaryLLMResponse.\n\n"
+                    "CONTEXT_JSON_BEGIN\n"
+                    + json.dumps(raw_context, ensure_ascii=False, indent=2)
+                    + "\nCONTEXT_JSON_END\n\n"
+                    "QUY TẮC NHẮC LẠI:\n"
+                    "- PHẢI so sánh chính xác giữa tên nhân viên và tên trên giấy (facts_comparison_summary.name_comparison).\n"
+                    "- PHẢI so sánh lý do và chẩn đoán, ngày nghỉ và ngày bác sĩ cho.\n"
+                    "- Nếu đơn không có chứng từ / không yêu cầu chứng từ thì KHÔNG bắt lỗi thiếu chứng từ.\n"
+                    "- Tất cả các text trả về đều là TIẾNG VIỆT, ngắn gọn, súc tích.\n"
+                )
+                llm_out = _llm.generate_json(
+                    system_prompt=SUMMARY_MANAGER_SYSTEM_PROMPT,
+                    user_prompt=user_prompt,
+                    response_model=ManagerSummaryLLMResponse,
+                )
+                llm_parsed = llm_out
+                # 🏆 Ghi đè các trường từ LLM thật lên template fallback
+                llm_engine_used = "qwen_2.5_7b_inprocess_gpu (Real LLM inference)"
+                if llm_parsed.get('summary_natural_vn'):
+                    template_summary_full = llm_parsed['summary_natural_vn']
+                if llm_parsed.get('why_escalated'):
+                    why_escalated_vi = llm_parsed['why_escalated']
+                if llm_parsed.get('actionable_question') and '?' in llm_parsed['actionable_question']:
+                    aq_vi = llm_parsed['actionable_question']
+                if llm_parsed.get('quick_action_options_vn'):
+                    quick_vi = list(llm_parsed['quick_action_options_vn'])
+                if llm_parsed.get('applied_policy_clauses_vn'):
+                    policy_vi = list(llm_parsed['applied_policy_clauses_vn'])
+                if llm_parsed.get('warnings'):
+                    warnings_vi = list(llm_parsed['warnings'])
+                if llm_parsed.get('correlation_tier_vn'):
+                    correlation_tier = llm_parsed['correlation_tier_vn']
+                if llm_parsed.get('integrity_assessment_vn'):
+                    integrity_assess = llm_parsed['integrity_assessment_vn']
+                if llm_parsed.get('leave_type_vn'):
+                    ltype_vi = llm_parsed['leave_type_vn']
+            except Exception as e:
+                # Fallback: giữ nguyên template đã tạo, nhưng ghi lại lỗi
+                llm_call_error = f"{type(e).__name__}: {e}"
+                llm_engine_used += f" | llm_call_failed: {llm_call_error[:160]}"
 
         # Build structured summary (24 keys như cũ, nhưng đã được LLM polish)
         _error_vn = ERROR_VI.get(error_code, error_code or '—')
@@ -536,6 +589,8 @@ class LeaveOrchestratorService:
             "waived_operational_errors": [_v_enum(w) for w in list(waived or [])],
             "why_escalated": why_escalated_vi,
             "summary_natural_vn": template_summary_full,
+            "info_sufficient_vn": list(llm_parsed.get('info_sufficient_vn') or []) if llm_parsed else [],
+            "info_missing_vn": list(llm_parsed.get('info_missing_vn') or []) if llm_parsed else [],
             "correlation_tier_vn": correlation_tier,
             "integrity_assessment_vn": integrity_assess,
             "context": {
@@ -659,7 +714,7 @@ class LeaveOrchestratorService:
                     raise st.Conflict('Không thu hồi quyền nghỉ luật định bằng workflow Annual.')
                 if req.get('legacy_reconciliation_required'): raise st.Conflict('Hồ sơ lịch sử cần đối soát debit; không tự hoàn phép.')
                 count=st.refund(conn,req)
-                req.update(status='REJECTED',human_resolution='REVOKED',deducted_days=0,annual_balance_change=req['annual_balance_change']+count)
+                req.update(status='REJECTED',human_resolution='REVOKED',deducted_days=0,annual_balance_change=(req.get('annual_balance_change') or 0)+count)
             else:
                 if actor_id!=req['employee_id']: raise st.AccessDenied('Chỉ người nộp được hủy.')
                 if req['status'] not in {'WAITING_EMPLOYEE','PENDING_ESCALATION'}: raise st.Conflict('Chỉ hủy đơn đang chờ xử lý.')

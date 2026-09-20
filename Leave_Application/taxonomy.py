@@ -63,6 +63,7 @@ class ErrorCode(str, Enum):
     DIAGNOSIS_MISMATCH = 'DOC_FIELD_MISSING'
     CONSECUTIVE_SPLIT_DETECTED = 'OVERLAPPING_REQUEST'
     CLUSTER_ABSENCE_ANOMALY = 'TEAM_QUOTA_EXCEEDED'
+    FLAG_ABUSE_PATTERN = 'FLAG_ABUSE_PATTERN'
 
 class EscalationDetail(BaseModel):
     category: UncertaintyCategory | None = None
@@ -102,5 +103,8 @@ TAXONOMY_METADATA = {code: {'category': UncertaintyCategory.UNCERTAIN_FACTS,
 for code in (ErrorCode.DURATION_OVER_AI_LIMIT, ErrorCode.DURATION_OVER_MANAGER_LIMIT, ErrorCode.LONG_TERM_UNPAID):
     TAXONOMY_METADATA[code]['category'] = UncertaintyCategory.AUTHORITY_ESCALATION
 for code in (ErrorCode.BALANCE_EXCEEDED, ErrorCode.NOTICE_PERIOD_VIOLATED, ErrorCode.TEAM_QUOTA_EXCEEDED,
-             ErrorCode.LEGAL_REVIEW_REQUIRED, ErrorCode.AUTOMATION_SCOPE_UNSUPPORTED, ErrorCode.PROOF_REVIEW_REQUIRED):
+             ErrorCode.LEGAL_REVIEW_REQUIRED, ErrorCode.AUTOMATION_SCOPE_UNSUPPORTED, ErrorCode.PROOF_REVIEW_REQUIRED,
+             ErrorCode.FLAG_ABUSE_PATTERN):
     TAXONOMY_METADATA[code]['category'] = UncertaintyCategory.OUT_OF_POLICY
+    if code == ErrorCode.FLAG_ABUSE_PATTERN:
+        TAXONOMY_METADATA[code]['default_target'] = TargetApproverRole.DIRECT_MANAGER

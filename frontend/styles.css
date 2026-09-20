@@ -1343,18 +1343,16 @@ html, body {
 .escalation-inbox-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-left: 4px solid #f59e0b;
-  border-radius: 12px;
-  padding: 18px 20px;
+  border-radius: 14px;
+  padding: 22px 24px;
   margin-bottom: 20px;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
   transition: all 0.2s ease;
 }
 
 .escalation-inbox-card:hover {
-  box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 22px -4px rgba(15, 23, 42, 0.08);
   border-color: #cbd5e1;
-  border-left-color: #d97706;
 }
 
 .esc-split-layout {
@@ -2250,6 +2248,158 @@ html, body {
 /* ============================================================= */
 /* TIERED FAN-OUT: 3 tầng common → branches (per leave type) → final + outcomes */
 /* ============================================================= */
+
+/* Dạng cây thật: cha - con, node dạng pill, connector line SVG */
+.dt-tree-wrap {
+  width: 100%;
+  padding: 6px 0 10px 0;
+}
+.dt-tree-scroll {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 18px 24px 28px 24px;
+  background: linear-gradient(180deg, rgba(2,6,23,0.45), rgba(2,6,23,0.25));
+  border: 1px solid #1e293b;
+  border-radius: 14px;
+  min-width: 100%;
+}
+.dt-tree-scroll > .tv-node-col {
+  justify-content: flex-start;
+}
+.tv-svg-connector {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* Cột 1 node (mỗi level = 1 cột cha / con) */
+.tv-node-col {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: top;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+/* Mỗi 1 nhánh cha có dòng .tv-children = các cột con inline-flex đứng cạnh nhau */
+.tv-children {
+  display: inline-flex;
+  flex-direction: row;
+  gap: 18px;
+  align-items: flex-start;
+  margin-top: 28px;
+  padding: 0;
+  position: relative;
+  flex-wrap: nowrap;
+  z-index: 1;
+}
+
+/* 1 node (pill bo góc) */
+.tv-node {
+  position: relative;
+  z-index: 2;
+  min-width: 180px;
+  max-width: 240px;
+  padding: 10px 14px 11px 14px;
+  border-radius: 999px;
+  border: 2px solid;
+  text-align: center;
+  line-height: 1.35;
+  font-size: 0.78rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  background: rgba(15,23,42,0.65);
+}
+.tv-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(59,130,246,0.22);
+}
+.tv-node-title {
+  display: block;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+}
+.tv-node-note {
+  display: block;
+  font-size: 0.64rem;
+  color: #cbd5e1;
+  opacity: 0.88;
+  line-height: 1.35;
+  padding: 2px 4px 0 4px;
+}
+
+/* Root (toàn màn hình giữa) */
+.dt-tree-scroll > .tv-node-col > .tv-node {
+  min-width: 260px;
+  max-width: 340px;
+  padding: 12px 18px 13px 18px;
+  font-size: 0.9rem;
+  border-width: 2.5px;
+}
+
+/* ============== Level 1 (4 Tier dưới ROOT) ============== */
+.dt-tree-scroll > .tv-node-col > .tv-children {
+  gap: 20px;
+}
+.dt-tree-scroll > .tv-node-col > .tv-children > .tv-node-col > .tv-node {
+  min-width: 200px;
+  max-width: 260px;
+  padding: 10px 14px;
+}
+
+/* ============== Level 2 (dưới 8 loại hình nghỉ / 5 lá = các cột nhỏ) ============== */
+.dt-tree-scroll > .tv-node-col > .tv-children > .tv-node-col > .tv-children {
+  gap: 10px;
+  margin-top: 26px;
+}
+.dt-tree-scroll > .tv-node-col > .tv-children > .tv-node-col > .tv-children > .tv-node-col > .tv-node {
+  min-width: 140px;
+  max-width: 176px;
+  padding: 7px 10px 8px 10px;
+  border-radius: 18px;
+  font-size: 0.72rem;
+  text-align: left;
+  border-width: 1.6px;
+}
+.dt-tree-scroll > .tv-node-col > .tv-children > .tv-node-col > .tv-children > .tv-node-col > .tv-node .tv-node-title {
+  font-size: 0.74rem;
+  text-align: left;
+  padding-left: 2px;
+}
+
+/* ============== LEAF (các bước trong 8 loại, và 5 lá cuối) ============== */
+.dt-tree-scroll > .tv-node-col > .tv-children > .tv-node-col > .tv-children > .tv-node-col > .tv-children {
+  gap: 8px;
+  margin-top: 22px;
+}
+.dt-tree-scroll > .tv-node-col > .tv-children > .tv-node-col > .tv-children > .tv-node-col > .tv-children > .tv-node-col > .tv-node {
+  min-width: 130px;
+  max-width: 160px;
+  padding: 6px 9px 7px 9px;
+  border-radius: 14px;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  text-align: left;
+  border-width: 1.5px;
+}
+.dt-tree-scroll > .tv-node-col > .tv-children > .tv-node-col > .tv-children > .tv-node-col > .tv-children > .tv-node-col > .tv-node .tv-node-title {
+  font-size: 0.7rem;
+  padding-left: 2px;
+}
+.dt-tree-scroll > .tv-node-col > .tv-children > .tv-node-col > .tv-children > .tv-node-col > .tv-children > .tv-node-col > .tv-node .tv-node-note {
+  font-size: 0.62rem;
+  padding: 2px 0 0 2px;
+}
 
 .dt-tier {
   display: block;

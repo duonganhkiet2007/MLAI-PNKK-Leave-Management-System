@@ -26,6 +26,8 @@ venv/
 .venv/
 env/
 .conda/
+test_env/
+**/test_env/
 
 # ------ IDE / Editor -----------------------------------------
 .vscode/

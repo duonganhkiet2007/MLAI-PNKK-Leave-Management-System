@@ -297,8 +297,40 @@ def get_decision_tree():
     vlm_total = sum(1 for x in all_nodes if x['kind'] == VLM)
     policy_total = sum(1 for x in all_nodes if x['kind'] == POLICY)
 
+    # --- Cây dạng cha-con (dành cho vẽ cây thật - tree visual) ---
+    def tnode(node_id, label, color='#475569', note='', children=None):
+        return {'node_id': node_id, 'label': label, 'color': color,
+                'note': note, 'children': children or []}
+
+    branch_nodes = []
+    for b in branches:
+        leaves = []
+        for s in b['steps']:
+            c = '#a855f7' if s.get('kind') == VLM else '#64748b'
+            leaves.append(tnode(f"{b['branch_id']}__{s['node_id']}", s['label'], c,
+                                note='🤖 Máy đọc (VLM)' if s.get('kind') == VLM else s.get('hint','')))
+        branch_nodes.append(tnode(b['branch_id'], b['title'], color=b.get('color') or '#475569',
+                                  note=b.get('next') or '', children=leaves))
+
+    final_nodes = [tnode(f"FIN__{x['node_id']}", x['label'], '#475569', note=x.get('hint','')) for x in common_final]
+
+    outcome_nodes = [tnode(f"OUT__{o['id']}", o['title'], o['color'], note=o.get('body','')) for o in outcomes]
+
+    tree_visual = tnode('ROOT', 'Tiếp nhận Đơn Nghỉ Phép', '#0f172a',
+        children=[
+            tnode('TIER_1', 'Bước chung mọi loại nghỉ', '#0ea5e9',
+                  children=[tnode(f"T1__{x['node_id']}", x['label'], '#38bdf8', note=x.get('hint','')) for x in common_inputs]),
+            tnode('TIER_2', '8 loại hình nghỉ phép (chia nhánh riêng)', '#6366f1',
+                  children=branch_nodes),
+            tnode('TIER_3', 'Bước chung cuối cùng', '#0ea5e9',
+                  children=final_nodes),
+            tnode('TIER_OUT', '5 kết quả cuối cùng (Lá)', '#1e293b',
+                  children=outcome_nodes),
+        ]
+    )
+
     tree = {
-        'version': '4.1.0',
+        'version': '4.2.0',
         'layout': 'TIERED_FAN_OUT',
         'common_tier_title': 'Bước chung mọi loại nghỉ',
         'common_inputs': common_inputs,
@@ -320,7 +352,9 @@ def get_decision_tree():
             'policy_steps': policy_total,
             'leave_types': len(branches),
             'final_outcomes': 5,
-        }
+        },
+        # --- Dữ liệu dành cho vẽ cây thật (dạng cha-con, connector line tự vẽ) ---
+        'tree_visual': tree_visual,
     }
     return {'success': True, 'tree': tree}
 

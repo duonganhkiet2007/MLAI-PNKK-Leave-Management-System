@@ -677,6 +677,21 @@ async function loadDecisionTree() {
 }
 
 function renderDecisionTree(tree) {
+  // Ưu tiên dùng cấu trúc cây cha-con (nếu có) để vẽ dạng cây thật, connector line SVG)
+  if (tree.tree_visual) {
+    const html = `
+      <div class="dt-tree-wrap">
+        <div class="dt-tree-scroll">
+          ${renderTreeNode(tree.tree_visual, 0)}
+        </div>
+      </div>
+      ${renderTreeLegend(tree)}
+    `;
+    document.querySelectorAll('.dt-nodes-container').forEach(c => { c.innerHTML = html; });
+    requestAnimationFrame(drawTreeConnectors);
+    return;
+  }
+
   const branches = tree.branches || tree.leave_type_branches || [];
 
   const tier1 = `
@@ -769,6 +784,135 @@ function renderDecisionTree(tree) {
 
   document.querySelectorAll('.dt-nodes-container').forEach(c => {
     c.innerHTML = html;
+  });
+}
+
+// --- Render dạng cây thật (cha-con, có connector) ---
+function renderTreeNode(node, depth) {
+  const children = node.children || [];
+  const c = node.color || '#475569';
+  const note = node.note ? `<div class="tv-node-note">${escapeHtml(node.note)}</div>` : '';
+  const childrenHtml = children.length ? `
+    <div class="tv-children" data-level="${depth + 1}">
+      ${children.map(ch => renderTreeNode(ch, depth + 1)).join('')}
+    </div>` : '';
+  return `
+    <div class="tv-node-col" data-level="${depth}">
+      <div class="tv-node" data-node-id="${node.node_id}" style="border-color: ${c}; background: ${hexToRgba(c, 0.08)};">
+        <div class="tv-node-title" style="color: ${c};">${escapeHtml(node.label)}</div>
+        ${note}
+      </div>
+      ${childrenHtml}
+    </div>`;
+}
+
+function renderTreeLegend(tree) {
+  return (tree.legend && Object.keys(tree.legend).length) ? `
+      <div class="dt-legend-row">
+        <div class="dt-tier-header" style="margin-bottom: 6px;">
+          <span class="dt-tier-icon">🧾</span>
+          <span class="dt-tier-title">Chú thích cây</span>
+        </div>
+        <div class="dt-outcomes-grid dt-legend-grid">
+          <div class="dt-outcome-card" style="border-color: #0ea5e9; background: rgba(14,165,233,0.08);">
+            <div class="dt-outcome-title" style="color: #0ea5e9;">📥 Bước chung</div>
+            <div class="dt-outcome-desc">Mọi loại nghỉ đều đi qua</div>
+          </div>
+          <div class="dt-outcome-card" style="border-color: #6366f1; background: rgba(99,102,241,0.08);">
+            <div class="dt-outcome-title" style="color: #6366f1;">🌿 Chia nhánh</div>
+            <div class="dt-outcome-desc">8 loại hình nghỉ (luồng riêng)</div>
+          </div>
+          <div class="dt-outcome-card" style="border-color: #a855f7; background: rgba(168,85,247,0.08);">
+            <div class="dt-outcome-title" style="color: #a855f7;">🤖 VLM</div>
+            <div class="dt-outcome-desc">${escapeHtml(tree.legend.VLM || 'Máy đọc chứng từ')}</div>
+          </div>
+          <div class="dt-outcome-card" style="border-color: #475569; background: rgba(71,85,105,0.08);">
+            <div class="dt-outcome-title" style="color: #475569;">🌳 Lá</div>
+            <div class="dt-outcome-desc">5 kết quả cuối cùng hệ thống trả về</div>
+          </div>
+        </div>
+      </div>` : '';
+}
+
+// Vẽ connector SVG nối cha → con giữa các node (sau khi layout xong)
+function drawTreeConnectors() {
+  document.querySelectorAll('.dt-tree-scroll').forEach(root => {
+    // Xóa SVG cũ (nếu có)
+    root.querySelectorAll('svg.tv-svg-connector').forEach(s => s.remove());
+
+    const childrenRows = root.querySelectorAll('.tv-children');
+    childrenRows.forEach(childRow => {
+      const parentCol = childRow.parentElement;
+      const parentNode = parentCol.querySelector(':scope > .tv-node');
+      if (!parentNode) return;
+      const childCols = Array.from(childRow.children); // các cột con
+      if (!childCols.length) return;
+      const parentBox = (el) => {
+        const r = el.getBoundingClientRect();
+        const rr = root.getBoundingClientRect();
+        return { left: r.left - rr.left + root.scrollLeft, top: r.top - rr.top + root.scrollTop,
+                 right: r.right - rr.left + root.scrollLeft, bottom: r.bottom - rr.top + root.scrollTop,
+                 width: r.width, height: r.height };
+      };
+      const p = parentBox(parentNode);
+      const rootRect = root.getBoundingClientRect();
+
+      // Tạo 1 svg phủ lên container (chiều cao = khoảng từ dưới parent đến dưới con xa nhất)
+      let minTop = p.bottom;
+      let maxBottom = p.bottom;
+      const childCenters = childCols.map(c => {
+        const cn = c.querySelector(':scope > .tv-node');
+        const b = parentBox(cn);
+        minTop = Math.min(minTop, b.top);
+        maxBottom = Math.max(maxBottom, b.bottom);
+        return { box: b, cx: (b.left + b.width / 2), cy: b.top };
+      });
+      const padX = 8, padY = 8;
+      const svgW = rootRect.width + 16;
+      const svgH = (maxBottom - p.bottom) + padY * 2;
+      if (svgH <= 0 || svgW <= 0) return;
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('class', 'tv-svg-connector');
+      svg.style.left = (-padX) + 'px';
+      svg.style.top = (p.bottom - padY) + 'px';
+      svg.setAttribute('width', svgW);
+      svg.setAttribute('height', svgH);
+      root.appendChild(svg);
+      const parentCx = p.left + p.width / 2 - (-padX);
+      const parentCy = p.bottom - (p.bottom - padY);
+      const trunkY = parentCy + 10;
+      // trunk từ parent xuống trunkY
+      {
+        const l = document.createElementNS(svgNS, 'line');
+        l.setAttribute('x1', parentCx); l.setAttribute('y1', parentCy);
+        l.setAttribute('x2', parentCx); l.setAttribute('y2', trunkY);
+        l.setAttribute('stroke', '#94a3b8'); l.setAttribute('stroke-width', '1.5');
+        svg.appendChild(l);
+      }
+      // horizontal line: giữa trái và phải các con
+      const xs = childCenters.map(c => c.cx - (-padX));
+      const minX = Math.min(parentCx, ...xs);
+      const maxX = Math.max(parentCx, ...xs);
+      {
+        const l = document.createElementNS(svgNS, 'line');
+        l.setAttribute('x1', minX); l.setAttribute('y1', trunkY);
+        l.setAttribute('x2', maxX); l.setAttribute('y2', trunkY);
+        l.setAttribute('stroke', '#94a3b8'); l.setAttribute('stroke-width', '1.5');
+        svg.appendChild(l);
+      }
+      // từ trunk ngang xuống mỗi con
+      childCenters.forEach(cc => {
+        const cx = cc.cx - (-padX);
+        const cy = cc.cy - (p.bottom - padY);
+        // đứng xuống từ trunkY đến cy
+        const v = document.createElementNS(svgNS, 'line');
+        v.setAttribute('x1', cx); v.setAttribute('y1', trunkY);
+        v.setAttribute('x2', cx); v.setAttribute('y2', cy);
+        v.setAttribute('stroke', '#94a3b8'); v.setAttribute('stroke-width', '1.5');
+        svg.appendChild(v);
+      });
+    });
   });
 }
 
@@ -1676,38 +1820,44 @@ function renderManagerQueue() {
       : '20/09/2026';
     const workDays = r.requested_working_days ?? r.workdays ?? 1;
     const leaveLabel = getLeaveTypeLabel(r.leave_type);
-    const dateRange = (r.from_date && r.to_date) 
-      ? `${formatSimpleDate(r.from_date)} → ${formatSimpleDate(r.to_date)}` 
-      : '';
 
-    // Style badge loại nghỉ
+    // Bảng màu hài hòa, dịu mắt, có điểm nhấn theo từng loại nghỉ
     let typeBg = '#eff6ff';
-    let typeColor = '#1d4ed8';
-    if (r.leave_type === 'SICK_MEDICAL' || r.leave_type === 'MEDICAL_EMERGENCY' || String(r.leave_type).toUpperCase().includes('SICK')) {
-      typeBg = '#fef2f2';
-      typeColor = '#b91c1c';
-    } else if (r.leave_type === 'ANNUAL') {
-      typeBg = '#ecfdf5';
-      typeColor = '#047857';
+    let typeColor = '#2563eb';
+    let typeBorder = '#dbeafe';
+    const norm = String(r.leave_type || '').toUpperCase();
+    if (norm.includes('SICK') || norm.includes('MEDICAL')) {
+      typeBg = '#fff1f2';
+      typeColor = '#e11d48';
+      typeBorder = '#ffe4e6';
+    } else if (norm.includes('ANNUAL')) {
+      typeBg = '#f0fdf4';
+      typeColor = '#16a34a';
+      typeBorder = '#dcfce7';
+    } else if (norm.includes('SPECIAL')) {
+      typeBg = '#faf5ff';
+      typeColor = '#7c3aed';
+      typeBorder = '#f3e8ff';
+    } else if (norm.includes('UNPAID')) {
+      typeBg = '#f8fafc';
+      typeColor = '#475569';
+      typeBorder = '#e2e8f0';
     }
 
     return `
       <div class="escalation-inbox-card" id="esc-card-${r.id}">
-        <!-- Dòng Header: Tên nhân sự & Trạng thái -->
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <!-- Dòng Header: Tên nhân sự & Trạng thái (đã bỏ mã đơn) -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
           <div class="d-flex align-items-center gap-3">
-            <div style="width: 42px; height: 42px; border-radius: 10px; background: #f1f5f9; color: #334155; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0; border: 1px solid #e2e8f0;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); color: #334155; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.05rem; flex-shrink: 0; border: 1px solid #e2e8f0;">
               ${escapeHtml(r.employee_name ? r.employee_name.trim().charAt(0) : 'N')}
             </div>
             <div>
               <div class="d-flex align-items-center gap-2 flex-wrap">
-                <span style="font-size: 1.05rem; font-weight: 700; color: #0f172a; letter-spacing: -0.01em;">
+                <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a; letter-spacing: -0.01em;">
                   ${escapeHtml(r.employee_name || 'Nhân viên')}
                 </span>
-                ${r.department ? `<span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.75rem;">${escapeHtml(r.department)}</span>` : ''}
-              </div>
-              <div class="text-secondary small mt-0.5">
-                Mã đơn: <span class="fw-semibold text-dark">${escapeHtml(r.id)}</span>
+                ${r.department ? `<span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.76rem; border-radius: 6px;">${escapeHtml(r.department)}</span>` : ''}
               </div>
             </div>
           </div>
@@ -1716,42 +1866,41 @@ function renderManagerQueue() {
           </div>
         </div>
 
-        <!-- Khối Thông Tin Quan Trọng: Loại nghỉ, Ngày nộp, Số ngày nghỉ -->
-        <div class="row g-2 py-2 px-3 mb-2" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
-          <div class="col-sm-4 d-flex align-items-center gap-2">
+        <!-- Khối Thông Tin: Thoáng đãng, điểm nhấn tinh tế, chỉ ghi số ngày nghỉ -->
+        <div class="d-flex align-items-center flex-wrap gap-4 py-3 my-2" style="border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;">
+          <div class="d-flex align-items-center gap-2">
             <span class="text-secondary small fw-medium">Loại nghỉ:</span>
-            <span class="badge fw-semibold px-2 py-1" style="background: ${typeBg}; color: ${typeColor}; border-radius: 6px; font-size: 0.8rem;">
+            <span class="badge fw-semibold px-2.5 py-1" style="background: ${typeBg}; color: ${typeColor}; border: 1px solid ${typeBorder}; border-radius: 6px; font-size: 0.82rem;">
               ${escapeHtml(leaveLabel)}
             </span>
           </div>
-          <div class="col-sm-4 d-flex align-items-center gap-2">
+          <div class="d-flex align-items-center gap-2">
             <span class="text-secondary small fw-medium">Ngày nộp:</span>
-            <span class="fw-semibold text-dark small">${escapeHtml(submitDate)}</span>
+            <span class="fw-semibold text-dark" style="font-size: 0.88rem;">${escapeHtml(submitDate)}</span>
           </div>
-          <div class="col-sm-4 d-flex align-items-center gap-2">
+          <div class="d-flex align-items-center gap-2">
             <span class="text-secondary small fw-medium">Số ngày nghỉ:</span>
-            <span class="fw-bold text-dark small">${workDays} ngày</span>
-            ${dateRange ? `<span class="text-muted" style="font-size: 0.78rem;">(${escapeHtml(dateRange)})</span>` : ''}
+            <span class="fw-bold" style="color: #0f172a; font-size: 0.95rem;">${workDays} ngày</span>
           </div>
         </div>
 
-        <!-- Khối Lý Do Nghỉ -->
-        <div class="p-2 px-3 mb-3" style="background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px;">
+        <!-- Khối Lý Do Nghỉ: Nhẹ nhàng, dễ đọc, không viền đứt -->
+        <div class="py-2.5 px-3 mb-3" style="background: #f8fafc; border-radius: 10px;">
           <div class="d-flex align-items-baseline gap-2">
             <span class="text-secondary small fw-semibold" style="white-space: nowrap;">Lý do nghỉ:</span>
-            <span class="text-dark fw-medium" style="font-size: 0.88rem; line-height: 1.5;">
+            <span class="text-dark fw-medium" style="font-size: 0.9rem; line-height: 1.55;">
               ${escapeHtml(r.reason || 'Không có mô tả chi tiết')}
             </span>
           </div>
         </div>
 
         <!-- Khu vực Xử lý của Quản lý & Nút Chi tiết -->
-        <div class="d-flex flex-column gap-2 pt-2" style="border-top: 1px solid #f1f5f9;">
+        <div class="d-flex flex-column gap-2 pt-1">
           <div>
-            <input type="text" id="esc-feedback-${r.id}" class="form-control form-control-sm" placeholder="Nhập ý kiến chỉ đạo / phản hồi (nếu có)..." style="border-radius: 6px; font-size: 0.84rem; background: #fafafa;">
+            <input type="text" id="esc-feedback-${r.id}" class="form-control form-control-sm" placeholder="Nhập ý kiến chỉ đạo / phản hồi (nếu có)..." style="border-radius: 8px; font-size: 0.85rem; padding: 8px 14px; border: 1px solid #e2e8f0; background: #ffffff;">
           </div>
-          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
-            <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" onclick="openRequestDetailModal('${r.id}')" style="border-radius: 6px; font-size: 0.82rem;">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2">
+            <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5" onclick="openRequestDetailModal('${r.id}')" style="border-radius: 7px; font-size: 0.82rem;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
                 <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -1760,16 +1909,16 @@ function renderManagerQueue() {
               Chi tiết
             </button>
             <div class="d-flex align-items-center gap-2">
-              <button type="button" class="btn btn-sm btn-warning px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" onclick="submitManagerDecision('${r.id}','REQUEST_MORE_INFO')" style="border-radius: 6px; font-size: 0.82rem;">
+              <button type="button" class="btn btn-sm px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5" onclick="submitManagerDecision('${r.id}','REQUEST_MORE_INFO')" style="border-radius: 7px; font-size: 0.82rem; background: #f59e0b; border-color: #f59e0b; color: #ffffff;">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
                 Yêu cầu bổ sung
               </button>
-              <button type="button" class="btn btn-sm btn-danger px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" onclick="submitManagerDecision('${r.id}','REJECT')" style="border-radius: 6px; font-size: 0.82rem;">
+              <button type="button" class="btn btn-sm px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5" onclick="submitManagerDecision('${r.id}','REJECT')" style="border-radius: 7px; font-size: 0.82rem; background: #ef4444; border-color: #ef4444; color: #ffffff;">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 Từ chối
               </button>
               ${r.target_role !== 'HR' ? `
-                <button type="button" class="btn btn-sm btn-success px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" onclick="submitManagerDecision('${r.id}','APPROVE')" style="border-radius: 6px; font-size: 0.82rem;">
+                <button type="button" class="btn btn-sm px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5" onclick="submitManagerDecision('${r.id}','APPROVE')" style="border-radius: 7px; font-size: 0.82rem; background: #10b981; border-color: #10b981; color: #ffffff;">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   Duyệt
                 </button>

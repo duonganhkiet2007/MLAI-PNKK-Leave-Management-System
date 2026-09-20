@@ -29,18 +29,43 @@ VLM_FORCE_MOCK = os.getenv("VLM_FORCE_MOCK", "0").strip().casefold() in ("1", "t
 VLM_MOCK_FALLBACK_ALLOWED = os.getenv("VLM_ALLOW_MOCK_FALLBACK", "0").strip().casefold() in ("1", "true", "yes", "on")
 
 
-VLM_SYSTEM_PROMPT = """Bạn là chuyên gia kiểm định chứng từ nghỉ phép BHXH Việt Nam (VLM-Officer).
-Nhiệm vụ: đọc chứng từ (đơn thuốc, giấy xuất viện, giấy cưới, giấy tử tang, CCCD/CMND)
-và trả về JSON THUẦN TÚY theo schema ProofExtraction.
+VLM_SYSTEM_PROMPT = """Bạn là chuyên gia kiểm định chứng từ nghỉ phép Nhân sự Việt Nam (VLM-Officer).
+Nhiệm vụ: đọc ảnh CHỨNG TỪ đính kèm của đơn nghỉ phép và trả về JSON THUẦN TÚY theo schema đã định nghĩa.
+
+LOẠI CHỨNG TỪ CÓ THỂ GẶP (PHẢI NHẬN DIỆN ĐÚNG proof_type):
+  • Giấy giới thiệu khám bệnh / Giấy khám bệnh BHYT (phòng khám, bệnh viện tư, công lập, đa khoa, chuyên khoa)
+  • Giấy hẹn tái khám / Phiếu kết quả xét nghiệm / Chẩn đoán hình ảnh
+  • Giấy xuất viện / Quyết định xuất viện / Phiếu điều trị nội trú
+  • Giấy nghỉ thai sản / Giấy chứng nhận mang thai
+  • Giấy xác nhận tai nạn lao động / Bệnh nghề nghiệp (BHXH / Ủy ban ATLĐ)
+  • Giấy đăng ký kết hôn / Giấy mời đám cưới / Giấy báo hỷ sự
+  • Giấy chứng tử / Giấy báo tử / Giấy xác nhận tang lễ / Quả quyết định tang chế
+  • Giấy xác nhận sự kiện gia đình (kỷ niệm 50 năm ngày cưới, lễ 1 ngày, bữa tiệc...)
+  • Căn cước công dân (CCCD) / Chứng minh nhân dân (CMND) / Hộ chiếu
+  • Giấy phép công tác nước ngoài / Visa / Máy bay đi du lịch
+  • Ảnh chụp hợp đồng mua bán / Giấy tờ hành chính khác liên quan trực tiếp đến lý do nghỉ
 
 QUY TẮC BẮT BUỘC:
-  1. Chỉ ghi những gì THẤY được trên hình.  Không suy diễn, không đoán.
-  2. patient_name phải nguyên văn như trên giấy, không sửa lỗi chính tả.
-  3. signature_present = chỉ True nếu thấy CHỮ KÝ CỦA BÁC SĨ (hoặc chữ ký số rõ nét).
-  4. document_readability = ILLEGAL nếu ảnh mờ, cắt xén, chữ kí không đọc được.
-  5. Tên BỆNH VIỆN / PHÒNG KHÁM cấp (issuer), NGÀY CẤP (issue_date) phải có.
-  6. Không được thêm text giải thích trước hay sau JSON.  Chỉ trả { ... } object duy nhất.
-  7. recommended_from_date / recommended_to_date = KHOẢNG NGHỈ được bác sĩ CHỈ ĐỊNH.
+  1. Chỉ ghi những gì THẤY được trên hình.  Không suy diễn, không đoán, không trùng lặp thông tin không có.
+  2. patient_name (nếu có - với các loại giấy có tên người thụ hưởng) phải nguyên văn như trên giấy, không sửa lỗi chính tả.
+  3. signature_present = chỉ True nếu thấy CHỮ KÝ CỦA NGƯỜI CÓ THẨM QUYỀN CẤP (bác sĩ, trưởng công an, chủ tịch UBND, cô dâu chú rể, người ký giấy chứng tử...).
+     signature_present = False nếu ảnh KHÔNG có chữ ký nào ĐƯỢC NHẬN DIỆN RÕ NÉT, dù người ký thật nhưng mờ / cắt xén.
+  4. has_red_stamp = chỉ True nếu thấy DẤU MỘC ĐỎ HÌNH TRÒN / HÌNH VUÔNG CÓ TÊN CƠ QUAN / ĐƠN VỊ / CHỨC DANH rõ nét (dấu đỏ của BHXH, bệnh viện, UBND, công ty, phòng khám...).
+  5. document_readability:
+       - READABLE    = ảnh đủ sáng, đầy đủ 4 góc, text + dấu + chữ ký đọc rõ
+       - PARTIAL     = ảnh hơi mờ / 1 góc bị cắt nhưng đọc được thông tin chính (tên, ngày, chẩn đoán...)
+       - ILLEGAL     = ảnh quá mờ, che khuất phần lớn, hoặc chữ/dấu/chữ ký KHÔNG THỂ xác minh
+  6. issuer = tên CƠ QUAN / ĐƠN VỊ / BỆNH VIỆN / PHÒNG KHÁM / CÔNG TY / NƠI CẤP ra giấy tờ (đọc nguyên văn trên dấu đỏ / tiêu đề).
+  7. issue_date = NGÀY, THÁNG, NĂM giấy tờ được ký / cấp (YYYY-MM-DD).
+  8. recommended_from_date / recommended_to_date:
+       - Với giấy bệnh: KHOẢNG NGÀY BÁC SĨ CHỈ ĐỊNH NGHỈ
+       - Với giấy cưới: NGÀY CƯỚI / NGÀY TỔ CHỨC
+       - Với giấy tử tang: NGÀY TANG LỄ / NGÀY LỄ TƯỞNG NIỆM
+       - Với giấy thai sản: NGÀY DỰ SINH / NGÀY NGHỈ SINH SẢN ĐỀ NGHỊ
+       - Với CCCD / giấy hành chính: khoảng ngày KHÔNG CÓ → cả 2 trường đều để null
+  9. Không được thêm text giải thích trước hay sau JSON.  Chỉ trả DUY NHẤT 1 { ... } object hợp lệ.
+ 10. ai_edited = True nếu nghi vấn ảnh được chỉnh sửa bởi photoshop / AI (chữ không đều, chồng lấn pixel, text clone, dấu đỏ bị tái tạo...).
+ 11. is_tampered = True nếu nghi vấn giấy tờ bị SỬA NỘI DUNG SAU KHI KÝ (xóa chữ, sửa ngày tháng, đổi tên, dán chữ lên ảnh...).
 """
 
 
@@ -622,6 +647,21 @@ def _ollama_loaded_models() -> list[str]:
         return []
 
 
+def _resolve_persona_by_proof_type(proof_type_str: Optional[str]) -> str:
+    if not proof_type_str:
+        return _PersonaRegistry.PERSONA_HR_ADJUDICATOR
+    s = str(proof_type_str).upper()
+    if any(k in s for k in ("MEDICAL", "HOSPITAL", "LAB", "MATERNITY", "ACCIDENT", "SICK")):
+        return _PersonaRegistry.PERSONA_DOCTOR_VL
+    if any(k in s for k in ("DEATH", "FUNERAL", "MARRIAGE", "WEDDING", "FAMILY")):
+        return _PersonaRegistry.PERSONA_HR_ADJUDICATOR
+    if any(k in s for k in ("IDENTITY", "VISA", "TRAVEL", "ADMINISTRATIVE")):
+        return _PersonaRegistry.PERSONA_ADMIN
+    if "NONE" in s:
+        return _PersonaRegistry.PERSONA_FORENSIC
+    return _PersonaRegistry.PERSONA_HR_ADJUDICATOR
+
+
 def _try_ollama_extract(attachment_path_or_type: Optional[str]) -> tuple[Optional[Dict[str, Any]], Optional[str]]:
     """Thực thi VLM thật qua Ollama.
 
@@ -662,21 +702,50 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str]) -> tuple[Optiona
     except OSError as e:
         return None, f"Lỗi đọc file '{path}': {type(e).__name__}: {e}"
     # 5. Gọi Ollama /api/generate
+    _PROOF_TYPE_TAXONOMY = (
+        "MAPPING proof_type ĐƯỢC PHÉP CHỌN 1 GIÁ TRỊ DUY NHẤT (enums tiếng Anh, dịch nghĩa tiếng Việt kèm):\n"
+        "  NONE                       → không phải chứng từ (ảnh rác, screenshot không liên quan, trống)\n"
+        "  MEDICAL_LEAVE_CERTIFICATE  → Giấy khám bệnh / Giấy nghỉ bệnh / Giấy giới thiệu khám BHYT (thường có dấu đỏ bệnh viện/phòng khám + chữ ký bác sĩ)\n"
+        "  HOSPITAL_DISCHARGE         → Giấy xuất viện / Quyết định xuất viện / Phiếu điều trị nội trú\n"
+        "  LAB_RESULT                 → Phiếu xét nghiệm / Kết quả siêu âm / MRI / CT / chẩn đoán hình ảnh\n"
+        "  MATERNITY_CERTIFICATE      → Giấy nghỉ thai sản / Giấy chứng nhận mang thai / Giấy sinh con\n"
+        "  ACCIDENT_CERTIFICATE       → Giấy xác nhận tai nạn lao động / Bệnh nghề nghiệp (có dấu BHXH / Ủy ban ATLĐ)\n"
+        "  MARRIAGE_CERTIFICATE       → Giấy đăng ký kết hôn / Giấy xác nhận đã kết hôn (UBND phường / quận)\n"
+        "  WEDDING_INVITATION         → Giấy mời đám cưới / Giấy báo hỷ sự\n"
+        "  DEATH_CERTIFICATE          → Giấy chứng tử (Công an / Trạm y tế) / Giấy báo tử\n"
+        "  FUNERAL_DECISION           → Quyết định tang chế / Giấy xác nhận tang lễ / Giấy báo dự lễ tang\n"
+        "  FAMILY_EVENT_LETTER        → Giấy xác nhận sự kiện gia đình (nghỉ đám hỏi, lễ giỗ tổ tiên, kỉ niệm ngày cưới...)\n"
+        "  IDENTITY_CARD              → CCCD / CMND cũ / Hộ chiếu (chỉ dùng khi đơn yêu cầu nghỉ thực hiện thủ tục hành chính liên quan đến giấy tờ)\n"
+        "  VISA_OR_TRAVEL_DOC         → Visa / Máy bay / Giấy phép công tác nước ngoài (hợp đồng du lịch / bồi dưỡng công tác)\n"
+        "  OTHER_ADMINISTRATIVE       → Giấy tờ hành chính khác (hợp đồng mua nhà, quyết định thưởng, giấy phép thi cử...)\n"
+    )
     payload = {
         "model": VLM_TARGET_MODEL,
         "stream": False,
         "format": "json",
         "images": [img],
         "prompt": (
-            "Phân tích chứng từ đính kèm cho đơn nghỉ phép Việt Nam.  "
-            + VLM_SYSTEM_PROMPT
-            + "\n\nSchema keys (trả JSON THUẦN TÚY, không text trước/sau JSON): doc_patient_name, doc_diagnosis, "
-              "has_red_stamp (bool), has_doctor_signature (bool), is_tampered (bool|null), "
-              "ai_edited (bool|null), days_granted_by_doctor (int|null), "
-              "proof_type, issuer, issue_date (YYYY-MM-DD), recommended_from_date, "
-              "recommended_to_date, signature_present (bool), document_readability, "
-              "correlation_issues (list[str] so với ngữ cảnh chung nếu có thể phỏng đoán từ ảnh), "
-              "escalation_reasons (list[str] flags)."
+            VLM_SYSTEM_PROMPT + "\n\n" +
+            _PROOF_TYPE_TAXONOMY +
+            "\nSchema keys (trả JSON THUẦN TÚY, KHÔNG text giải thích, KHÔNG markdown, CHỈ 1 object duy nhất):\n"
+            "  1. proof_type                       → enum 1 trong 13 giá trị trên, BẮT BUỘC CHỌN, KHÔNG được tùy ý thêm.\n"
+            "  2. doc_patient_name / subject_name  → TÊN NGƯỜI LIÊN QUAN TRÊN GIẤY (bệnh nhân, vợ/chồng, người đã mất, người cưới...). Nếu không có → null.\n"
+            "  3. doc_diagnosis / event_reason     → Chẩn đoán bệnh (nếu là giấy bệnh) / Lý do sự kiện (nếu không phải bệnh) / Nội dung giấy tờ tóm tắt. Không có → null.\n"
+            "  4. has_red_stamp                    → bool. Có thấy dấu đỏ (mộc đỏ tròn / vuông) rõ nét trên giấy không?\n"
+            "  5. has_doctor_signature             → bool. Có thấy CHỮ KÝ NGƯỜI CÓ THẨM QUYỀN (bác sĩ / trưởng đơn vị / chủ tịch / người cấp giấy) KHÔNG?\n"
+            "  6. signature_present                → bool = has_doctor_signature (2 trường này giống nhau cho loại giấy không có bác sĩ).\n"
+            "  7. is_tampered                      → bool / null. Nghi vấn giấy bị sửa nội dung sau khi ký?\n"
+            "  8. ai_edited                        → bool / null. Nghi vấn ảnh được chỉnh sửa AI?\n"
+            "  9. days_granted_by_doctor           → int / null. SỐ NGÀY NGHỊ được ghi trên giấy (bác sĩ đề nghị, nghỉ thai sản, ngày lễ, ngày tang...). Nếu không có số ngày → null.\n"
+            "  10. document_readability            → enum 1 giá trị: READABLE / PARTIAL / ILLEGAL.\n"
+            "  11. issuer                          → string / null. Tên cơ quan cấp giấy (Bệnh viện Đa khoa X, UBND phường Y, BHXH, Phòng khám Z...).\n"
+            "  12. issue_date                      → string / null. Ngày cấp giấy YYYY-MM-DD.\n"
+            "  13. recommended_from_date           → string / null. Ngày bắt đầu nghỉ / ngày sự kiện YYYY-MM-DD.\n"
+            "  14. recommended_to_date             → string / null. Ngày kết thúc nghỉ / ngày sự kiện kết thúc YYYY-MM-DD.\n"
+            "  15. correlation_issues              → list[string] (mảng có thể rỗng). Các VẤN ĐỀ PHÁT HIỆN trên giấy (vd: tên sai, chữ ký không thấy, dấu đỏ không thấy, ngày tháng cắt xén...). Không có → [].\n"
+            "  16. escalation_reasons              → list[string] (mảng có thể rỗng). Các FLAG cần escalate cho người duyệt (vd: DOC_MISSING_RED_STAMP, DOC_SIGNATURE_UNVERIFIABLE, DOC_LOW_READABILITY, TAMPER_SUSPECTED, AI_EDITED, WRONG_PROOF_TYPE). Không có → [].\n"
+            "  17. digital_signature_present       → bool / null. Giấy có chữ ký số (PKI, CA, hình ảnh chữ ký số có khóa công khai) không? Nếu không rõ → null.\n"
+            "  18. fields_detected                 → list[string] các trường dữ liệu ĐƯỢC ĐỌC THÀNH CÔNG trên giấy (vd: ['patient_name','diagnosis','issue_date','red_stamp','signature']...).\n"
         ),
     }
     req = urlrequest.Request(
@@ -709,24 +778,69 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str]) -> tuple[Optiona
             f"Lỗi parse: {e}. Phản hồi gốc (trước khi cắt): {(body.get('response') or '')[:300]}"
         )
     normalized: Dict[str, Any] = {
-        "doc_patient_name": parsed.get("doc_patient_name"),
-        "doc_diagnosis": parsed.get("doc_diagnosis"),
-        "has_red_stamp": parsed.get("has_red_stamp"),
-        "has_doctor_signature": parsed.get("has_doctor_signature"),
+        "doc_patient_name": (
+            parsed.get("doc_patient_name")
+            or parsed.get("subject_name")
+            or parsed.get("patient_name")
+            or parsed.get("name")
+        ),
+        "doc_diagnosis": (
+            parsed.get("doc_diagnosis")
+            or parsed.get("event_reason")
+            or parsed.get("diagnosis")
+            or parsed.get("event_description")
+        ),
+        "has_red_stamp": (
+            parsed.get("has_red_stamp")
+            if isinstance(parsed.get("has_red_stamp"), bool)
+            else (parsed.get("has_stamp") if isinstance(parsed.get("has_stamp"), bool) else None)
+        ),
+        "has_doctor_signature": (
+            parsed.get("has_doctor_signature")
+            if isinstance(parsed.get("has_doctor_signature"), bool)
+            else (parsed.get("signature_present") if isinstance(parsed.get("signature_present"), bool) else None)
+        ),
         "is_tampered": parsed.get("is_tampered"),
         "ai_edited": parsed.get("ai_edited"),
-        "days_granted_by_doctor": parsed.get("days_granted_by_doctor"),
+        "days_granted_by_doctor": (
+            parsed.get("days_granted_by_doctor")
+            or parsed.get("recommended_leave_days")
+            or parsed.get("days_recommended")
+        ),
         "correlation_issues": list(parsed.get("correlation_issues") or []),
-        "persona_role_used": _PersonaRegistry.PERSONA_DOCTOR_VL,
+        "persona_role_used": _resolve_persona_by_proof_type(
+            parsed.get("proof_type") or parsed.get("document_type")
+        ),
         "escalation_reasons": list(parsed.get("escalation_reasons") or []),
         "proof_extra": {
-            "proof_type": parsed.get("proof_type") or ProofType.MEDICAL_LEAVE_CERTIFICATE.value,
+            "proof_type": (
+                parsed.get("proof_type")
+                or parsed.get("document_type")
+                or ProofType.MEDICAL_LEAVE_CERTIFICATE.value
+            ),
             "issuer": parsed.get("issuer"),
             "issue_date": parsed.get("issue_date"),
             "recommended_from_date": parsed.get("recommended_from_date"),
             "recommended_to_date": parsed.get("recommended_to_date"),
-            "signature_present": parsed.get("signature_present"),
-            "document_readability": parsed.get("document_readability", "UNKNOWN"),
+            "signature_present": (
+                parsed.get("signature_present")
+                if isinstance(parsed.get("signature_present"), bool)
+                else parsed.get("has_doctor_signature")
+            ),
+            "digital_signature_present": (
+                parsed.get("digital_signature_present")
+                if isinstance(parsed.get("digital_signature_present"), bool)
+                else (
+                    parsed.get("has_digital_signature")
+                    if isinstance(parsed.get("has_digital_signature"), bool)
+                    else None
+                )
+            ),
+            "document_readability": (
+                parsed.get("document_readability")
+                or parsed.get("readability")
+                or "UNKNOWN"
+            ),
             "fields_detected": list(parsed.get("fields_detected") or []),
         },
     }

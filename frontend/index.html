@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/static/vendor/tabler/tabler.min.css">
   
   <!-- Custom Styling & Refinements -->
-  <link rel="stylesheet" href="styles.css?v=20260920_v11">
+  <link rel="stylesheet" href="styles.css?v=20260921_v3">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e40af'/><text x='16' y='22' font-family='sans-serif' font-size='16' font-weight='bold' fill='white' text-anchor='middle'>HR</text></svg>">
 </head>
 <body>
@@ -37,32 +37,29 @@
 
         <!-- Role / Demo Selectors -->
         <div class="saas-selector-wrap" id="header-staff-selector">
-          <span class="saas-selector-label">Nhân viên:</span>
+          <span class="saas-selector-label">Phòng ban:</span>
+          <select id="demo-department-select" class="saas-select" title="Chọn phòng ban">
+            <option value="Engineering" selected>Engineering</option>
+            <option value="Marketing & Operations">Marketing & Operations</option>
+          </select>
+
+          <span class="saas-selector-label" style="margin-left: 4px;">Nhân viên:</span>
           <select id="demo-employee-select" class="saas-select" title="Chọn nhân viên giả lập đăng nhập">
-            <option value="EMP012" selected>Nguyễn Văn An</option>
+            <option value="EMP003" selected>Trần Quốc Hưng (Principal Architect)</option>
           </select>
         </div>
 
         <div class="saas-selector-wrap" id="header-manager-selector" style="display: none;">
           <span class="saas-selector-label">Vai trò:</span>
           <select id="manager-role-select" class="saas-select">
-            <option value="EMP001" selected>Lê Thị Bình · HR Manager</option>
+            <option value="EMP001" selected>Đỗ Hoàng Long · Engineering Manager</option>
           </select>
         </div>
       </div>
 
       <div class="saas-topbar-right d-flex align-items-center gap-3">
-        <!-- Nút Reset Toàn Bộ Database -->
-        <button type="button" class="btn btn-sm d-flex align-items-center gap-1.5" id="btn-reset-database" style="background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; font-size: 0.76rem; font-weight: 600; padding: 4px 10px; cursor: pointer; transition: all 0.2s ease;" title="Xóa toàn bộ dữ liệu phát sinh & khôi phục database về trạng thái ban đầu">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-            <path d="M3 3v5h5"></path>
-          </svg>
-          <span>Reset DB</span>
-        </button>
-
         <!-- Brand Title Only -->
-        <span class="saas-brand-title">PNKK ESCALATION SYSTEM · DEMO</span>
+        <span class="saas-brand-title">PNKK ESCALATION SYSTEM</span>
       </div>
     </header>
 
@@ -116,6 +113,15 @@
             </svg>
             <span class="saas-nav-text">Quy chế</span>
           </button>
+
+          <button class="saas-nav-item tab-btn" data-tab="tab-staff-testing" id="btn-tab-staff-testing">
+            <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"></path>
+              <path d="M8.5 2h7"></path>
+              <path d="M7 16h10"></path>
+            </svg>
+            <span class="saas-nav-text">Kiểm thử</span>
+          </button>
         </nav>
 
         <!-- Sidebar Navigation for MANAGER -->
@@ -149,7 +155,7 @@
               <line x1="16" y1="17" x2="8" y2="17"></line>
               <polyline points="10 9 9 9 8 9"></polyline>
             </svg>
-            <span class="saas-nav-text">Nhật ký duyệt</span>
+            <span class="saas-nav-text">Nhật ký AI tự duyệt</span>
           </button>
 
           <button class="saas-nav-item tab-btn" data-tab="tab-mgr-all-requests" id="btn-tab-mgr-all">
@@ -349,8 +355,9 @@
                     <div class="col-12">
                       <div class="d-flex justify-content-between align-items-center mb-1">
                         <label class="form-label mb-0" id="staff-attachment-label">Chứng từ xác minh <span class="badge" style="background:#f1f5f9;color:#64748b;font-weight:500;font-size:0.75rem;padding:2px 8px;border-radius:4px;">Không bắt buộc</span></label>
-                        <span class="small" id="staff-attachment-hint" style="font-size:0.76rem;color:#64748b;">Nghỉ phép năm không yêu cầu chứng từ</span>
+                        <span class="small" id="staff-attachment-hint" style="font-size:0.76rem;color:#64748b;"></span>
                       </div>
+
                       <div class="file-upload-dropzone card p-3 text-center" id="file-dropzone" style="cursor: pointer; border: 1.5px dashed #cbd5e1; transition: all 0.2s ease;">
                         <input type="file" id="staff-file-input" accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
                         <div class="dropzone-content d-flex flex-column align-items-center" id="dropzone-prompt">
@@ -414,9 +421,22 @@
                   </div>
                 </div>
               </div>
-              <div class="saas-panel-body">
-                <div id="staff-requests-card-container" class="requests-card-list">
-                  <div class="text-center text-secondary py-5">Đang tải danh sách đơn...</div>
+              <div class="saas-panel-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-vcenter card-table table-hover table-striped" id="table-staff-requests">
+                    <thead>
+                      <tr>
+                        <th>Thời gian nghỉ</th>
+                        <th>Số ngày</th>
+                        <th>Trạng thái</th>
+                        <th>Chi tiết</th>
+                        <th>Hủy đơn</th>
+                      </tr>
+                    </thead>
+                    <tbody id="staff-requests-tbody">
+                      <tr><td colspan="5" class="text-center text-secondary py-4">Đang tải danh sách đơn...</td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -437,6 +457,67 @@
                   <div style="text-align:center; padding:40px; color: var(--text-muted, #94a3b8);">
                     <div style="font-size:2rem; margin-bottom:12px;">⏳</div>
                     <div>Đang tải văn bản quy chế nội bộ...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TAB S6: TRUNG TÂM KIỂM THỬ QUY CHẾ AI -->
+          <section id="tab-staff-testing" class="tab-pane">
+            <div class="saas-panel mb-4" id="staff-testcase-card" style="border: 1px solid rgba(59, 130, 246, 0.22); box-shadow: 0 4px 16px rgba(30, 58, 138, 0.05); background: #ffffff; border-radius: 12px; overflow: hidden;">
+              <div class="saas-panel-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: linear-gradient(135deg, rgba(239, 246, 255, 0.85) 0%, rgba(248, 250, 252, 0.95) 100%); border-bottom: 1px solid rgba(59, 130, 246, 0.15); padding: 14px 20px;">
+                <div class="d-flex align-items-center gap-2.5">
+                  <div style="width: 36px; height: 36px; border-radius: 8px; background: #1e3a8a; display: flex; align-items: center; justify-content: center; color: #ffffff; flex-shrink: 0; box-shadow: 0 2px 6px rgba(30, 58, 138, 0.25);">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"></path>
+                      <path d="M8.5 2h7"></path>
+                      <path d="M7 16h10"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 class="saas-panel-title m-0" style="font-size: 1.05rem; font-weight: 700; color: #1e3a8a; letter-spacing: -0.01em;">
+                      KỊCH BẢN KIỂM THỬ MẪU (TEST CASES)
+                    </h3>
+                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+                      Các kịch bản kiểm thử quy chế chuẩn hóa ứng với nhân viên đang được lựa chọn
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge" id="badge-testcase-count" style="background: rgba(37, 99, 235, 0.1); color: #1d4ed8; font-weight: 600; font-size: 0.78rem; border: 1px solid rgba(37, 99, 235, 0.2); padding: 5px 12px; border-radius: 20px;">
+                    Kịch bản của nhân viên
+                  </span>
+                </div>
+              </div>
+
+              <div class="saas-panel-body p-4">
+                <!-- Dropdown Select -->
+                <div class="mb-3">
+                  <label for="staff-testcase-select" class="form-label d-flex justify-content-between align-items-center mb-1.5" style="font-size: 0.84rem; font-weight: 700; color: #334155;">
+                    <span>Lựa chọn kịch bản kiểm thử:</span>
+                    <span id="testcase-emp-hint" class="small text-muted" style="font-weight: 500; font-size: 0.78rem;"></span>
+                  </label>
+                  <select id="staff-testcase-select" class="form-select" style="font-size: 0.88rem; font-weight: 500; border-radius: 8px; border-color: #cbd5e1; padding: 8px 14px; background-color: #ffffff;">
+                    <!-- Rendered dynamically via JS -->
+                  </select>
+                </div>
+
+                <!-- Test Case Preview Box -->
+                <div id="testcase-preview-box" class="p-3 mb-3" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                  <!-- Dynamically populated via JS -->
+                </div>
+
+                <!-- Action Buttons Toolbar -->
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div>
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" id="btn-fill-staff-testcase" style="font-weight: 600; font-size: 0.88rem; padding: 9px 22px; border-radius: 6px; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                      </svg>
+                      <span>Nạp vào form nộp đơn</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -570,14 +651,11 @@
                 <table class="table table-vcenter card-table table-hover table-striped" id="table-auto-approved-logs">
                   <thead>
                     <tr>
-                      <th>Mã đơn</th>
                       <th>Nhân viên</th>
                       <th>Phòng ban</th>
                       <th>Thời gian nghỉ</th>
                       <th>Số ngày</th>
-                      <th>Loại phép</th>
-                      <th>Lý do duyệt</th>
-                      <th>Thời điểm duyệt</th>
+                      <th>Chi tiết</th>
                       <th>Quyền kiểm soát</th>
                     </tr>
                   </thead>
@@ -597,29 +675,31 @@
                   <h3 class="saas-panel-title">TOÀN BỘ HỒ SƠ ĐƠN NGHỈ PHÉP</h3>
                   <div class="saas-panel-subtitle">Tổng hợp và tra cứu tất cả các đơn nghỉ phép trong toàn hệ thống</div>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                  <select id="mgr-filter-status" class="form-select form-select-sm" style="width: auto;">
-                    <option value="ALL">Tất cả trạng thái</option>
-                    <option value="PENDING_ESCALATION">Chờ duyệt</option>
-                    <option value="COMPLETED">Đã duyệt</option>
-                    <option value="REJECTED">Đã từ chối</option>
-                  </select>
-                  <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-mgr-all">Làm mới</button>
+                <div class="d-flex align-items-center">
+                  <div class="staff-filter-wrapper">
+                    <select id="mgr-filter-status" class="staff-status-select" style="padding-left: 14px !important; min-width: 175px;">
+                      <option value="ALL">Tất cả trạng thái</option>
+                      <option value="PENDING_ESCALATION">Chờ duyệt</option>
+                      <option value="COMPLETED">Đã duyệt</option>
+                      <option value="REJECTED">Đã từ chối</option>
+                      <option value="CANCELLED">Đã hủy</option>
+                    </select>
+                    <svg class="staff-chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
                 </div>
               </div>
               <div class="table-responsive">
                 <table class="table table-vcenter card-table table-hover table-striped" id="table-mgr-all-requests">
                   <thead>
                     <tr>
-                      <th>Mã đơn</th>
                       <th>Nhân viên</th>
                       <th>Phòng ban</th>
                       <th>Thời gian</th>
                       <th>Số ngày</th>
-                      <th>Loại nghỉ</th>
-                      <th>Quyết định</th>
                       <th>Trạng thái</th>
-                      <th>Thao tác</th>
+                      <th>Chi tiết</th>
                     </tr>
                   </thead>
                   <tbody id="mgr-all-requests-body">
@@ -798,7 +878,7 @@
                   <!-- Stats bar -->
                   <div id="dt-stats-bar" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
                     <div class="dt-stat-chip dt-stat-blue"><span class="dt-stat-num dt-stat-total" id="dt-stat-total">13</span><span class="dt-stat-label">Nút kiểm tra</span></div>
-                    <div class="dt-stat-chip dt-stat-purple"><span class="dt-stat-num dt-stat-vlm" id="dt-stat-vlm">4</span><span class="dt-stat-label">Nút VLM</span></div>
+                    <div class="dt-stat-chip dt-stat-purple"><span class="dt-stat-num dt-stat-vlm" id="dt-stat-vlm">4</span><span class="dt-stat-label">Nút AI Engine</span></div>
                     <div class="dt-stat-chip dt-stat-green"><span class="dt-stat-num dt-stat-policy" id="dt-stat-policy">9</span><span class="dt-stat-label">Nút Quy chế</span></div>
                     <div class="dt-stat-chip dt-stat-orange"><span class="dt-stat-num">Full Traversal</span><span class="dt-stat-label">Tích lũy hết lỗi vi phạm</span></div>
                   </div>
@@ -806,7 +886,7 @@
                   <!-- Top Legend Quick Guide -->
                   <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; align-items:center; font-size:0.8rem; font-weight:600; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 16px;">
                     <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#3b82f6;display:inline-block;"></span> Nút Quy chế (Policy)</span>
-                    <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#8b5cf6;display:inline-block;"></span> Nút VLM (Vision AI)</span>
+                    <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#8b5cf6;display:inline-block;"></span> Nút AI Engine</span>
                     <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#10b981;display:inline-block;"></span> PASS → Tiếp theo</span>
                     <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#ef4444;display:inline-block;"></span> FAIL → Xử lý / Báo lỗi</span>
                   </div>
@@ -1050,7 +1130,7 @@
               <div class="pipeline-step-item d-flex align-items-center justify-content-between p-2.5 rounded-3" id="p-step-2" style="background: #f8fafc; border: 1px solid #e2e8f0;">
                 <div class="d-flex align-items-center gap-2.5">
                   <span class="step-icon" style="font-size: 1rem;">🤖</span>
-                  <span class="step-text small fw-semibold text-secondary">VLM qwen2.5vl:7b đọc chứng từ</span>
+                  <span class="step-text small fw-semibold text-secondary">AI Engine đọc chứng từ</span>
                 </div>
                 <span class="step-status badge bg-secondary-lt text-secondary" style="font-size: 0.72rem;">Chờ</span>
               </div>
@@ -1058,7 +1138,7 @@
               <div class="pipeline-step-item d-flex align-items-center justify-content-between p-2.5 rounded-3" id="p-step-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
                 <div class="d-flex align-items-center gap-2.5">
                   <span class="step-icon" style="font-size: 1rem;">⚖️</span>
-                  <span class="step-text small fw-semibold text-secondary">Rule Engine đối soát 3 tầng chính sách</span>
+                  <span class="step-text small fw-semibold text-secondary">AI Engine đối soát 3 tầng chính sách</span>
                 </div>
                 <span class="step-status badge bg-secondary-lt text-secondary" style="font-size: 0.72rem;">Chờ</span>
               </div>
@@ -1066,7 +1146,7 @@
               <div class="pipeline-step-item d-flex align-items-center justify-content-between p-2.5 rounded-3" id="p-step-4" style="background: #f8fafc; border: 1px solid #e2e8f0;">
                 <div class="d-flex align-items-center gap-2.5">
                   <span class="step-icon" style="font-size: 1rem;">🧠</span>
-                  <span class="step-text small fw-semibold text-secondary">Tổng hợp hồ sơ (template, không gọi LLM)</span>
+                  <span class="step-text small fw-semibold text-secondary">AI Engine tổng hợp hồ sơ</span>
                 </div>
                 <span class="step-status badge bg-secondary-lt text-secondary" style="font-size: 0.72rem;">Chờ</span>
               </div>
@@ -1097,6 +1177,6 @@
   <script src="/static/vendor/tabler/tabler.min.js" defer></script>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20260921_tree_node_tags"></script>
+  <script src="app.js?v=20260921_v14"></script>
 </body>
 </html>

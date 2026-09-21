@@ -5,7 +5,6 @@
 ### 1. Policy coverage is incomplete
 
 - `MATERNITY` and `WORK_ACCIDENT` are represented in schemas/UI/VLM profiles, but `rule_engine.py` immediately returns `ESCALATE / HR / AUTOMATION_SCOPE_UNSUPPORTED`. Detailed maternity entitlement in `policy_rules.md` is not implemented.
-- Policy says sick leave above five working days routes to HR/out-of-policy; current engine routes all medical requests from two days upward to `DIRECT_MANAGER`.
 - Policy describes unsupported leave type as auto-reject; current engine treats an unknown/missing type as correction.
 - `PUBLIC_HOLIDAY` and `WEEKLY_REST` are calendar day types, not values accepted by `LeaveType`.
 
@@ -56,9 +55,9 @@ Tests mock model calls and verify schemas/call counts. There is no labeled-corpu
 
 Detection totals previously completed annual days in the same calendar month and raises `FLAG_ABUSE_PATTERN`. Policy asks the audit to include employee, period, total, related requests and final approver. Current audit stores the engine result/action details but not that full structured related-request payload.
 
-### 12. Approval semantics have unresolved policy questions
+### 12. Approval and role configuration limitations
 
-Annual ≥20 days routes directly to CEO in code, while policy language also discusses department/director tiers. Sick >5 is the clearest mismatch. Human approval can waive notice and quota only; this boundary is implemented but needs policy-owner confirmation. Role seeding recognizes only exact sample job titles; unknown titles need explicit configuration.
+Current authority is fixed as follows: Annual ≤2 auto, 3–5 Direct Manager, 6–19 Department Head and ≥20 CEO; `SICK_MEDICAL` 1 working day with valid/verified proof is auto-approved and ≥2 working days routes to Direct Manager; Special Paid and Statutory Unpaid route to Direct Manager. Human approval can waive notice and quota only. Role seeding recognizes only exact sample job titles, so unknown titles need explicit configuration.
 
 ### 13. UI analysis contains presentation logic beyond the core engine
 
@@ -78,10 +77,10 @@ These are proposed tasks, not current features.
 
 ### Policy correctness first
 
-1. Resolve every policy/code mismatch in a signed traceability matrix, especially sick >5, annual ≥20 approval chain and unknown leave type handling.
+1. Resolve remaining policy/code gaps in a signed traceability matrix, including unknown leave type handling and the incomplete maternity/work-accident paths.
 2. Implement explicit maternity and work-accident rules only after legal/policy review, including proof, entitlement, authority and HR Ops workflow.
-3. Decide whether statutory unpaid needs proof and whether pending requests count toward anti-abuse.
-4. Add structured anti-abuse audit fields with related request IDs, month, total and final approver.
+3. Add traceability tests that preserve current routing: Special Paid requires verified proof before Direct Manager review, while Statutory Unpaid does not require proof and routes to Direct Manager.
+4. Add structured anti-abuse audit fields with related request IDs, month, prior approved total, current-request total and final approver.
 5. Add calendar governance: annual approval, version/effective date, country/employee schedule and revalidation.
 
 ### Security and platform

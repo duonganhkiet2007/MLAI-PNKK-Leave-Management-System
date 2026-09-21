@@ -70,12 +70,12 @@ def migrate(conn):
         ]
         for sql in statements: conn.execute(sql)
         # Exact known role titles, no LLM inference. Unknown titles need explicit configuration.
-        mapping={'Chief Executive Officer (CEO)':'CEO', 'VP of Technology / Technical Director':'DEPARTMENT_HEAD',
-                 'HR Director':'HRD', 'Engineering Manager':'DIRECT_MANAGER','HR Executive':'HR'}
+        mapping={'Chief Executive Officer (CEO)':'CEO', 'Chief Executive Officer (Boss)':'CEO',
+                 'Engineering Manager':'DIRECT_MANAGER', 'Marketing & Operations Manager':'DIRECT_MANAGER'}
         for row in conn.execute('SELECT employee_id,role,department FROM employees').fetchall():
             role=mapping.get(row['role'])
             if role:
-                scope='*' if role in {'CEO','HRD','HR'} else row['department']
+                scope='*' if role in {'CEO'} else row['department']
                 conn.execute('INSERT OR IGNORE INTO actor_roles VALUES(?,?,?)',(row['employee_id'],role,scope))
         conn.execute('INSERT INTO schema_migrations VALUES(?,?)',(VERSION,datetime.now(timezone.utc).isoformat()))
         conn.commit()

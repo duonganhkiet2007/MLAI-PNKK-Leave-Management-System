@@ -57,7 +57,9 @@ YÊU CẦU TRÌNH BÀY (TUYỆT ĐỐI KHÔNG VIẾT 1 ĐOẠN VĂN DÍNH LIỀN
 
 QUY TẮC:
 - Viết TIẾNG VIỆT, ngắn gọn, chỉ nêu lỗi hoặc sai lệch thực tế cần xử lý.
-- info_missing_vn, staff_errors_vn và manager_suspicions_vn chỉ chứa lỗi tương ứng; không ghi hướng xử lý, chuyển HR, hay mô tả chung.
+- info_missing_vn, staff_errors_vn và manager_suspicions_vn chỉ chứa dữ kiện sai, thiếu hoặc không khớp đã quan sát được.
+- Tuyệt đối không đưa nhận xét, tóm tắt, khuyến nghị, câu hỏi, hướng xử lý, tên người nhận xử lý hoặc trạng thái chuyển cấp vào các mảng lỗi.
+- Mỗi phần tử trong các mảng lỗi phải là một lỗi/sai lệch độc lập; nếu không có dữ kiện lỗi thì trả [] (không dùng câu "không phát hiện lỗi").
 - Nếu không có lỗi hoặc nghi vấn, trả [] cho các mảng lỗi và không hiển thị phần lỗi trong summary.
 - Tôn trọng sai khác nhỏ khi đối chiếu tên (bỏ dấu, danh xưng, tên rút gọn, một lỗi chính tả nhẹ); chỉ báo lỗi khi khác biệt không thể nhận diện hợp lý.
 - Tóm tắt tối đa 3 dòng ngắn; không lặp lại cùng một lỗi ở nhiều mục.

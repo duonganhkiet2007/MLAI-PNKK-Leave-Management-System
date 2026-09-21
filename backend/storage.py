@@ -50,8 +50,11 @@ def read_request(conn, request_id):
     return db._parse_leave_row(dict(row))
 
 def can_view(conn, actor_id, req):
-    employee(conn,actor_id)
+    emp=employee(conn,actor_id)
     if actor_id==req['employee_id']: return True
+    # Đồng nghiệp cùng phòng ban được xem các đơn đã duyệt hoàn tất để phục vụ hiển thị lịch vắng mặt
+    if req.get('status')=='COMPLETED' and emp.get('department') and emp['department']==req.get('department'):
+        return True
     roles=roles_for(conn,actor_id)
     required={s['role'] for s in conn.execute('SELECT role FROM approval_steps WHERE request_id=? AND revision=?',
                 (req['id'],req.get('revision',0)))}
@@ -234,17 +237,20 @@ def serialize(conn, req):
             except Exception: pass
     summary = req.get('llm_summary_json')
     if isinstance(summary, dict):
-        legacy_errors = list(summary.get('info_missing_vn') or [])
+        decision = str(summary.get('decision') or req.get('decision') or '').upper()
+        legacy_errors = list(summary.get('info_missing_vn') or []) if decision in {
+            'NEED_CORRECTION', 'AUTO_REJECT'
+        } else []
         summary.setdefault('staff_summary', {
             'errors_vn': legacy_errors,
             'next_steps_vn': ['Sửa hoặc bổ sung các mục đang báo lỗi rồi nộp lại đơn.'] if legacy_errors else [],
-            'summary_natural_vn': '\n'.join(legacy_errors) if legacy_errors else 'Không phát hiện lỗi cần nhân viên sửa.',
+            'summary_natural_vn': '',
         })
         summary.setdefault('manager_summary', {
             'suspicions_vn': legacy_errors,
             'risk_level_vn': '—' if not legacy_errors else 'CẦN XÁC MINH',
             'recommendation_vn': 'Đối chiếu các điểm bất thường trước khi quyết định.' if legacy_errors else 'Không phát hiện nghi vấn rõ ràng.',
-            'summary_natural_vn': '\n'.join(legacy_errors) if legacy_errors else 'Không phát hiện nghi vấn rõ ràng.',
+            'summary_natural_vn': '',
         })
     result=req.get('result_json')
     if isinstance(result,dict):

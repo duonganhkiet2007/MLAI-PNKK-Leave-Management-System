@@ -152,18 +152,11 @@
 
 ## Open Questions Before Final Report
 
-1. Kết quả pytest mới nhất trên môi trường chuẩn là gì? Dùng commit/hash nào?
-2. Accuracy của LLM parser và VLM extraction trên tập dữ liệu gán nhãn là bao nhiêu?
-3. Benchmark cold start, p50/p95 latency, throughput và peak memory/VRAM là gì?
-4. Môi trường demo/final deployment cụ thể: OS, CPU, GPU, RAM, Ollama version và model digests?
-5. Bộ ảnh/chứng từ đánh giá có quyền sử dụng và đã ẩn dữ liệu cá nhân chưa?
-6. Team chọn những case nào cho final demo, và expected output đã được policy owner duyệt chưa?
-7. Ai là policy owner/legal reviewer xác nhận `policy_rules.md` phiên bản 3.0.0?
-8. Routing đúng mong muốn cho `SICK_MEDICAL` trên 5 ngày là HR hay Direct Manager?
-9. Với `ANNUAL` từ 20 ngày, có cần chuỗi duyệt Department Head → CEO hay chỉ CEO như code hiện tại?
-10. Maternity và work accident cần mức tự động hóa nào trong bản final?
-11. Có giữ VLM tamper/AI-edit signals trong UI không, và disclaimer về việc đây chỉ là nghi vấn sẽ hiển thị thế nào?
-12. Production có dùng SSO/RBAC, object storage, encryption, retention và audit export nào?
-13. Screenshot, architecture figure và video demo nào được chọn cho submission?
-14. Phân công đóng góp của từng thành viên và mốc tiến độ chính thức là gì?
-15. Có chấp nhận giới hạn free-text không kèm proof, hay cần workflow ghép proof vào đơn text?
+1. Final pytest output của revision cuối là gì?
+2. Commit hash nào tương ứng với test run và submission package?
+3. Evaluation metrics của LLM parser và VLM extraction là gì, trên dataset/định nghĩa metric nào?
+4. Latency benchmark cold/warm và end-to-end p50/p95 là gì?
+5. Hardware/software environment cuối gồm OS, Python/dependencies, Ollama/model digests, CPU, RAM và GPU/VRAM nào?
+6. Những demo cases nào được chọn và expected outcomes đã được duyệt?
+7. Những screenshots/figures nào sẽ được đưa vào submission?
+8. Team contribution và ownership của từng thành viên là gì?

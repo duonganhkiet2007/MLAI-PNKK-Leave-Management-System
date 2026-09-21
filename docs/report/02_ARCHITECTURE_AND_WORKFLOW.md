@@ -143,7 +143,7 @@ sequenceDiagram
 
 Đường này có 0 LLM và 0 VLM call theo code/tests. Actor được xác thực ở mức demo và context lấy từ DB. Rule engine tính calendar, kiểm policy và trả structured result. Chỉ `AUTO_APPROVE` mới gọi commit; chỉ `ANNUAL` bị debit. Persistence và balance mutation nằm trong transaction `BEGIN IMMEDIATE`.
 
-## D2. Sequence: Form có proof
+## D2. Sequence: Form có proof bắt buộc (medical/special-paid)
 
 ```mermaid
 sequenceDiagram
@@ -159,7 +159,7 @@ sequenceDiagram
     E->>API: POST /api/leave/proofs (PDF/JPEG/PNG)
     API->>FS: Store file
     API->>DB: Store UNVERIFIED proof record
-    E->>API: POST request with proof_id
+    E->>API: POST medical/special-paid request with proof_id
     API->>O: Evaluate request
     O->>DB: Load proof + trusted context
     O->>FS: Resolve file path
@@ -171,12 +171,14 @@ sequenceDiagram
     HR->>API: POST /proofs/{id}/verify
     API->>DB: Save HR verification facts/status
     API->>O: Re-evaluate linked request
+    O->>V: Inspect proof again for this evaluation
+    V-->>O: Diagnostic/extracted output; HR verification remains authoritative
     O->>R: Evaluate with VERIFIED proof
     R-->>O: Policy/authority result
     O->>DB: Persist/commit as applicable
 ```
 
-Upload được kiểm size và magic MIME. VLM chạy một lần mỗi lần `_evaluate` thấy proof/attachment; output không tự biến thành verified proof. Rule engine vì vậy chuyển HR nếu proof chưa verified. HR ghi facts và verification status qua endpoint riêng, sau đó linked request được tăng revision và đánh giá lại. VLM không xác nhận authenticity với issuer bên ngoài.
+Upload được kiểm size và magic MIME. VLM chạy một lần trong mỗi lần `_evaluate` có proof/attachment; vì vậy một lifecycle gồm initial evaluation và các re-evaluation có thể có nhiều VLM calls. Output không tự biến thành verified proof. Với loại medical/special-paid cần proof, rule engine chuyển HR nếu proof chưa verified. HR ghi facts và verification status qua endpoint riêng, sau đó linked request được tăng revision và đánh giá lại; trạng thái HR đã ghi vẫn là authoritative. Proof gắn vào loại nghỉ khác vẫn có thể kích hoạt VLM, nhưng không tự tạo yêu cầu HR nếu rule của loại đó không dùng proof. VLM không xác nhận authenticity với issuer bên ngoài.
 
 ## D3. Sequence: Free text request
 

@@ -10,10 +10,11 @@ const API_BASE = window.location.origin;
 
 let currentLang = localStorage.getItem("app_lang") || "vi";
 let currentMode = "staff"; // 'staff' | 'manager'
-let currentEmployeeId = "EMP012";
+let currentEmployeeId = "EMP003";
 let editingRequestId = null;
 let currentProofId = null;
-let currentManagerRoleId = "EMP015";
+let selectedProofFile = null;
+let currentManagerRoleId = "EMP001";
 let employeesCache = [];
 let activeRequests = [];
 let pollInterval = null;
@@ -252,6 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initStaffTabs();
   initManagerTabs();
   initStaffForm();
+  initStaffTestCaseCard();
   initFileUploadDropzone();
   initLeaveAllocationDrawer();
   initVerifyHarness();
@@ -346,6 +348,7 @@ function initModeSwitcher() {
 
       if (staffSelector) {
         staffSelector.style.display = "flex";
+        autoResizeSelect(document.getElementById("demo-department-select"));
         autoResizeSelect(document.getElementById("demo-employee-select"));
       }
       if (mgrSelector) mgrSelector.style.display = "none";
@@ -442,7 +445,7 @@ function autoResizeSelect(selectEl) {
   const selectedOpt = (selectEl.selectedIndex >= 0) ? selectEl.options[selectEl.selectedIndex] : (selectEl.options[0] || null);
   const text = selectedOpt ? selectedOpt.text.trim() : "";
   if (!text) {
-    selectEl.style.width = "180px";
+    selectEl.style.width = "160px";
     return;
   }
   let measurer = document.getElementById("select-width-measurer");
@@ -464,24 +467,75 @@ function autoResizeSelect(selectEl) {
   measurer.textContent = text;
 
   const textWidth = measurer.getBoundingClientRect().width || measurer.offsetWidth || 0;
-  // padding-left (14px) + gap (8px) + icon (12px) + padding-right (14px) + border (4px)
-  const targetWidth = Math.max(175, Math.min(320, Math.ceil(textWidth) + 52));
+  const isDept = selectEl.id === "demo-department-select";
+  const minW = isDept ? 130 : 160;
+  const maxW = isDept ? 220 : 340;
+  const targetWidth = Math.max(minW, Math.min(maxW, Math.ceil(textWidth) + 48));
   selectEl.style.width = `${targetWidth}px`;
 }
 
-function initDemoLoginAndRoles() {
+function updateStaffDropdown(selectedDept) {
   const demoSelect = document.getElementById("demo-employee-select");
+  if (!demoSelect) return;
+
+  // Lọc danh sách staff thuộc department được chọn (bỏ qua managers/boss có actor_roles)
+  const deptStaff = employeesCache.filter(e =>
+    e.department === selectedDept &&
+    (!e.actor_roles || e.actor_roles.length === 0) &&
+    e.status === "ACTIVE"
+  );
+
+  demoSelect.innerHTML = deptStaff.map(emp => `
+    <option value="${escapeHtml(emp.employee_id)}" ${emp.employee_id === currentEmployeeId ? 'selected' : ''}>
+      ${escapeHtml(emp.name)} (${escapeHtml(emp.role)})
+    </option>
+  `).join("");
+
+  // Nếu nhân viên đang chọn không thuộc phòng ban này thì tự động chọn staff đầu tiên
+  if (!deptStaff.some(e => e.employee_id === currentEmployeeId) && deptStaff.length > 0) {
+    currentEmployeeId = deptStaff[0].employee_id;
+    demoSelect.value = currentEmployeeId;
+  }
+
+  autoResizeSelect(demoSelect);
+}
+
+function initDemoLoginAndRoles() {
+  const deptSelect = document.getElementById("demo-department-select");
+  const demoSelect = document.getElementById("demo-employee-select");
+
+  if (deptSelect) {
+    deptSelect.addEventListener("change", (e) => {
+      const selectedDept = e.target.value;
+      autoResizeSelect(deptSelect);
+      updateStaffDropdown(selectedDept);
+
+      editingRequestId = null;
+      currentProofId = null;
+      loadAllRequests();
+      renderStaffDashboard();
+      renderStaffRequests();
+      renderWeeklyCalendar();
+
+      const curr = getCurrentEmployee();
+      const empName = curr ? `${curr.name} (${curr.role})` : currentEmployeeId;
+      showToast(`Đã chọn bộ phận: ${selectedDept} · Nhân viên: ${empName}`, "info");
+    });
+    autoResizeSelect(deptSelect);
+  }
+
   if (demoSelect) {
     demoSelect.addEventListener("change", (e) => {
       currentEmployeeId = e.target.value;
-      editingRequestId = null; currentProofId = null;
+      editingRequestId = null;
+      currentProofId = null;
       loadAllRequests();
       autoResizeSelect(demoSelect);
       renderStaffDashboard();
       renderStaffRequests();
       renderWeeklyCalendar();
       const curr = getCurrentEmployee();
-      const empName = curr ? curr.name : (demoSelect.options[demoSelect.selectedIndex]?.text || currentEmployeeId);
+      const empName = curr ? `${curr.name} (${curr.role})` : (demoSelect.options[demoSelect.selectedIndex]?.text || currentEmployeeId);
       showToast(`Đã chuyển sang nhân viên: ${empName}`, "info");
     });
     autoResizeSelect(demoSelect);
@@ -502,6 +556,7 @@ function initDemoLoginAndRoles() {
 
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => {
+      if (deptSelect) autoResizeSelect(deptSelect);
       if (demoSelect) autoResizeSelect(demoSelect);
       if (roleSelect) autoResizeSelect(roleSelect);
     });
@@ -526,9 +581,17 @@ async function loadEmployees() {
     employeesCache = [];
   }
   const managers = employeesCache.filter(e => e.status === 'ACTIVE' && e.actor_roles?.length);
+  // Thứ tự hiển thị quản lý: Engineering Manager (EMP001), Marketing Manager (EMP002), CEO (EMP000)
+  const rolePriority = { 'EMP001': 1, 'EMP002': 2, 'EMP000': 3 };
+  managers.sort((a, b) => (rolePriority[a.employee_id] || 99) - (rolePriority[b.employee_id] || 99));
+
   const selector = document.getElementById('manager-role-select');
   if (selector) {
-    selector.innerHTML = managers.map(e => `<option value="${escapeHtml(e.employee_id)}">${escapeHtml(e.name)} · ${escapeHtml(e.actor_roles.map(r=>r.role).join('/'))}</option>`).join('');
+    selector.innerHTML = managers.map(e => `
+      <option value="${escapeHtml(e.employee_id)}">
+        ${escapeHtml(e.name)} · ${escapeHtml(e.role || e.actor_roles.map(r=>r.role).join('/'))}
+      </option>
+    `).join('');
     if (!managers.some(e=>e.employee_id===currentManagerRoleId)) currentManagerRoleId=managers[0]?.employee_id || '';
     selector.value = currentManagerRoleId;
     autoResizeSelect(selector);
@@ -539,17 +602,38 @@ async function loadEmployees() {
 }
 
 function populateEmployeeDropdowns() {
-  const demoSelect = document.getElementById("demo-employee-select");
+  const deptSelect = document.getElementById("demo-department-select");
   const allocEmpSelect = document.getElementById("alloc-emp-select");
 
-  if (demoSelect) {
-    demoSelect.innerHTML = employeesCache.map(emp => `
-      <option value="${emp.employee_id}" ${emp.employee_id === currentEmployeeId ? 'selected' : ''}>
-        ${emp.name}
+  // Lấy danh sách phòng ban có nhân viên (staff)
+  let staffDepts = Array.from(new Set(
+    employeesCache
+      .filter(e => (!e.actor_roles || e.actor_roles.length === 0) && e.status === 'ACTIVE')
+      .map(e => e.department)
+      .filter(Boolean)
+  )).sort();
+
+  if (staffDepts.length === 0) {
+    staffDepts = ["Engineering", "Marketing & Operations"];
+  }
+
+  const currentEmp = getCurrentEmployee();
+  let currentDept = currentEmp?.department || deptSelect?.value || staffDepts[0];
+  if (!staffDepts.includes(currentDept)) {
+    currentDept = staffDepts[0];
+  }
+
+  if (deptSelect) {
+    deptSelect.innerHTML = staffDepts.map(dept => `
+      <option value="${escapeHtml(dept)}" ${dept === currentDept ? 'selected' : ''}>
+        ${escapeHtml(dept)}
       </option>
     `).join("");
-    autoResizeSelect(demoSelect);
+    deptSelect.value = currentDept;
+    autoResizeSelect(deptSelect);
   }
+
+  updateStaffDropdown(currentDept);
 
   if (allocEmpSelect) {
     allocEmpSelect.innerHTML = employeesCache.map(emp => `
@@ -626,6 +710,1342 @@ function renderStaffDashboard() {
 
   updateHandoverOptions();
   renderStaffRecentPreview();
+  renderStaffTestCaseCard();
+}
+
+/* ========================================================================= */
+/* 2.5 STAFF TEST CASE SIMULATOR (21 TEST SUITE PRESETS)                     */
+/* ========================================================================= */
+const EMP_NAME_MAP = {
+  "EMP000": "Phạm Minh Hoàng",
+  "EMP001": "Đỗ Hoàng Long",
+  "EMP002": "Dương Mỹ Duyên",
+  "EMP003": "Trần Quốc Hưng",
+  "EMP004": "Lê Văn Nam",
+  "EMP005": "Nguyễn Văn An",
+  "EMP006": "Bùi Tuấn Kiệt",
+  "EMP007": "Lê Thị Hương",
+  "EMP008": "Nguyễn Thị Kim Ngân",
+  "EMP009": "Võ Minh Khang",
+  "EMP010": "Phan Thảo My",
+  "EMP011": "Hoàng Kim Yến",
+  "EMP012": "Lê Mai Loan"
+};
+
+const STAFF_TEST_CASES = [
+  // =========================================================================
+  // EMP003: Trần Quốc Hưng (Senior / Lead Developer - Engineering)
+  // =========================================================================
+  {
+    id: "TC-HARD-03",
+    primaryEmpId: "EMP003",
+    title: "TC-HARD-03: Nghỉ liên tục 6 ngày -> Vượt trần Quản lý (5 ngày), chuyển Boss",
+    badge: "Cấp Sếp · Vượt trần Quản lý",
+    badgeClass: "bg-purple-lt",
+    desc: "Trần Quốc Hưng xin 6 ngày làm việc liên tiếp có bàn giao cho EMP004 -> Vượt hạn mức 5 ngày của Quản lý trực tiếp, thẩm quyền chuyển Tổng Giám đốc (Boss).",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-12",
+      handover_person_id: "EMP004",
+      handover: { employee_id: "EMP004", department: "Engineering", status: "ACTIVE", absent_dates: [] },
+      reason: "Nghỉ du lịch gia đình dài ngày",
+      submitted_at: "2026-09-10T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "CEO",
+      error_code: "DURATION_OVER_MANAGER_LIMIT",
+      note: "Vượt 5 ngày trần Quản lý: Chuyển cấp trên (Boss/Head)"
+    }
+  },
+  {
+    id: "TC-EMP003-01",
+    primaryEmpId: "EMP003",
+    title: "TC-EMP003-01: Con kết hôn 1 ngày nguyên lương theo Điều 115 BLLĐ",
+    badge: "Nguyên lương · Con kết hôn",
+    badgeClass: "bg-pink-lt",
+    desc: "Trần Quốc Hưng xin 1 ngày nghỉ tham dự đám cưới con trai (Trần Quốc Anh) kèm Giấy chứng nhận kết hôn -> Chuyển Quản lý duyệt hưởng nguyên lương, 0 trừ phép.",
+    payload: {
+      leave_type: "SPECIAL_PAID",
+      reason_category: "CHILD_MARRIAGE",
+      from_date: "2026-10-12",
+      to_date: "2026-10-12",
+      reason: "Nghỉ tham dự lễ thành hôn của con trai ruột (Trần Quốc Anh)",
+      proof: {
+        proof_type: "MARRIAGE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "UBND Phường Dịch Vọng Hậu",
+        issue_date: "2026-10-01",
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-05T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Hưởng nguyên lương theo Điều 115 BLLĐ: Con kết hôn được nghỉ 01 ngày có lương"
+    }
+  },
+  {
+    id: "TC-EMP003-02",
+    primaryEmpId: "EMP003",
+    title: "TC-EMP003-02: Giấy ra viện nội trú phẫu thuật sỏi thận 4 ngày BV Bạch Mai",
+    badge: "BHXH · Ra viện nội trú",
+    badgeClass: "bg-info-lt",
+    desc: "Nghỉ ốm điều trị nội trú 4 ngày kèm Giấy ra viện BV Bạch Mai có tóm tắt bệnh án & chữ ký GĐ bệnh viện -> Chuyển Quản lý duyệt chế độ ốm đau BHXH.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-08",
+      to_date: "2026-10-11",
+      reason: "Phẫu thuật tán sỏi nội soi ngược dòng tại Bệnh viện Bạch Mai",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Bạch Mai",
+        issue_date: "2026-10-11",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-12T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Chứng từ nội trú hợp lệ: Chuyển Quản lý duyệt chế độ ốm đau BHXH"
+    }
+  },
+
+  // =========================================================================
+  // EMP004: Lê Văn Nam (Senior Developer - Engineering)
+  // =========================================================================
+  {
+    id: "TC-MGR-01",
+    primaryEmpId: "EMP004",
+    title: "TC-MGR-01: Phép năm 4 ngày -> Chuyển Quản lý Kỹ thuật (EMP001)",
+    badge: "Cấp 1 · Engineering Mgr",
+    badgeClass: "bg-primary-lt",
+    desc: "Lê Văn Nam xin 4 ngày phép năm có bàn giao cùng phòng cho EMP003 -> Chuyển Đỗ Hoàng Long (Engineering Manager) duyệt.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-08",
+      handover_person_id: "EMP003",
+      handover: { employee_id: "EMP003", department: "Engineering", status: "ACTIVE", absent_dates: [] },
+      reason: "Nghỉ phép thường niên",
+      submitted_at: "2026-09-25T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Phép năm 3-5 ngày: Thẩm quyền duyệt là Quản lý Kỹ thuật (EMP001)"
+    }
+  },
+  {
+    id: "TC-HARD-06",
+    primaryEmpId: "EMP004",
+    title: "TC-HARD-06: Bàn giao chéo phòng ban không hợp lệ (Bắt lỗi)",
+    badge: "Lỗi bàn giao · Bị chặn",
+    badgeClass: "bg-danger-lt",
+    desc: "Nhân viên Kỹ thuật bàn giao công việc cho EMP009 phòng Marketing -> Báo lỗi HANDOVER_INVALID, yêu cầu sửa đơn.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-07",
+      handover_person_id: "EMP009",
+      handover: { employee_id: "EMP009", department: "Marketing & Operations", status: "ACTIVE", absent_dates: [] },
+      reason: "Nghỉ phép thường niên",
+      submitted_at: "2026-09-25T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "NEED_CORRECTION",
+      target_role: "AI",
+      error_code: "HANDOVER_INVALID",
+      note: "Chặn tự động: Người nhận bàn giao khác phòng ban"
+    }
+  },
+  {
+    id: "TC-VLM-05",
+    primaryEmpId: "EMP004",
+    title: "TC-VLM-05: Chứng từ y tế có chữ ký số theo TT 25/2025/TT-BYT",
+    badge: "VLM · Chữ ký số",
+    badgeClass: "bg-success-lt",
+    desc: "Chứng từ điện tử BV Hồng Ngọc không có mộc đỏ vật lý nhưng có chữ ký số bệnh viện -> Hợp lệ chuyển Quản lý Kỹ thuật duyệt.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-12",
+      to_date: "2026-10-14",
+      reason: "Viêm xoang hàm cấp tính có mủ, điều trị ngoại trú",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Đa khoa Hồng Ngọc",
+        signature_present: false,
+        digital_signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-12T07:30:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Chữ ký số hợp lệ theo TT 25/2025/TT-BYT, không bắt bẻ mộc đỏ"
+    }
+  },
+  {
+    id: "TC-VLM-03",
+    primaryEmpId: "EMP004",
+    title: "TC-VLM-03: Bác sĩ chỉ định 1 ngày nhưng đơn xin 3 ngày (Lệch số ngày)",
+    badge: "Bẫy VLM · Lệch ngày",
+    badgeClass: "bg-danger-lt",
+    desc: "Giấy chứng nhận chỉ cho nghỉ 1 ngày (12/10) nhưng nhân viên nộp xin 3 ngày -> Bắt lỗi MEDICAL_DAYS_MISMATCH, yêu cầu sửa đơn.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-12",
+      to_date: "2026-10-14",
+      reason: "Rối loạn tiêu hóa cấp, theo dõi ngộ độc thức ăn",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Đa khoa Hồng Ngọc",
+        recommended_from_date: "2026-10-12",
+        recommended_to_date: "2026-10-12",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-12T07:30:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "NEED_CORRECTION",
+      target_role: "AI",
+      error_code: "MEDICAL_DAYS_MISMATCH",
+      note: "Bẫy số ngày: Số ngày xin (3) vượt quá số ngày bác sĩ cho nghỉ (1)"
+    }
+  },
+
+  // =========================================================================
+  // EMP005: Nguyễn Văn An (Developer - Engineering)
+  // =========================================================================
+  {
+    id: "TC-AI-01",
+    primaryEmpId: "EMP005",
+    title: "TC-AI-01: Phép năm 1 ngày tự động duyệt (1-2 ngày đủ số dư)",
+    badge: "AI Cấp 0 · Tự duyệt",
+    badgeClass: "bg-success-lt",
+    desc: "Nguyễn Văn An xin 1 ngày phép năm (05/10/2026), báo trước đúng hạn, đủ số dư phép -> AI Cấp 0 tự động duyệt, trừ 1 ngày phép.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-05",
+      reason: "Việc riêng gia đình",
+      submitted_at: "2026-10-01T08:00:00+07:00",
+      total_team_members: 6,
+      team_absent_count: 0
+    },
+    expected: {
+      decision: "AUTO_APPROVE",
+      target_role: "AI",
+      deducted_days: 1,
+      note: "Hệ thống AI tự động duyệt & trừ 1 ngày phép năm"
+    }
+  },
+  {
+    id: "TC-AI-05",
+    primaryEmpId: "EMP005",
+    title: "TC-AI-05: Đơn rơi vào ngày lễ / nghỉ bù Giỗ Tổ (Không cần xin phép)",
+    badge: "Lễ / Cuối tuần",
+    badgeClass: "bg-secondary-lt",
+    desc: "Xin nghỉ trùng Giỗ Tổ Hùng Vương & nghỉ bù (26-27/04/2026) -> Hệ thống xác định không cần xin phép vì là ngày nghỉ luật định.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-04-26",
+      to_date: "2026-04-27",
+      reason: "Nghỉ lễ Giỗ Tổ",
+      submitted_at: "2026-04-20T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "NO_LEAVE_REQUIRED",
+      target_role: "AI",
+      error_code: "DAY_ALREADY_NON_WORKING",
+      note: "Ngày lễ/nghỉ bù luật định: Không cần xin phép, 0 trừ ngày"
+    }
+  },
+  {
+    id: "TC-MGR-04",
+    primaryEmpId: "EMP005",
+    title: "TC-MGR-04: Nghỉ việc riêng quan hệ họ hàng chưa rõ thân nhân",
+    badge: "Cấp 1 · Xác minh thân nhân",
+    badgeClass: "bg-warning-lt",
+    desc: "Lý do 'Về quê lo việc họ hàng' chưa rõ thân nhân hưởng lương -> Chuyển Quản lý trực tiếp xác minh, không từ chối vội.",
+    payload: {
+      leave_type: "STATUTORY_UNPAID",
+      from_date: "2026-10-05",
+      to_date: "2026-10-05",
+      reason: "Về quê lo việc họ hàng",
+      submitted_at: "2026-10-01T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      error_code: "RELATIONSHIP_UNCLEAR",
+      note: "Bắt cờ RELATIONSHIP_UNCLEAR: Quản lý thẩm định mối quan hệ"
+    }
+  },
+  {
+    id: "TC-HARD-04",
+    primaryEmpId: "EMP005",
+    title: "TC-HARD-04: Nghỉ ngắt quãng nhiều lần trong tháng (Cờ lạm dụng)",
+    badge: "Cảnh báo · Lạm dụng",
+    badgeClass: "bg-danger-lt",
+    desc: "Đơn 1 ngày lẽ ra AI tự duyệt, nhưng đã có nhiều đơn trong tháng tích lũy > 2 ngày -> Bắt cờ FLAG_ABUSE_PATTERN, chuyển Quản lý.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-19",
+      to_date: "2026-10-19",
+      has_abuse_pattern: true,
+      reason: "Nghỉ việc riêng",
+      submitted_at: "2026-10-15T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      error_code: "FLAG_ABUSE_PATTERN",
+      note: "Bắt cờ lạm dụng: Chặn tự duyệt Cấp 0, chuyển Quản lý xem xét"
+    }
+  },
+  {
+    id: "TC-VLM-01",
+    primaryEmpId: "EMP005",
+    title: "TC-VLM-01: Khám ngoại trú 2 ngày phòng khám Medlatec hợp lệ",
+    badge: "Chứng từ · Hợp lệ",
+    badgeClass: "bg-info-lt",
+    desc: "Đơn nghỉ ốm 2 ngày kèm chứng từ y tế PK Đa khoa Medlatec có chữ ký bác sĩ & dấu mộc vuông -> Chuyển Quản lý duyệt.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-06",
+      to_date: "2026-10-07",
+      reason: "Viêm dạ dày tá tràng cấp tính điều trị ngoại trú",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Phòng khám Đa khoa Medlatec",
+        issue_date: "2026-10-06",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-06T07:30:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Chứng từ hợp lệ (2 ngày ốm): Chuyển Quản lý duyệt theo quy chế"
+    }
+  },
+  {
+    id: "TC-EMP005-02",
+    primaryEmpId: "EMP005",
+    title: "TC-EMP005-02: [Bẫy quá hạn] Nộp chứng từ y tế quá thời hạn 3 ngày làm việc",
+    badge: "Bẫy VLM · Quá hạn",
+    badgeClass: "bg-warning-lt",
+    desc: "Chứng từ khám từ ngày 15/09 nhưng đến 05/10 mới nộp (quá 3 ngày làm việc) -> Bắt cảnh báo nộp muộn DOC_SUBMISSION_EXPIRED.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-09-15",
+      to_date: "2026-09-16",
+      reason: "Nộp bổ sung giấy khám sức khỏe tháng trước",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Đa khoa Quốc tế Thu Cúc",
+        issue_date: "2026-09-15",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-05T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      error_code: "DOC_SUBMISSION_EXPIRED",
+      note: "Quá hạn nộp chứng từ: Chuyển Quản lý xem xét lý do nộp trễ"
+    }
+  },
+
+  // =========================================================================
+  // EMP006: Bùi Tuấn Kiệt (Developer - Engineering)
+  // =========================================================================
+  {
+    id: "TC-AI-03A",
+    primaryEmpId: "EMP006",
+    title: "TC-AI-03A: Biên số dư phép - Còn 1 ngày, xin 1 ngày (Duyệt)",
+    badge: "Biên số dư · Đạt",
+    badgeClass: "bg-success-lt",
+    desc: "Bùi Tuấn Kiệt số dư còn 1 ngày: Xin đúng 1 ngày phép năm -> AI tự duyệt, số dư trừ sạch về 0.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-05",
+      remaining_leave_days: 1.0,
+      reason: "Giải quyết việc cá nhân",
+      submitted_at: "2026-10-01T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "AUTO_APPROVE",
+      target_role: "AI",
+      deducted_days: 1,
+      note: "Số dư vừa đủ (1 ngày) -> Tự động duyệt"
+    }
+  },
+  {
+    id: "TC-AI-03B",
+    primaryEmpId: "EMP006",
+    title: "TC-AI-03B: Biên số dư phép - Còn 1 ngày, xin 2 ngày (Từ chối tự động)",
+    badge: "Biên số dư · Từ chối",
+    badgeClass: "bg-danger-lt",
+    desc: "Bùi Tuấn Kiệt số dư còn 1 ngày nhưng xin 2 ngày phép -> Bị hệ thống từ chối tự động vì vượt số dư (BALANCE_EXCEEDED).",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-06",
+      remaining_leave_days: 1.0,
+      reason: "Nghỉ việc gia đình 2 ngày",
+      submitted_at: "2026-10-01T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "AUTO_REJECT",
+      target_role: "AI",
+      error_code: "BALANCE_EXCEEDED",
+      note: "Từ chối tự động (AUTO_REJECT) do vượt số dư phép năm"
+    }
+  },
+  {
+    id: "TC-EMP006-01",
+    primaryEmpId: "EMP006",
+    title: "TC-EMP006-01: Nghỉ ốm 2 ngày tiêu chuẩn BV Đa khoa Đống Đa",
+    badge: "BHXH · Ngoại trú chuẩn",
+    badgeClass: "bg-info-lt",
+    desc: "Nghỉ ốm 2 ngày điều trị viêm xoang có Giấy chứng nhận nghỉ việc hưởng BHXH BV Đống Đa -> Chuyển Quản lý duyệt.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-14",
+      to_date: "2026-10-15",
+      reason: "Viêm phế quản co thắt điều trị ngoại trú",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Đa khoa Đống Đa",
+        issue_date: "2026-10-14",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-14T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Chứng từ tiêu chuẩn: Chuyển Quản lý Kỹ thuật phê duyệt BHXH"
+    }
+  },
+  {
+    id: "TC-EMP006-02",
+    primaryEmpId: "EMP006",
+    title: "TC-EMP006-02: Giấy cấp cứu ban đêm tai nạn nhẹ BV E (Hỗ trợ khẩn cấp)",
+    badge: "Khẩn cấp · Ban đêm",
+    badgeClass: "bg-danger-lt",
+    desc: "Sơ cứu vết thương phần mềm tại Khoa Cấp cứu BV E lúc 23h45 đêm -> Nộp giấy cấp cứu, chuyển Quản lý xem xét phê duyệt hỗ trợ.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-19",
+      to_date: "2026-10-19",
+      reason: "Cấp cứu ban đêm tai nạn sinh hoạt tại Khoa Cấp cứu BV E",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện E - Khoa Cấp cứu",
+        issue_date: "2026-10-19",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-19T07:15:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Ca cấp cứu khẩn cấp: Chuyển Quản lý xử lý nhanh chế độ"
+    }
+  },
+
+  // =========================================================================
+  // EMP007: Lê Thị Hương (Thử việc - Engineering)
+  // =========================================================================
+  {
+    id: "TC-AI-04A",
+    primaryEmpId: "EMP007",
+    title: "TC-AI-04A: Thử việc xin phép năm hưởng lương (Chặn sửa đơn)",
+    badge: "Thử việc · Bị chặn",
+    badgeClass: "bg-warning-lt",
+    desc: "Lê Thị Hương (thử việc) xin phép năm hưởng lương -> Bắt lỗi PROBATION_ANNUAL_RESTRICTED, yêu cầu sửa đơn.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-05",
+      employment_status: "PROBATION",
+      remaining_leave_days: 0.0,
+      reason: "Nghỉ phép năm",
+      submitted_at: "2026-10-01T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "NEED_CORRECTION",
+      target_role: "AI",
+      error_code: "PROBATION_ANNUAL_RESTRICTED",
+      note: "Chặn tự động: Thử việc chưa phát sinh phép năm hưởng lương"
+    }
+  },
+  {
+    id: "TC-AI-04B",
+    primaryEmpId: "EMP007",
+    title: "TC-AI-04B: Thử việc xin nghỉ không lương (Hợp lệ chuyển Quản lý)",
+    badge: "Thử việc · Quản lý",
+    badgeClass: "bg-primary-lt",
+    desc: "Lê Thị Hương (thử việc) xin nghỉ việc riêng không lương UNPAID_OTHER -> Hợp lệ chuyển Quản lý trực tiếp duyệt.",
+    payload: {
+      leave_type: "UNPAID_OTHER",
+      from_date: "2026-10-05",
+      to_date: "2026-10-05",
+      employment_status: "PROBATION",
+      remaining_leave_days: 0.0,
+      reason: "Giải quyết việc cá nhân đột xuất",
+      submitted_at: "2026-09-20T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Hợp lệ cho thử việc: Chuyển Quản lý trực tiếp (Cấp 1)"
+    }
+  },
+  {
+    id: "TC-EMP007-01",
+    primaryEmpId: "EMP007",
+    title: "TC-EMP007-01: Thử việc nghỉ ốm 1 ngày có chứng từ PK Medlatec",
+    badge: "Thử việc · Ốm BHXH",
+    badgeClass: "bg-info-lt",
+    desc: "Nhân sự thử việc có đóng BHXH nộp đơn ốm 1 ngày kèm chứng từ đầy đủ -> Chuyển Quản lý trực tiếp phê duyệt.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-15",
+      to_date: "2026-10-15",
+      reason: "Sốt siêu vi điều trị ngoại trú theo chỉ định",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Phòng khám Đa khoa Medlatec Cầu Giấy",
+        issue_date: "2026-10-15",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-15T08:10:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Thử việc có chứng từ y tế hợp lệ: Chuyển Quản lý duyệt chế độ BHXH"
+    }
+  },
+  {
+    id: "TC-EMP007-02",
+    primaryEmpId: "EMP007",
+    title: "TC-EMP007-02: [Bẫy thiếu chữ ký] Chứng từ thiếu chữ ký bác sĩ điều trị",
+    badge: "Bẫy VLM · Thiếu ký",
+    badgeClass: "bg-danger-lt",
+    desc: "Chứng từ có mộc đỏ bệnh viện nhưng ô bác sĩ khám ký tên bị bỏ trống -> Bắt lỗi DOC_SIGNATURE_MISSING, yêu cầu bổ sung.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-15",
+      to_date: "2026-10-15",
+      reason: "Nghỉ ốm theo dõi",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Giao thông Vận tải",
+        issue_date: "2026-10-15",
+        signature_present: false,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-15T08:15:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "NEED_CORRECTION",
+      target_role: "AI",
+      error_code: "DOC_SIGNATURE_MISSING",
+      note: "Thiếu chữ ký bác sĩ chuyên khoa: Yêu cầu nhân viên xin xác nhận lại"
+    }
+  },
+
+  // =========================================================================
+  // EMP008: Nguyễn Thị Kim Ngân (Operations Specialist - Marketing & Ops)
+  // =========================================================================
+  {
+    id: "TC-EMP008-01",
+    primaryEmpId: "EMP008",
+    title: "TC-EMP008-01: Khám thai định kỳ 1 ngày có chứng nhận y tế (BHXH)",
+    badge: "BHXH · Khám thai",
+    badgeClass: "bg-pink-lt",
+    desc: "Nguyễn Thị Kim Ngân nộp đơn khám thai định kỳ kèm Giấy chứng nhận BV Phụ sản Hà Nội -> Chuyển Quản lý duyệt hưởng chế độ thai sản.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-16",
+      to_date: "2026-10-16",
+      reason: "Khám thai định kỳ tuần thứ 28 tại BV Phụ sản Hà Nội",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Phụ sản Hà Nội",
+        issue_date: "2026-10-16",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-16T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Chế độ thai sản BHXH: Chuyển Quản lý duyệt theo Luật BHXH"
+    }
+  },
+  {
+    id: "TC-EMP008-02",
+    primaryEmpId: "EMP008",
+    title: "TC-EMP008-02: Tang lễ tứ thân phụ mẫu 3 ngày hưởng nguyên lương",
+    badge: "Nguyên lương · Tang chế",
+    badgeClass: "bg-dark-lt",
+    desc: "Nghỉ việc riêng hưởng nguyên lương do bố đẻ qua đời kèm Giấy chứng tử UBND xã -> Quản lý duyệt 3 ngày nguyên lương theo Điều 115 BLLĐ.",
+    payload: {
+      leave_type: "SPECIAL_PAID",
+      reason_category: "PARENT_FUNERAL",
+      from_date: "2026-10-20",
+      to_date: "2026-10-22",
+      reason: "Lo tang lễ cho bố ruột (Nguyễn Văn Thành) tại quê nhà Nam Định",
+      proof: {
+        proof_type: "OTHER",
+        proof_verification_status: "VERIFIED",
+        issuer: "UBND Xã Hải Hậu, Tỉnh Nam Định",
+        issue_date: "2026-10-19",
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-20T06:30:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Tang chế tứ thân phụ mẫu: 03 ngày hưởng nguyên lương theo Điều 115 BLLĐ"
+    }
+  },
+  {
+    id: "TC-EMP008-03",
+    primaryEmpId: "EMP008",
+    title: "TC-EMP008-03: Phép năm 2 ngày có bàn giao cùng phòng cho EMP010",
+    badge: "Phép năm · Có bàn giao",
+    badgeClass: "bg-success-lt",
+    desc: "Nguyễn Thị Kim Ngân xin nghỉ phép năm 2 ngày có bàn giao công việc cho Phan Thảo My (EMP010) cùng phòng Marketing & Ops.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-08",
+      to_date: "2026-10-09",
+      handover_person_id: "EMP010",
+      handover: { employee_id: "EMP010", department: "Marketing & Operations", status: "ACTIVE", absent_dates: [] },
+      reason: "Nghỉ phép thường niên",
+      submitted_at: "2026-10-01T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "AUTO_APPROVE",
+      target_role: "AI",
+      deducted_days: 2,
+      note: "Phép năm 1-2 ngày có bàn giao hợp lệ -> AI tự động phê duyệt"
+    }
+  },
+
+  // =========================================================================
+  // EMP009: Võ Minh Khang (Marketing Specialist - Marketing & Ops)
+  // =========================================================================
+  {
+    id: "TC-MGR-03",
+    primaryEmpId: "EMP009",
+    title: "TC-MGR-03: Nghỉ kết hôn 3 ngày hưởng nguyên lương (SPECIAL_PAID)",
+    badge: "Cấp 1 · Chế độ kết hôn",
+    badgeClass: "bg-pink-lt",
+    desc: "Võ Minh Khang nộp đơn kết hôn 3 ngày kèm giấy đăng ký kết hôn UBND Quận Cầu Giấy -> Quản lý duyệt hưởng nguyên lương, 0 trừ phép năm.",
+    payload: {
+      leave_type: "SPECIAL_PAID",
+      reason_category: "SELF_MARRIAGE",
+      from_date: "2026-10-05",
+      to_date: "2026-10-07",
+      reason: "Nghỉ đám cưới bản thân (Lễ thành hôn)",
+      proof: {
+        proof_type: "MARRIAGE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "UBND Phường Dịch Vọng Hậu",
+        issue_date: "2026-09-20",
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-09-25T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Hưởng nguyên lương, không trừ phép năm (Điều 115 BLLĐ)"
+    }
+  },
+  {
+    id: "TC-VLM-02",
+    primaryEmpId: "EMP009",
+    title: "TC-VLM-02: Bẫy lệch tên bệnh nhân trên giấy nghỉ ốm (NAME_MISMATCH)",
+    badge: "Bẫy VLM · Lệch tên",
+    badgeClass: "bg-danger-lt",
+    desc: "Giấy chứng nhận ghi tên bệnh nhân 'Phạm Quốc Dũng' khác tên Võ Minh Khang -> Bắt cờ NAME_MISMATCH, yêu cầu sửa/nộp lại đơn.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-12",
+      to_date: "2026-10-14",
+      reason: "Nghỉ ốm điều trị",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Đa khoa Medlatec",
+        patient_name: "Phạm Quốc Dũng",
+        issue_date: "2026-10-12",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-12T07:30:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "NEED_CORRECTION",
+      target_role: "AI",
+      error_code: "NAME_MISMATCH",
+      note: "Bẫy thị giác: Tên trên chứng từ không khớp tên nhân viên nộp"
+    }
+  },
+  {
+    id: "TC-EMP009-03",
+    primaryEmpId: "EMP009",
+    title: "TC-EMP009-03: Phép năm 3 ngày có bàn giao cho EMP008 -> Quản lý duyệt",
+    badge: "Cấp 1 · Mkt & Ops Mgr",
+    badgeClass: "bg-primary-lt",
+    desc: "Võ Minh Khang xin 3 ngày phép năm có bàn giao cùng phòng cho EMP008 -> Chuyển Dương Mỹ Duyên (Marketing/Ops Manager) duyệt.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-19",
+      to_date: "2026-10-21",
+      handover_person_id: "EMP008",
+      handover: { employee_id: "EMP008", department: "Marketing & Operations", status: "ACTIVE", absent_dates: [] },
+      reason: "Nghỉ việc gia đình",
+      submitted_at: "2026-10-10T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Phép năm 3-5 ngày: Thẩm quyền duyệt là Quản lý Marketing (EMP002)"
+    }
+  },
+
+  // =========================================================================
+  // EMP010: Phan Thảo My (Operations Specialist - Marketing & Ops)
+  // =========================================================================
+  {
+    id: "TC-MGR-02",
+    primaryEmpId: "EMP010",
+    title: "TC-MGR-02: Phép năm 4 ngày -> Chuyển Quản lý Marketing (EMP002)",
+    badge: "Cấp 1 · Mkt & Ops Mgr",
+    badgeClass: "bg-primary-lt",
+    desc: "Phan Thảo My xin 4 ngày phép năm có bàn giao cùng phòng cho EMP008 -> Chuyển Dương Mỹ Duyên (Mkt/Ops Manager) duyệt.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-08",
+      handover_person_id: "EMP008",
+      handover: { employee_id: "EMP008", department: "Marketing & Operations", status: "ACTIVE", absent_dates: [] },
+      reason: "Nghỉ phép cá nhân",
+      submitted_at: "2026-09-25T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Phép năm 3-5 ngày: Thẩm quyền duyệt là Quản lý Marketing (EMP002)"
+    }
+  },
+  {
+    id: "TC-HARD-05",
+    primaryEmpId: "EMP010",
+    title: "TC-HARD-05: Tỷ lệ vắng mặt phòng ban vượt 30% (Chặn tự duyệt)",
+    badge: "Cảnh báo · Quota 30%",
+    badgeClass: "bg-danger-lt",
+    desc: "Phòng Marketing đã có 2/6 thành viên vắng (33%) -> Bắt cờ TEAM_QUOTA_EXCEEDED, chặn tự duyệt, chuyển Quản lý trực tiếp.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-05",
+      team_absent_count: 2,
+      total_team_members: 6,
+      reason: "Nghỉ cá nhân",
+      submitted_at: "2026-10-01T08:00:00+07:00"
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      error_code: "TEAM_QUOTA_EXCEEDED",
+      note: "Vắng >= 30% nhân sự: Chuyển Quản lý điều phối nguồn lực"
+    }
+  },
+  {
+    id: "TC-VLM-04",
+    primaryEmpId: "EMP010",
+    title: "TC-VLM-04: Ảnh chụp chứng từ bị mờ nhòe, mất nét (DOC_ILLEGIBLE)",
+    badge: "Bẫy VLM · Mờ nhòe",
+    badgeClass: "bg-danger-lt",
+    desc: "Ảnh chụp tài liệu mờ nhòe, mất nét không đọc được thông tin -> Bắt cờ DOC_ILLEGIBLE, yêu cầu tải lại ảnh rõ nét.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-08",
+      to_date: "2026-10-10",
+      reason: "Nghỉ ốm điều trị",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        document_readability: "ILLEGIBLE"
+      },
+      submitted_at: "2026-10-08T07:30:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "NEED_CORRECTION",
+      target_role: "AI",
+      error_code: "DOC_ILLEGIBLE",
+      note: "Bẫy chất lượng ảnh: Ảnh mờ nhòe, yêu cầu bổ sung ảnh đọc được"
+    }
+  },
+  {
+    id: "TC-EMP010-02",
+    primaryEmpId: "EMP010",
+    title: "TC-EMP010-02: Nghỉ ốm 3 ngày tiêu chuẩn BV Vinmec Times City",
+    badge: "BHXH · Vinmec Times City",
+    badgeClass: "bg-info-lt",
+    desc: "Nghỉ ốm ngoại trú 3 ngày do viêm amidan hốc mủ kèm chứng từ chuẩn Vinmec Times City -> Quản lý duyệt chế độ BHXH.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-08",
+      to_date: "2026-10-10",
+      reason: "Viêm amidan hốc mủ sốt cao điều trị ngoại trú",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện ĐKQT Vinmec Times City",
+        issue_date: "2026-10-08",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-08T07:30:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Chứng từ hợp lệ (3 ngày): Chuyển Quản lý duyệt theo quy chế"
+    }
+  },
+
+  // =========================================================================
+  // EMP011: Hoàng Kim Yến (Operations Specialist - Marketing & Ops)
+  // =========================================================================
+  {
+    id: "TC-AI-02",
+    primaryEmpId: "EMP011",
+    title: "TC-AI-02: Nghỉ ốm 1 ngày có đơn thuốc nộp trước 08:30 (BHXH)",
+    badge: "AI Cấp 0 · Ốm đau BHXH",
+    badgeClass: "bg-info-lt",
+    desc: "Hoàng Kim Yến nộp đơn ốm 1 ngày lúc 07:45 sáng kèm đơn thuốc bệnh viện hợp lệ -> AI tự duyệt, 0 trừ phép năm (chế độ BHXH).",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-05",
+      reason: "Bị sốt cảm cúm đột xuất",
+      submitted_at: "2026-10-05T07:45:00+07:00",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Đa khoa Quốc tế Hà Nội",
+        issue_date: "2026-10-05",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      total_team_members: 6
+    },
+    expected: {
+      decision: "AUTO_APPROVE",
+      target_role: "AI",
+      deducted_days: 0,
+      note: "Chế độ ốm đau BHXH: Tự duyệt, không trừ phép năm"
+    }
+  },
+  {
+    id: "TC-EMP011-02",
+    primaryEmpId: "EMP011",
+    title: "TC-EMP011-02: Tai nạn giao thông nhẹ trên đường đi làm (Thẩm định tai nạn)",
+    badge: "Thẩm định · Tai nạn LĐ",
+    badgeClass: "bg-warning-lt",
+    desc: "Va chạm giao thông nhẹ trên tuyến đường đi làm hợp lý lúc 07:30 sáng -> Nộp bệnh án sơ cứu, chuyển Quản lý thẩm định chế độ tai nạn lao động.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-13",
+      to_date: "2026-10-14",
+      reason: "Xây xát phần mềm do va quệt xe trên đường đi làm",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Giao thông Vận tải",
+        issue_date: "2026-10-13",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-13T08:15:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Hồ sơ tai nạn trên đường đi làm: Quản lý thẩm định biên bản & lộ trình"
+    }
+  },
+  {
+    id: "TC-EMP011-03",
+    primaryEmpId: "EMP011",
+    title: "TC-EMP011-03: Phép năm 1 ngày việc riêng (Tự động duyệt)",
+    badge: "AI Cấp 0 · Tự duyệt",
+    badgeClass: "bg-success-lt",
+    desc: "Hoàng Kim Yến xin 1 ngày phép năm giải quyết việc cá nhân, đủ số dư phép -> AI tự duyệt.",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-23",
+      to_date: "2026-10-23",
+      reason: "Việc riêng gia đình",
+      submitted_at: "2026-10-18T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "AUTO_APPROVE",
+      target_role: "AI",
+      deducted_days: 1,
+      note: "Phép năm 1 ngày đủ số dư: AI tự động duyệt & trừ 1 ngày phép"
+    }
+  },
+
+  // =========================================================================
+  // EMP012: Lê Mai Loan (Creative / Operations - Marketing & Ops)
+  // =========================================================================
+  {
+    id: "TC-HARD-02",
+    primaryEmpId: "EMP012",
+    title: "TC-HARD-02: Nghỉ dài hạn 21 ngày làm việc -> Bắt buộc Tổng Giám đốc (Boss)",
+    badge: "Cấp Sếp · Nghỉ dài hạn",
+    badgeClass: "bg-purple-lt",
+    desc: "Lê Mai Loan xin 21 ngày làm việc (01-29/10/2026) có bàn giao -> Thẩm quyền bắt buộc là Tổng Giám đốc (CEO/Boss).",
+    payload: {
+      leave_type: "UNPAID_OTHER",
+      from_date: "2026-10-01",
+      to_date: "2026-10-29",
+      handover_person_id: "EMP010",
+      handover: { employee_id: "EMP010", department: "Marketing & Operations", status: "ACTIVE", absent_dates: [] },
+      reason: "Nghỉ việc riêng dài hạn",
+      submitted_at: "2026-09-01T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "CEO",
+      note: "Đơn >= 20 ngày làm việc: Thẩm quyền duyệt là Tổng Giám đốc (Boss)"
+    }
+  },
+  {
+    id: "TC-EMP012-02",
+    primaryEmpId: "EMP012",
+    title: "TC-EMP012-02: Con ốm 2 ngày hưởng trợ cấp BHXH (Con dưới 7 tuổi)",
+    badge: "BHXH · Chăm sóc con ốm",
+    badgeClass: "bg-info-lt",
+    desc: "Nghỉ chăm sóc con gái 4 tuổi bị viêm phế quản kèm Giấy chứng nhận BV Nhi Trung ương -> Chuyển Quản lý duyệt hưởng chế độ con ốm.",
+    payload: {
+      leave_type: "SICK_MEDICAL",
+      from_date: "2026-10-20",
+      to_date: "2026-10-21",
+      reason: "Nghỉ chăm sóc con gái ruột (Lê Ngọc Ánh, 4 tuổi) điều trị viêm phế quản",
+      proof: {
+        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "Bệnh viện Nhi Trung ương",
+        issue_date: "2026-10-20",
+        signature_present: true,
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-20T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      note: "Chế độ con ốm hưởng BHXH theo Luật BHXH: Quản lý phê duyệt"
+    }
+  },
+  {
+    id: "TC-EMP012-03",
+    primaryEmpId: "EMP012",
+    title: "TC-EMP012-03: [Bẫy quy chế] Cưới em gái ruột (Không thuộc diện có lương)",
+    badge: "Bẫy quy chế · Không lương",
+    badgeClass: "bg-warning-lt",
+    desc: "Tham dự lễ cưới em gái ruột -> Điều 115 BLLĐ chỉ cho nghỉ có lương khi bản thân hoặc con kết hôn. Đơn chuyển thành nghỉ không lương hoặc phép năm.",
+    payload: {
+      leave_type: "SPECIAL_PAID",
+      from_date: "2026-10-24",
+      to_date: "2026-10-24",
+      reason: "Tham dự lễ thành hôn của em gái ruột (Lê Mai Linh)",
+      proof: {
+        proof_type: "MARRIAGE_CERTIFICATE",
+        proof_verification_status: "VERIFIED",
+        issuer: "UBND Phường Quan Hoa, Quận Cầu Giấy",
+        issue_date: "2026-10-10",
+        document_readability: "READABLE"
+      },
+      submitted_at: "2026-10-15T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      error_code: "NON_COMPLIANT_POLICY",
+      note: "Bẫy quy chế: Anh/chị/em cưới không có lương -> Quản lý hướng dẫn đổi loại phép"
+    }
+  },
+
+  // =========================================================================
+  // EMP001: Đỗ Hoàng Long (Engineering Manager)
+  // =========================================================================
+  {
+    id: "TC-HARD-01",
+    primaryEmpId: "EMP001",
+    title: "TC-HARD-01: Quản lý nộp đơn -> Không tự duyệt, chuyển Sếp (Boss)",
+    badge: "Cấp Sếp · Anti Self-Approval",
+    badgeClass: "bg-purple-lt",
+    desc: "Đỗ Hoàng Long nộp đơn -> Quy chế chống tự phê duyệt (Anti-self-approval), thẩm quyền chuyển thẳng lên Sếp (EMP000 - Boss).",
+    payload: {
+      leave_type: "ANNUAL",
+      from_date: "2026-10-05",
+      to_date: "2026-10-07",
+      reason: "Nghỉ phép cá nhân",
+      submitted_at: "2026-09-25T08:00:00+07:00",
+      total_team_members: 6
+    },
+    expected: {
+      decision: "ESCALATE",
+      target_role: "CEO",
+      note: "Người nộp là Quản lý: Chuyển cấp trên trực tiếp là Tổng Giám đốc"
+    }
+  }
+];
+
+function initStaffTestCaseCard() {
+  const select = document.getElementById("staff-testcase-select");
+  const btnFill = document.getElementById("btn-fill-staff-testcase");
+
+  if (select) {
+    select.addEventListener("change", (e) => {
+      const tc = STAFF_TEST_CASES.find(t => t.id === e.target.value);
+      if (tc) updateStaffTestCasePreview(tc);
+    });
+  }
+
+  if (btnFill) {
+    btnFill.addEventListener("click", async () => {
+      const caseId = document.getElementById("staff-testcase-select")?.value;
+      const tc = STAFF_TEST_CASES.find(t => t.id === caseId);
+      if (tc) await fillStaffTestCaseIntoForm(tc);
+    });
+  }
+}
+
+function renderStaffTestCaseCard() {
+  const card = document.getElementById("staff-testcase-card");
+  const select = document.getElementById("staff-testcase-select");
+  if (!card || !select) return;
+
+  const currEmp = getCurrentEmployee();
+  const empId = currEmp ? currEmp.employee_id : currentEmployeeId;
+
+  // CHỈ hiển thị các kịch bản liên quan tới nhân sự đang được chọn
+  const specificCases = STAFF_TEST_CASES.filter(t => t.primaryEmpId === empId);
+
+  const empHint = document.getElementById("testcase-emp-hint");
+  if (empHint && currEmp) {
+    empHint.innerHTML = `Đang xem: <strong>${escapeHtml(currEmp.name)}</strong> (${empId})`;
+  }
+
+  const badgeCount = document.getElementById("badge-testcase-count");
+  if (badgeCount) {
+    badgeCount.innerText = `${specificCases.length} kịch bản của ${currEmp ? escapeHtml(currEmp.name) : empId}`;
+  }
+
+  let html = "";
+  if (specificCases.length > 0) {
+    html = specificCases.map(t => `<option value="${t.id}">${t.title}</option>`).join("");
+  } else {
+    html = `<option value="">Không có kịch bản riêng cho nhân sự này</option>`;
+  }
+
+  select.innerHTML = html;
+
+  // Chọn kịch bản đầu tiên và hiển thị preview
+  const defaultTc = specificCases[0];
+  if (defaultTc) {
+    select.value = defaultTc.id;
+    updateStaffTestCasePreview(defaultTc);
+  } else {
+    const previewBox = document.getElementById("testcase-preview-box");
+    if (previewBox) {
+      previewBox.innerHTML = `
+        <div class="text-center text-muted py-3">
+          Không có kịch bản mẫu nào được cấu hình cho nhân viên <strong>${currEmp ? escapeHtml(currEmp.name) : empId}</strong>.
+        </div>
+      `;
+    }
+  }
+}
+
+function updateStaffTestCasePreview(tc) {
+  const previewBox = document.getElementById("testcase-preview-box");
+  if (!previewBox || !tc) return;
+
+  const currEmp = getCurrentEmployee();
+  const isDifferentEmp = tc.primaryEmpId && tc.primaryEmpId !== currentEmployeeId;
+  const targetEmpName = EMP_NAME_MAP[tc.primaryEmpId] || tc.primaryEmpId;
+
+  const decisionBadgeClass = tc.expected.decision === "AUTO_APPROVE" ? "bg-success" :
+    (tc.expected.decision === "AUTO_REJECT" ? "bg-danger" :
+    (tc.expected.decision === "ESCALATE" ? "bg-primary" : "bg-warning"));
+
+  previewBox.innerHTML = `
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+      <div class="d-flex align-items-center gap-1.5 flex-wrap">
+        <span class="badge ${tc.badgeClass}" style="font-size: 0.76rem; font-weight: 700; padding: 4px 8px;">${escapeHtml(tc.badge)}</span>
+        <span class="badge" style="background:#e2e8f0; color:#334155; font-size: 0.74rem; font-weight: 600; padding: 4px 8px;">Mã: ${tc.id}</span>
+        <span class="badge" style="background:#e0f2fe; color:#0369a1; font-size: 0.74rem; font-weight: 600; padding: 4px 8px;">Loại: ${tc.payload.leave_type}</span>
+        <span class="badge" style="background:#fef3c7; color:#92400e; font-size: 0.74rem; font-weight: 600; padding: 4px 8px;">${tc.payload.from_date} &rarr; ${tc.payload.to_date}</span>
+      </div>
+      ${tc.payload.proof ? `<span class="badge bg-purple-lt" style="font-size: 0.74rem; font-weight: 600; padding: 4px 8px;">📎 Có ảnh chứng từ đính kèm</span>` : ''}
+    </div>
+
+    <div style="font-size: 0.83rem; color: #1e293b; line-height: 1.5; font-weight: 500;">
+      ${escapeHtml(tc.desc)}
+    </div>
+
+    <div class="d-flex align-items-center gap-2 mt-2.5 p-2" style="background: rgba(30, 58, 138, 0.05); border-left: 3px solid #1e3a8a; border-radius: 4px;">
+      <div style="font-size: 0.78rem; font-weight: 700; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap;">KỲ VỌNG:</div>
+      <div style="font-size: 0.81rem; color: #0f172a;">
+        <span class="badge ${decisionBadgeClass}" style="font-size: 0.75rem; padding: 2px 7px;">${tc.expected.decision}</span>
+        ${tc.expected.target_role ? `<span style="font-weight: 600; color: #1e3a8a; margin-left: 4px;">(Cấp duyệt: ${tc.expected.target_role})</span>` : ''}
+        <span style="color: #64748b; margin-left: 4px;">&bull; ${escapeHtml(tc.expected.note || '')}</span>
+      </div>
+    </div>
+
+    ${tc.payload.proof ? `
+      <div class="mt-2.5" style="font-size: 0.76rem; color: #166534; background: #f0fdf4; border: 1px dashed #bbf7d0; border-radius: 6px; padding: 6px 10px;">
+        📎 <em>Kịch bản này có đính kèm ảnh chứng từ thực tế của <strong>${escapeHtml(currEmp ? currEmp.name : currentEmployeeId)}</strong>. Bấm <strong>"Nạp vào form nộp đơn"</strong> để tự động gắn tệp ảnh vào form.</em>
+      </div>
+    ` : ''}
+  `;
+}
+
+function switchToEmployee(empId) {
+  if (!empId) return;
+  const emp = employeesCache.find(e => e.employee_id === empId);
+  if (!emp) return;
+
+  const deptSelect = document.getElementById("demo-department-select");
+  const demoSelect = document.getElementById("demo-employee-select");
+
+  if (deptSelect && emp.department && deptSelect.value !== emp.department) {
+    deptSelect.value = emp.department;
+    autoResizeSelect(deptSelect);
+    updateStaffDropdown(emp.department);
+  }
+
+  currentEmployeeId = empId;
+  if (demoSelect) {
+    demoSelect.value = empId;
+    autoResizeSelect(demoSelect);
+  }
+
+  editingRequestId = null;
+  currentProofId = null;
+  loadAllRequests();
+  renderStaffDashboard();
+  renderStaffRequests();
+  renderWeeklyCalendar();
+  updateHandoverOptions();
+  renderStaffTestCaseCard();
+}
+
+const TESTCASE_PROOF_MAP = {
+  // EMP003
+  "TC-EMP003-01": { file: "proof_emp003_wedding_child.png", type: "MARRIAGE_CERTIFICATE" },
+  "TC-EMP003-02": { file: "proof_emp003_discharge_inpatient.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  // EMP004
+  "TC-VLM-05": { file: "proof_emp004_sick_digital_valid.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  "TC-VLM-03": { file: "proof_emp004_sick_days_mismatch.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  // EMP005
+  "TC-VLM-01": { file: "proof_emp005_sick_clinic_valid.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  "TC-EMP005-02": { file: "proof_emp005_sick_expired.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  // EMP006
+  "TC-EMP006-01": { file: "proof_emp006_sick_standard_2days.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  "TC-EMP006-02": { file: "proof_emp006_emergency_slip.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  // EMP007
+  "TC-EMP007-01": { file: "proof_emp007_sick_probation_valid.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  "TC-EMP007-02": { file: "proof_emp007_sick_missing_signature.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  // EMP008
+  "TC-EMP008-01": { file: "proof_emp008_maternity_prenatal.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  "TC-EMP008-02": { file: "proof_emp008_funeral_direct.png", type: "OTHER" },
+  // EMP009
+  "TC-MGR-03": { file: "proof_emp009_wedding_valid.png", type: "MARRIAGE_CERTIFICATE" },
+  "TC-VLM-02": { file: "proof_emp009_sick_name_mismatch.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  // EMP010
+  "TC-VLM-04": { file: "proof_emp010_sick_blurry.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  "TC-EMP010-02": { file: "proof_emp010_sick_standard_3days.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  // EMP011
+  "TC-AI-02": { file: "proof_emp011_sick_morning_valid.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  "TC-EMP011-02": { file: "proof_emp011_work_accident.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  // EMP012
+  "TC-EMP012-02": { file: "proof_emp012_child_sick_care.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
+  "TC-EMP012-03": { file: "proof_emp012_wedding_sibling.png", type: "MARRIAGE_CERTIFICATE" }
+};
+
+async function attachProofFileFromUrl(url, fileName, proofType) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Không tải được tệp đính kèm mẫu (${res.status})`);
+    const blob = await res.blob();
+    const file = new File([blob], fileName, { type: "image/png" });
+    selectedProofFile = file;
+
+    const fileInput = document.getElementById("staff-file-input");
+    if (fileInput) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+    }
+
+    const promptEl = document.getElementById("dropzone-prompt");
+    const cardEl = document.getElementById("attached-file-card");
+    const nameEl = document.getElementById("attached-file-name");
+    const sizeEl = document.getElementById("attached-file-size");
+    const iconEl = document.getElementById("attached-file-icon");
+    const attachTypeVal = document.getElementById("staff-attachment-type-val");
+    const proofTypeSelect = document.getElementById("staff-proof-type");
+
+    if (nameEl) nameEl.innerText = fileName;
+    if (sizeEl) sizeEl.innerText = `${(file.size / 1024).toFixed(1)} KB (Tự động nạp từ Test Case)`;
+    if (iconEl) iconEl.innerText = "";
+    if (promptEl) promptEl.classList.add("d-none");
+    if (cardEl) {
+      cardEl.classList.remove("d-none");
+      cardEl.classList.add("d-flex");
+    }
+    if (attachTypeVal) attachTypeVal.value = "unverified";
+    if (proofTypeSelect && proofType) proofTypeSelect.value = proofType;
+
+    showToast(`Đã tự động nạp ảnh chứng từ: ${fileName}`, "info");
+  } catch (err) {
+    console.warn("Lỗi nạp ảnh đính kèm kịch bản:", err);
+    showToast(`Không thể nạp tệp chứng từ mẫu: ${err.message}`, "warning");
+  }
+}
+
+function clearAttachedProofFile() {
+  selectedProofFile = null;
+  const fileInput = document.getElementById("staff-file-input");
+  const promptEl = document.getElementById("dropzone-prompt");
+  const cardEl = document.getElementById("attached-file-card");
+  const attachTypeVal = document.getElementById("staff-attachment-type-val");
+  if (fileInput) fileInput.value = "";
+  if (promptEl) promptEl.classList.remove("d-none");
+  if (cardEl) {
+    cardEl.classList.remove("d-flex");
+    cardEl.classList.add("d-none");
+  }
+  if (attachTypeVal) attachTypeVal.value = "none";
+}
+
+async function fillStaffTestCaseIntoForm(tc) {
+  if (!tc) return;
+
+  // 1. Tự động chuyển nhân viên nếu kịch bản thiết kế cho nhân viên khác
+  if (tc.primaryEmpId && tc.primaryEmpId !== currentEmployeeId) {
+    switchToEmployee(tc.primaryEmpId);
+  }
+
+  // 2. Chuyển sang tab Nộp đơn
+  switchStaffTab("tab-staff-submit");
+
+  // 3. Nạp dữ liệu vào form
+  const typeEl = document.getElementById("staff-leave-type");
+  const fromEl = document.getElementById("staff-from-date");
+  const toEl = document.getElementById("staff-to-date");
+  const reasonEl = document.getElementById("staff-reason");
+  const handoverEl = document.getElementById("staff-handover-select");
+
+  if (typeEl && tc.payload.leave_type) typeEl.value = tc.payload.leave_type;
+  if (fromEl && tc.payload.from_date) fromEl.value = tc.payload.from_date;
+  if (toEl && tc.payload.to_date) toEl.value = tc.payload.to_date;
+  if (reasonEl && tc.payload.reason) reasonEl.value = tc.payload.reason;
+  if (handoverEl && tc.payload.handover_person_id) {
+    if (Array.from(handoverEl.options).some(o => o.value === tc.payload.handover_person_id)) {
+      handoverEl.value = tc.payload.handover_person_id;
+    }
+  }
+
+  // Kích hoạt tính toán thời lượng và kiểm tra hạn mức
+  if (fromEl) fromEl.dispatchEvent(new Event("change"));
+  if (typeEl) typeEl.dispatchEvent(new Event("change"));
+
+  // 4. Xử lý tệp đính kèm chứng từ nếu kịch bản có ảnh
+  const proofConfig = TESTCASE_PROOF_MAP[tc.id];
+  if (proofConfig) {
+    await attachProofFileFromUrl(`assets/proofs/${proofConfig.file}`, proofConfig.file, proofConfig.type);
+  } else {
+    clearAttachedProofFile();
+  }
+
+  showToast(`Đã nạp kịch bản [${tc.id}] vào form nộp đơn thành công!`, "info");
 }
 
 /* ========================================================================= */
@@ -652,6 +2072,8 @@ function switchStaffTab(tabId) {
   } else if (tabId === "tab-staff-policy") {
     loadDecisionTree();
     loadPolicyDocument();
+  } else if (tabId === "tab-staff-testing") {
+    renderStaffTestCaseCard();
   }
 }
 window.switchStaffTab = switchStaffTab;
@@ -708,11 +2130,11 @@ async function loadAIStackStatus() {
       const llmLoading = llm.loading || (llm.engine_online && llm.model_loading);
       const llmErr = llm.last_error || llm.error;
       if (llmText) {
-        let ok = false, label = "LLM Lỗi", extra = "";
-        if (llmOk) { ok = true; label = "LLM Sẵn sàng"; extra = llm.target_model || "qwen2.5:3b-instruct"; }
-        else if (llmLoading) { ok = false; label = "LLM Đang nạp..."; extra = llm.target_model || "qwen2.5:3b-instruct"; }
-        else if (llmErr) { ok = false; label = "LLM Lỗi"; extra = (llmErr || "").slice(0, 40); }
-        else { ok = false; label = "LLM Offline"; extra = llm.target_model || "qwen2.5:3b-instruct"; }
+        let ok = false, label = "AI Engine lỗi", extra = "";
+        if (llmOk) { ok = true; label = "AI Engine sẵn sàng"; extra = llm.target_model || "qwen2.5:3b-instruct"; }
+        else if (llmLoading) { ok = false; label = "AI Engine đang nạp..."; extra = llm.target_model || "qwen2.5:3b-instruct"; }
+        else if (llmErr) { ok = false; label = "AI Engine lỗi"; extra = (llmErr || "").slice(0, 40); }
+        else { ok = false; label = "AI Engine offline"; extra = llm.target_model || "qwen2.5:3b-instruct"; }
         setBadge(llmText, ok, label, extra);
       }
 
@@ -720,17 +2142,17 @@ async function loadAIStackStatus() {
       const vlmOnGpu = Number(vlm.size_vram || 0) > 0;
       if (vlmText) {
         let ok = false, label = "", extra = vlm.target_model || "qwen2.5vl:7b";
-        if (vlmPulled && vlmOnGpu) { ok = true; label = "VLM Sẵn sàng"; extra = extra + " · GPU"; }
-        else if (vlmPulled && !vlmOnGpu) { label = "VLM trên CPU"; extra = extra + " · size_vram=0"; }
-        else if (vlm.ollama_reachable && !vlm.model_loaded) { label = "VLM thiếu model"; extra = "Cần pull qwen2.5vl:7b"; }
-        else { label = "VLM Offline"; extra = vlm.last_error || "Ollama không phản hồi"; }
+        if (vlmPulled && vlmOnGpu) { ok = true; label = "AI Engine sẵn sàng"; extra = extra + " · GPU"; }
+        else if (vlmPulled && !vlmOnGpu) { label = "AI Engine trên CPU"; extra = extra + " · size_vram=0"; }
+        else if (vlm.ollama_reachable && !vlm.model_loaded) { label = "AI Engine thiếu model"; extra = "Cần pull model"; }
+        else { label = "AI Engine offline"; extra = vlm.last_error || "Ollama không phản hồi"; }
         setBadge(vlmText, ok, label, extra);
       }
     }
   } catch (err) {
     console.warn("AI stack status fetch failed:", err);
-    if (llmText) setBadge(llmText, false, "LLM Offline", "Không kết nối backend");
-    if (vlmText) setBadge(vlmText, false, "VLM Offline", "Không kết nối backend");
+    if (llmText) setBadge(llmText, false, "AI Engine offline", "Không kết nối backend");
+    if (vlmText) setBadge(vlmText, false, "AI Engine offline", "Không kết nối backend");
   }
 }
 
@@ -1082,7 +2504,7 @@ function renderMindmapNode(node, branchColor) {
   const isVlm = kind === 'VLM';
   const hex = isVlm ? '#8b5cf6' : (branchColor || '#0284c7');
   const tagClass = isVlm ? 'mm-tag-vlm' : 'mm-tag-policy';
-  const tagLabel = isVlm ? '🤖 VLM Vision' : '📋 Quy chế';
+  const tagLabel = isVlm ? '🤖 AI Engine' : '📋 Quy chế';
   const whenPass = (node.when_pass || node.pass_action || '').trim();
   const whenFail = (node.when_fail || node.fail_action || '').trim();
 
@@ -1112,7 +2534,7 @@ function renderMindmapMiniNode(node, hex) {
       <div class="mm-subnode-head">
         <span class="mm-subnode-id">${escapeHtml(node.node_id || '')}</span>
         <span class="mm-subnode-name">${escapeHtml(node.label || '')}</span>
-        ${isVlm ? '<span class="mm-vlm-pill">🤖 VLM</span>' : ''}
+        ${isVlm ? '<span class="mm-vlm-pill">🤖 AI Engine</span>' : ''}
       </div>
       ${whenFail || whenPass ? `
         <div class="mm-subnode-branches">
@@ -1361,14 +2783,14 @@ function initStaffForm() {
         dropTitle.innerHTML = `Bấm để tải <strong style="color:#b91c1c;">giấy khám / giấy tờ xác nhận</strong> hoặc kéo thả vào đây`;
       }
       if (dropSub) {
-        dropSub.innerText = `Chấp nhận PDF, PNG, JPG (VLM sẽ đọc và đối soát)`;
+        dropSub.innerText = `Chấp nhận PDF, PNG, JPG (AI Engine sẽ đọc và đối soát)`;
       }
     } else {
       if (label) {
         label.innerHTML = `Chứng từ xác minh <span class="badge" style="background:#f1f5f9;color:#64748b;font-weight:500;font-size:0.75rem;padding:2px 8px;border-radius:4px;margin-left:4px;">Không bắt buộc / Tùy chọn</span>`;
       }
       if (hint) {
-        hint.innerHTML = `<span style="color:#64748b;">Nghỉ phép năm / không lương không bắt buộc chứng từ (bỏ qua VLM)</span>`;
+        hint.innerHTML = '';
       }
       if (dropzone) {
         dropzone.style.borderColor = '#cbd5e1';
@@ -1432,6 +2854,7 @@ function initStaffForm() {
         const promptEl = document.getElementById("dropzone-prompt");
         const cardEl = document.getElementById("attached-file-card");
         const attachTypeVal = document.getElementById("staff-attachment-type-val");
+        selectedProofFile = null;
         if (fileInput) fileInput.value = "";
         if (promptEl) promptEl.classList.remove("d-none");
         if (cardEl) {
@@ -1488,7 +2911,6 @@ function initStaffForm() {
     });
   }
 }
-
 function initFileUploadDropzone() {
   const dropzone = document.getElementById("file-dropzone");
   const fileInput = document.getElementById("staff-file-input");
@@ -1526,6 +2948,7 @@ function initFileUploadDropzone() {
   if (btnRemove) {
     btnRemove.addEventListener("click", (e) => {
       e.stopPropagation();
+      selectedProofFile = null;
       fileInput.value = "";
       if (promptEl) promptEl.classList.remove("d-none");
       if (cardEl) {
@@ -1559,8 +2982,8 @@ function showSubmitProgress(hasFile = false) {
   const sub = document.getElementById("progress-modal-sub");
   if (sub) {
     sub.textContent = hasFile
-      ? "VLM qwen2.5vl:7b ~12s (8–18s) · Rule Engine <0.3s · form không gọi LLM"
-      : "Không chứng từ: bỏ qua VLM · Rule Engine <0.3s · form không gọi LLM";
+      ? "AI Engine đọc chứng từ ~12s (8–18s) · đối soát <0.3s"
+      : "Không chứng từ: AI Engine bỏ qua bước đọc chứng từ · đối soát <0.3s";
   }
   if (bar) bar.style.background = "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)";
 
@@ -1608,7 +3031,7 @@ function showSubmitProgress(hasFile = false) {
         remainLabel = "vượt mốc 12s";
       }
       _setStepState(2, "processing", remainLabel);
-      paint(pct, `Bước 2: VLM qwen2.5vl:7b đang đọc chứng từ (${remainLabel})${dots}`);
+      paint(pct, `Bước 2: AI Engine đang đọc chứng từ (${remainLabel})${dots}`);
       return;
     }
 
@@ -1621,7 +3044,7 @@ function showSubmitProgress(hasFile = false) {
     _setStepState(1, "done", "Xong ✓");
     if (elapsed < RECV_MS + RULE_MS) {
       _setStepState(3, "processing", "Đang đối soát");
-      paint(25 + ((elapsed - RECV_MS) / RULE_MS) * 50, "Bước 3: Rule Engine đối soát chính sách...");
+      paint(25 + ((elapsed - RECV_MS) / RULE_MS) * 50, "Bước 3: AI Engine đối soát chính sách...");
       return;
     }
     _setStepState(3, "done", "Xong ✓");
@@ -1716,7 +3139,7 @@ function _setStepState(stepNum, state, text) {
 }
 
 async function handleStandardFormSubmit() {
-  const file = document.getElementById('staff-file-input')?.files[0];
+  const file = document.getElementById('staff-file-input')?.files[0] || selectedProofFile;
   const leaveType = document.getElementById('staff-leave-type')?.value || 'ANNUAL';
   const mandatoryProofTypes = ['SICK_MEDICAL', 'MEDICAL_EMERGENCY', 'SPECIAL_PAID', 'WORK_ACCIDENT', 'MATERNITY'];
 
@@ -1777,7 +3200,7 @@ async function submitLeaveToBackend(payload, hasFile = false) {
     }
     finishSubmitProgress(true, async () => {
       showToast(`${DECISION_LABELS[result.data.decision] || result.data.decision}: ${result.data.human_readable_explanation}`,'info');
-      editingRequestId=null; currentProofId=null;
+      editingRequestId=null; currentProofId=null; selectedProofFile=null;
       document.getElementById('form-staff-standard')?.reset();
       const attachTypeVal = document.getElementById("staff-attachment-type");
       if (attachTypeVal) attachTypeVal.value = "none";
@@ -1867,8 +3290,9 @@ function updateBadgesAndCounters() {
 }
 
 function renderStaffRequests() {
-  const container = document.getElementById("staff-requests-card-container");
-  if (!container) return;
+  const tbody = document.getElementById("staff-requests-tbody");
+  const cardContainer = document.getElementById("staff-requests-card-container");
+  if (!tbody && !cardContainer) return;
 
   const filterVal = document.getElementById("staff-requests-filter")?.value || "ALL";
   let myRequests = activeRequests.filter(r => r.employee_id === currentEmployeeId);
@@ -1877,18 +3301,44 @@ function renderStaffRequests() {
     myRequests = myRequests.filter(r => r.decision === filterVal || r.status === filterVal);
   }
 
-  if (myRequests.length === 0) {
-    container.innerHTML = `
-      <div style="text-align: center; color: var(--text-dim); padding: 50px 0;">
-        
-        <div>Không có đơn nghỉ phép nào phù hợp với bộ lọc.</div>
-      </div>
-    `;
-    return;
-  }
+  if (tbody) {
+    if (myRequests.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center text-secondary py-4">Không có đơn nghỉ phép nào phù hợp với bộ lọc.</td></tr>`;
+      return;
+    }
 
-  container.innerHTML = myRequests.map(req => renderSingleRequestCard(req, true)).join("");
-  attachRequestCardEvents();
+    tbody.innerHTML = myRequests.map(req => {
+      const cancellable = ['WAITING_EMPLOYEE', 'PENDING_ESCALATION'].includes(req.status);
+      const cancelBtnHtml = cancellable
+        ? `<button type="button" class="btn btn-sm btn-outline-danger px-2.5 py-1" onclick="cancelMyRequest('${req.id}')" title="Hủy đơn nghỉ phép này">Hủy đơn</button>`
+        : `<span class="text-muted">—</span>`;
+
+      return `
+        <tr>
+          <td>${escapeHtml(req.from_date || '')} → ${escapeHtml(req.to_date || '')}</td>
+          <td><b>${req.requested_working_days ?? req.workdays ?? 0} ngày</b></td>
+          <td>${getStatusBadgeHtml(req)}</td>
+          <td>
+            <button type="button" class="btn btn-sm btn-outline-primary px-2.5 py-1" onclick="openRequestDetailModal('${req.id}')" title="Xem chi tiết đơn nghỉ phép">
+              Chi tiết
+            </button>
+          </td>
+          <td>${cancelBtnHtml}</td>
+        </tr>
+      `;
+    }).join("");
+  } else if (cardContainer) {
+    if (myRequests.length === 0) {
+      cardContainer.innerHTML = `
+        <div style="text-align: center; color: var(--text-dim); padding: 50px 0;">
+          <div>Không có đơn nghỉ phép nào phù hợp với bộ lọc.</div>
+        </div>
+      `;
+      return;
+    }
+    cardContainer.innerHTML = myRequests.map(req => renderSingleRequestCard(req, true)).join("");
+    attachRequestCardEvents();
+  }
 }
 
 function renderStaffRecentPreview() {
@@ -1955,7 +3405,6 @@ function renderSingleRequestCard(req, isStaffView=false) {
             <div style="font-size: 1.05rem; font-weight: 700; color: #0f172a; letter-spacing: -0.01em;">
               ${escapeHtml(getLeaveTypeLabel(req.leave_type))}
             </div>
-            ${renderLeavePolicyTags(req)}
             <div class="d-flex align-items-center gap-1 text-secondary mt-1" style="font-size: 0.84rem;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -1969,7 +3418,7 @@ function renderSingleRequestCard(req, isStaffView=false) {
           </div>
         </div>
 
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2" style="align-self: flex-start; margin-top: 2px;">
           ${getStatusBadgeHtml(req)}
         </div>
       </div>
@@ -1998,9 +3447,23 @@ function renderSingleRequestCard(req, isStaffView=false) {
 }
 
 
-function openRequestDetailModal(requestId) {
-  const req = activeRequests.find(r => r.id === requestId);
+async function openRequestDetailModal(requestId) {
+  let req = activeRequests.find(r => r.id === requestId);
   if (!req) return;
+
+  // Bản ghi danh sách không chứa checklist đầy đủ; lấy trace 13 node trước khi dựng popup.
+  try {
+    const analysisRes = await apiFetch(`${API_BASE}/api/leave/${requestId}/analysis`);
+    if (analysisRes.ok) {
+      const analysis = await analysisRes.json();
+      req = Object.assign({}, req, analysis, {
+        vlm_analysis_json: analysis.vlm_analysis || req.vlm_analysis_json,
+        llm_summary_json: analysis.llm_summary || req.llm_summary_json,
+      });
+    }
+  } catch (error) {
+    console.warn('Không tải được checklist Decision Tree:', error);
+  }
 
   const modal = document.getElementById("modal-request-detail");
   const sub = document.getElementById("modal-req-detail-sub");
@@ -2065,7 +3528,7 @@ function openRequestDetailModal(requestId) {
   const _vlmCorr = _vlm.correlation_analysis || {};
   const _vlmMode = _vlm.inspection_mode || "";
   const _vlmErr = _vlm.vlm_error || "";
-  const _hasVlm = !!(req.vlm_analysis_json);
+  const _hasVlm = hasAttachment && !!(req.vlm_analysis_json && Object.keys(req.vlm_analysis_json).length);
 
   function _boolBadge(val, trueL, falseL) {
     if (val === true)  return '<span style="background:#dcfce7;color:#166534;padding:2px 9px;border-radius:5px;font-size:0.78rem;font-weight:600;">\u2713 ' + trueL + '</span>';
@@ -2077,7 +3540,7 @@ function openRequestDetailModal(requestId) {
   }
 
   let _vlmModeBadge = '';
-  if (_vlmMode === 'OLLAMA_REAL_QWEN25_VL_3B' || _vlmMode.startsWith('OLLAMA_REAL')) _vlmModeBadge = '<span style="background:#dcfce7;color:#166534;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">\uD83E\uDD16 VLM Th\u1eadt</span>';
+  if (_vlmMode === 'OLLAMA_REAL_QWEN25_VL_3B' || _vlmMode.startsWith('OLLAMA_REAL')) _vlmModeBadge = '<span class="ai-engine-badge">\uD83E\uDD16 AI Engine</span>';
   else if (_vlmMode.includes('UNAVAILABLE') || _vlmMode.includes('ERROR')) _vlmModeBadge = '<span style="background:#fee2e2;color:#991b1b;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">\u26a0 VLM L\u1ed7i / Ch\u01b0a c\u00f3 model</span>';
   else if (_vlmMode) _vlmModeBadge = '<span style="background:#f1f5f9;color:#475569;font-size:0.72rem;padding:2px 8px;border-radius:4px;">' + escapeHtml(_vlmMode) + '</span>';
 
@@ -2088,7 +3551,7 @@ function openRequestDetailModal(requestId) {
     _vlmSection = '<div class="col-12" style="margin-top:4px;">'
       + '<div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#ffffff;">'
       + '<div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);padding:10px 16px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
-      + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:1rem;">\uD83E\uDD16</span><span style="font-weight:700;color:#0f172a;font-size:0.9rem;">Th\u00f4ng tin tr\u00edch xu\u1ea5t t\u1eeb ch\u1ee9ng t\u1eeb (VLM)</span>' + _vlmModeBadge + '</div>'
+      + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:1rem;">\uD83E\uDD16</span><span style="font-weight:700;color:#0f172a;font-size:0.9rem;">Th\u00f4ng tin tr\u00edch xu\u1ea5t t\u1eeb ch\u1ee9ng t\u1eeb (AI Engine)</span>' + _vlmModeBadge + '</div>'
       + (_vlmErr ? '<span style="background:#fee2e2;color:#991b1b;font-size:0.72rem;padding:2px 8px;border-radius:4px;" title="' + escapeHtml(_vlmErr) + '">\u26a0 ' + escapeHtml(_vlmErr.substring(0,75)) + (_vlmErr.length>75?'\u2026':'') + '</span>' : '')
       + '</div>'
       + '<div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">'
@@ -2114,10 +3577,18 @@ function openRequestDetailModal(requestId) {
   let _llmSection = '';
   if (_hasLlm) {
     const _isManagerAudience = currentMode === 'manager';
+    const _rawDecision = req.decision || (req.result_json && req.result_json.decision) || _llm.decision || '';
+    const _decisionForAudience = String(_rawDecision).toUpperCase();
+    const _isStaffCorrection = _decisionForAudience === 'NEED_CORRECTION';
+    const _isAutoRejected = _decisionForAudience === 'AUTO_REJECT';
+    const _isAutoApproved = _decisionForAudience === 'AUTO_APPROVE';
+    const _isNoLeave = ['NO_LEAVE_REQUIRED', 'NO_LEAVE', 'NO_LEAVE_NEEDED'].includes(_decisionForAudience);
+    const _legacyStaffErrors = ['NEED_CORRECTION', 'AUTO_REJECT'].includes(_decisionForAudience)
+      ? (_llm.staff_errors_vn || _llm.info_missing_vn || [])
+      : [];
     const _audienceSummary = _isManagerAudience
       ? (_llm.manager_summary || {suspicions_vn: _llm.info_missing_vn || [], risk_level_vn: '—'})
-      : (_llm.staff_summary || {errors_vn: _llm.info_missing_vn || []});
-    const _sumTxt = _audienceSummary.summary_natural_vn || (_isManagerAudience ? _llm.summary_natural_vn : '');
+      : (_llm.staff_summary || {errors_vn: _legacyStaffErrors});
     const _whyEsc = _isManagerAudience ? (_llm.why_escalated || '') : '';
     const _tier = _llm.correlation_tier_vn || '';
     const _aq = _isManagerAudience ? (_llm.actionable_question || '') : '';
@@ -2125,32 +3596,56 @@ function openRequestDetailModal(requestId) {
     const _qvn = _isManagerAudience ? (_llm.quick_action_options_vn || []) : [];
     const _warns = _isManagerAudience ? (_llm.warnings || []) : [];
     const _riskLevel = _audienceSummary.risk_level_vn || _llm.manager_risk_level_vn || '';
-    const _engine = _llm.engine || '';
-    const _isReal = /qwen2\.5:3b-instruct|Ollama/i.test(_engine);
-    const _isRule = _engine.includes('decision_tree');
     const _tierC = _tier === 'RẤT KHỚP' ? '#059669' : _tier === 'KHỚP' ? '#2563eb' : _tier === 'CHƯA KHỚP' ? '#d97706' : _tier === 'KHÔNG KHỚP' ? '#dc2626' : '#059669';
+    const _treeNodes = Array.isArray(req.decision_tree_checklist) ? req.decision_tree_checklist : [];
+    const _hiddenTreeStages = new Set(['FINAL_DECISION', 'LLM_SUMMARY']);
+    const _displayTreeNodes = _treeNodes.filter(function(node) {
+      if (_hiddenTreeStages.has(node.stage)) return false;
+      if (node.stage === 'AUTHORITY' && ['NONE', 'EMPLOYEE'].includes(String(req.target_role || 'NONE').toUpperCase())) return false;
+      return true;
+    });
+    const _passedNodes = _displayTreeNodes.filter(function(node) { return node.status === 'PASS'; });
+    const _reviewNodes = _displayTreeNodes.filter(function(node) { return node.status !== 'PASS' && node.status !== 'NOT_RUN'; });
 
-    // Đủ & thiếu thông tin do LLM / Rule Engine tổng hợp
-    let _infoSuf = _isManagerAudience ? [] : (_audienceSummary.errors_vn || _llm.info_missing_vn || []);
+    function _renderTreeNode(node, isReview) {
+      const shortTitles = {
+        VALIDATION: 'Thông tin nhân sự',
+        BALANCE: 'Số dư phép',
+        PROOF: 'Chứng từ',
+        VLM_INTEGRITY: 'Toàn vẹn chứng từ',
+        VLM_PATIENT: 'Tên trên chứng từ',
+        VLM_DATE_COVERAGE: 'Khoảng ngày nghỉ',
+        VLM_CORRELATION: 'Độ khớp nội dung',
+        PROOF_VERIFICATION: 'Xác minh chứng từ',
+        AUTHORITY: 'Thẩm quyền duyệt',
+        NOTICE: 'Thời hạn báo trước',
+        TEAM_QUOTA: 'Tỷ lệ nghỉ trong team',
+      };
+      const color = isReview ? '#b91c1c' : '#065f46';
+      const title = shortTitles[node.stage] || node.title_vi || node.stage || 'Kiểm tra hồ sơ';
+      return '<div style="font-size:0.82rem;color:' + color + ';padding:3px 0;line-height:1.45;">'
+        + '<span style="margin-right:6px;font-weight:700;">•</span>'
+        + '<strong>' + escapeHtml(title) + '</strong>'
+        + '</div>';
+    }
+
+    // Chỉ hiển thị lỗi khi Decision Tree thực sự yêu cầu sửa hoặc từ chối.
+    let _infoSuf = _isManagerAudience || (!_isStaffCorrection && !_isAutoRejected)
+      ? [] : (_audienceSummary.errors_vn || _legacyStaffErrors);
     let _infoMis = _isManagerAudience
       ? (_audienceSummary.suspicions_vn || _llm.manager_suspicions_vn || [])
       : (_llm.info_missing_vn || []);
 
-    // Fallback thông minh nếu cả 2 mảng rỗng
-    if (!_isManagerAudience && _infoSuf.length === 0 && _infoMis.length === 0) {
-      if (req.employee_name) _infoSuf.push('Nhân viên nộp đơn: ' + req.employee_name);
-      if (req.from_date && req.to_date) _infoSuf.push('Thời gian xin nghỉ: ' + req.from_date + ' → ' + req.to_date);
-      if (hasAttachment && _vlmDoc && _vlmDoc.diagnosis) _infoSuf.push('Chẩn đoán trên giấy: ' + _vlmDoc.diagnosis);
-
-      if (hasAttachment) {
-        if (_vlmFlags && _vlmFlags.has_red_stamp === false) _infoMis.push('Thiếu dấu mộc đỏ bệnh viện/phòng khám');
-        if (_vlmFlags && _vlmFlags.has_doctor_signature === false) _infoMis.push('Thiếu chữ ký bác sĩ / người cấp giấy');
-        if (_vlmDoc && !_vlmDoc.patient_name) _infoMis.push('Chưa đọc được tên trên chứng từ');
-      } else {
-        _infoSuf.push('Không yêu cầu chứng từ đối với loại nghỉ này');
-      }
+    if (!_isManagerAudience && _isStaffCorrection && _infoSuf.length === 0 && hasAttachment) {
+      if (_vlmFlags && _vlmFlags.has_red_stamp === false) _infoSuf.push('Thiếu dấu mộc đỏ bệnh viện/phòng khám');
+      if (_vlmFlags && _vlmFlags.has_doctor_signature === false) _infoSuf.push('Thiếu chữ ký bác sĩ / người cấp giấy');
+      if (_vlmDoc && !_vlmDoc.patient_name) _infoSuf.push('Chưa đọc được tên trên chứng từ');
     }
 
+    const _staffPanelTitle = _isAutoApproved ? 'Kết quả đối soát'
+      : _isNoLeave ? 'Kết quả ngày nghỉ'
+      : _isStaffCorrection || _isAutoRejected ? 'Thông tin cần xử lý'
+      : 'Kết quả xử lý AI Engine';
     const _timings = _llm.timings || {};
     const _timingBadge = (_timings.rule_engine_ms !== undefined && _timings.template_ms !== undefined)
       ? '<span style="font-size:0.72rem;color:#6b21a8;background:#f3e8ff;padding:2px 8px;border-radius:4px;font-weight:600;" title="Rule Engine: ' + _timings.rule_engine_ms + 'ms, Template: ' + _timings.template_ms + 'ms">⚡ ' + (_timings.total_eval_ms || Math.round((_timings.rule_engine_ms + _timings.template_ms)*10)/10) + 'ms</span>'
@@ -2159,56 +3654,32 @@ function openRequestDetailModal(requestId) {
     _llmSection = '<div class="col-12" style="margin-top:4px;">'
       + '<div style="border:1px solid #c084fc;border-radius:12px;overflow:hidden;background:#ffffff;box-shadow:0 2px 8px rgba(147,51,234,0.06);">'
       + '<div style="background:linear-gradient(135deg,#faf5ff,#f3e8ff);padding:12px 16px;border-bottom:1px solid #e9d5ff;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
-      + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.1rem;">🧠</span><span style="font-weight:700;color:#4c1d95;font-size:0.95rem;">' + (_isManagerAudience ? 'Nhận định nghi vấn cho Manager' : 'Lỗi cần Staff bổ sung') + '</span>'
-      + (_isReal ? '<span style="background:#dcfce7;color:#166534;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">✓ qwen2.5:3b-instruct</span>' : '<span style="background:#f3e8ff;color:#6b21a8;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">✓ Decision Tree Engine</span>')
+      + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.1rem;">🧠</span><span style="font-weight:700;color:#4c1d95;font-size:0.86rem;">' + (_isManagerAudience ? 'Nhận định nghi vấn cho Manager' : _staffPanelTitle) + '</span>'
+      + '<span class="ai-engine-badge">✓ AI Engine</span>'
       + _timingBadge
       + '</div>'
       + (_tier && _tier !== '—' ? '<span style="background:' + _tierC + '20;color:' + _tierC + ';font-size:0.78rem;padding:3px 10px;border-radius:5px;font-weight:700;">' + escapeHtml(_tier) + '</span>' : '')
       + '</div>'
       + (_isManagerAudience && _riskLevel ? '<div style="padding:8px 16px;border-bottom:1px solid #f3e8ff;font-size:0.8rem;color:#92400e;font-weight:700;">Mức nghi vấn: ' + escapeHtml(_riskLevel) + '</div>' : '')
       
-      // 1. Tóm tắt súc tích tách từng ý rõ ràng
-      + (_sumTxt ? (function() {
-          const _rawLines = _sumTxt.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
-          let _linesContent = '';
-          if (_rawLines.length > 1) {
-            _linesContent = _rawLines.map(function(line) {
-              let clean = line.replace(/^[•\-\*]\s*/, '');
-              let colonIdx = clean.indexOf(':');
-              if (colonIdx > 0 && colonIdx < 30) {
-                let title = clean.substring(0, colonIdx);
-                let rest = clean.substring(colonIdx + 1);
-                return '<div style="font-size:0.85rem;color:#1e293b;line-height:1.55;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px;">'
-                  + '<span style="color:#7c3aed;font-weight:700;font-size:1rem;line-height:1.2;">&bull;</span>'
-                  + '<span><strong style="color:#581c87;font-weight:600;">' + escapeHtml(title) + ':</strong>' + escapeHtml(rest) + '</span>'
-                  + '</div>';
-              }
-              return '<div style="font-size:0.85rem;color:#1e293b;line-height:1.55;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px;">'
-                + '<span style="color:#7c3aed;font-weight:700;font-size:1rem;line-height:1.2;">&bull;</span>'
-                + '<span>' + escapeHtml(clean) + '</span>'
-                + '</div>';
-            }).join('');
-          } else {
-            _linesContent = '<div style="font-size:0.86rem;color:#1e293b;line-height:1.6;white-space:pre-line;">' + escapeHtml(_sumTxt) + '</div>';
-          }
-          return '<div style="padding:12px 16px;border-bottom:1px solid #f3e8ff;">'
-            + '<div style="font-size:0.73rem;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Tóm tắt cốt lõi &amp; Đối soát</div>'
-            + _linesContent
-            + '</div>';
-        })() : '')
-      
-      // 2. Phân tách rõ ràng: Đủ vs Thiếu
-      + '<div style="padding:12px 16px;border-bottom:1px solid #f3e8ff;background:#faf5ff50;">'
-      + (_isManagerAudience
-        ? '<div><div style="font-size:0.74rem;color:#dc2626;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Nghi vấn / rủi ro cần xác minh (' + _infoMis.length + ')</div>' + (_infoMis.length > 0 ? _infoMis.map(function(m){ return '<div style="font-size:0.81rem;color:#991b1b;padding:2px 0;">&bull; ' + escapeHtml(String(m)) + '</div>'; }).join('') : '<div style="font-size:0.8rem;color:#059669;">\u2014 Không phát hiện nghi vấn</div>') + '</div>'
-        : '<div><div style="font-size:0.74rem;color:#dc2626;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Lỗi cần sửa / bổ sung (' + _infoSuf.length + ')</div>' + (_infoSuf.length > 0 ? _infoSuf.map(function(m){ return '<div style="font-size:0.81rem;color:#991b1b;padding:2px 0;">&bull; ' + escapeHtml(String(m)) + '</div>'; }).join('') : '<div style="font-size:0.8rem;color:#059669;">\u2014 Không có lỗi cần bổ sung</div>') + '</div>')
+      // Checklist ngắn gọn theo rule đã chạy
+      + '<div style="padding:12px 16px;border-bottom:1px solid #f3e8ff;background:#faf5ff50;display:grid;grid-template-columns:' + (_reviewNodes.length ? 'repeat(auto-fit,minmax(240px,1fr))' : '1fr') + ';gap:16px;">'
+      + '<div>'
+      + '<div style="font-size:0.72rem;color:#059669;font-weight:700;text-transform:uppercase;margin-bottom:6px;">HỢP LỆ</div>'
+      + (_passedNodes.length ? _passedNodes.map(function(node){ return _renderTreeNode(node, false); }).join('') : '<div style="font-size:0.81rem;color:#64748b;">Chưa có node đạt.</div>')
+      + '</div>'
+      + (_reviewNodes.length ? '<div>'
+      + '<div style="font-size:0.72rem;color:#dc2626;font-weight:700;text-transform:uppercase;margin-bottom:6px;">KHÔNG HỢP LỆ</div>'
+      + _reviewNodes.map(function(node){ return _renderTreeNode(node, true); }).join('')
+      + '</div>' : '')
       + '</div>'
 
-      // 3. Câu hỏi & Đề xuất giải quyết cho Manager
+      // Câu hỏi nghi vấn cho Manager (nếu có)
       + ((_aq || _whyEsc || _qvn.length > 0) ? '<div style="padding:12px 16px;background:#f8fafc;border-top:1px solid #f1f5f9;">'
-          + (_whyEsc ? '<div style="font-size:0.8rem;color:#475569;margin-bottom:6px;"><span style="font-weight:600;color:#6b21a8;">C\u0103n c\u1ee9 chuy\u1ec3n duy\u1ec7t:</span> ' + escapeHtml(_whyEsc) + '</div>' : '')
-          + (_aq ? '<div style="font-size:0.88rem;color:#1e1b4b;font-weight:600;padding:8px 12px;background:#ede9fe;border-radius:8px;border-left:4px solid #7c3aed;margin-bottom:8px;">\u2753 ' + escapeHtml(_aq) + '</div>' : '')
-          + (_qvn.length > 0 ? '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;"><span style="font-size:0.75rem;color:#64748b;font-weight:600;">G\u1ee3i \u00fd th\u00e1o t\u00e1c:</span>' + _qvn.map(function(q){ return '<span style="background:#ffffff;border:1px solid #cbd5e1;color:#334155;font-size:0.76rem;padding:2px 8px;border-radius:5px;font-weight:500;">' + escapeHtml(String(q)) + '</span>'; }).join('') + '</div>' : '')
+          + '<div style="font-size:0.72rem;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;">Câu hỏi nghi vấn cho Manager</div>'
+          + (_whyEsc ? '<div style="font-size:0.8rem;color:#475569;margin-bottom:6px;"><span style="font-weight:600;color:#6b21a8;">Căn cứ chuyển duyệt:</span> ' + escapeHtml(_whyEsc) + '</div>' : '')
+          + (_aq ? '<div style="font-size:0.88rem;color:#1e1b4b;font-weight:600;padding:8px 12px;background:#ede9fe;border-radius:8px;border-left:4px solid #7c3aed;margin-bottom:8px;">❓ ' + escapeHtml(_aq) + '</div>' : '')
+          + (_qvn.length > 0 ? '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;"><span style="font-size:0.75rem;color:#64748b;font-weight:600;">Gợi ý xử lý:</span>' + _qvn.map(function(q){ return '<span style="background:#ffffff;border:1px solid #cbd5e1;color:#334155;font-size:0.76rem;padding:2px 8px;border-radius:5px;font-weight:500;">' + escapeHtml(String(q)) + '</span>'; }).join('') + '</div>' : '')
           + '</div>' : '')
 
       + ((_pvn.length > 0 || _warns.length > 0) ? '<div style="padding:8px 16px;border-top:1px solid #f1f5f9;font-size:0.76rem;color:#64748b;display:flex;flex-wrap:wrap;gap:12px;">'
@@ -2224,7 +3695,6 @@ function openRequestDetailModal(requestId) {
         <label class="form-label text-secondary small fw-semibold mb-1">Lo\u1ea1i ngh\u1ec9 ph\u00e9p</label>
         <div class="modal-readonly-field">
           <span class="text-dark fw-semibold">${getLeaveTypeLabel(req.leave_type)}</span>
-          ${renderLeavePolicyTags(req, true)}
         </div>
       </div>
 
@@ -2442,7 +3912,6 @@ function renderManagerQueue() {
             ${escapeHtml(r.employee_name || 'Nhân viên')}
           </span>
         </div>
-        ${renderLeavePolicyTags(r, true)}
 
         <!-- Khối Thông Tin: 3 thẻ pill riêng biệt theo hình mẫu -->
         <div class="esc-pills-row">
@@ -2585,29 +4054,24 @@ function renderAutoApprovedLogs() {
 
   const autoRequests = activeRequests.filter(r => r.decision === "AUTO_APPROVE");
   if (autoRequests.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-secondary py-4">Chưa có đơn nào được AI tự động duyệt trong phiên làm việc này.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4">Chưa có đơn nào được AI tự động duyệt trong phiên làm việc này.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = autoRequests.map(req => {
-    const aiReason = req.human_readable_explanation || `Xin nghỉ ${req.requested_working_days ?? req.workdays ?? 0} ngày ${getLeaveTypeLabel(req.leave_type)}, đúng hạn mức quy chế.`;
-
     return `
       <tr>
-        <td class="fw-bold">${req.id}</td>
-        <td><b>${req.employee_name}</b></td>
-        <td><span class="badge bg-secondary-lt">${req.department}</span></td>
-        <td>${req.from_date} → ${req.to_date}</td>
+        <td><b>${escapeHtml(req.employee_name)}</b></td>
+        <td><span class="badge bg-secondary-lt">${escapeHtml(req.department)}</span></td>
+        <td>${escapeHtml(req.from_date)} → ${escapeHtml(req.to_date)}</td>
         <td><b>${req.requested_working_days ?? req.workdays ?? 0} ngày</b></td>
-        <td>${getLeaveTypeLabel(req.leave_type)}</td>
         <td>
-          <div class="text-success small fw-medium" style="line-height: 1.4;">
-            ${aiReason}
-          </div>
+          <button class="btn btn-sm btn-outline-primary px-2.5 py-1" onclick="openRequestDetailModal('${req.id}')" title="Xem chi tiết đơn nghỉ phép">
+            Chi tiết
+          </button>
         </td>
-        <td class="text-secondary small">${formatTime(req.updated_at || req.submitted_at)}</td>
         <td>
-          <button class="btn btn-sm btn-outline-danger" onclick="revokeAiApproval('${req.id}')" title="Thu hồi quyết định tự động của AI và hoàn trả quỹ phép">
+          <button class="btn btn-sm btn-outline-danger px-2.5 py-1" onclick="revokeAiApproval('${req.id}')" title="Thu hồi quyết định tự động của AI và hoàn trả quỹ phép">
             Hủy Lệnh AI
           </button>
         </td>
@@ -2656,27 +4120,28 @@ function renderManagerAllRequests() {
   const filterVal = document.getElementById("mgr-filter-status")?.value || "ALL";
   let list = activeRequests;
   if (filterVal !== "ALL") {
-    list = list.filter(r => r.status === filterVal || r.decision === filterVal);
+    if (filterVal === "CANCELLED") {
+      list = list.filter(r => r.status === "CANCELLED" || r.human_resolution === "REVOKED");
+    } else {
+      list = list.filter(r => r.status === filterVal || r.decision === filterVal);
+    }
   }
 
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-secondary py-4">Không tìm thấy hồ sơ đơn nào.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4">Không tìm thấy hồ sơ đơn nào.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = list.map(req => `
     <tr>
-      <td class="fw-bold">${req.id}</td>
-      <td>${req.employee_name}</td>
-      <td><span class="badge bg-secondary-lt">${req.department}</span></td>
-      <td>${req.from_date} → ${req.to_date}</td>
+      <td><b>${escapeHtml(req.employee_name)}</b></td>
+      <td><span class="badge bg-secondary-lt">${escapeHtml(req.department)}</span></td>
+      <td>${escapeHtml(req.from_date)} → ${escapeHtml(req.to_date)}</td>
       <td><b>${req.requested_working_days ?? req.workdays ?? 0} ngày</b></td>
-      <td>${getLeaveTypeLabel(req.leave_type)}</td>
-      <td><small class="text-secondary">${req.decision || '-'}</small></td>
       <td>${getStatusBadgeHtml(req)}</td>
       <td>
-        <button class="btn btn-sm btn-outline-secondary" onclick="viewAuditTrail('${req.id}')">
-          Nhật ký
+        <button class="btn btn-sm btn-outline-primary px-2.5 py-1" onclick="openRequestDetailModal('${req.id}')" title="Xem chi tiết đơn nghỉ phép">
+          Chi tiết
         </button>
       </td>
     </tr>
@@ -2686,15 +4151,6 @@ function renderManagerAllRequests() {
   if (mgrFilter && !mgrFilter.hasAttribute("data-bound")) {
     mgrFilter.setAttribute("data-bound", "true");
     mgrFilter.addEventListener("change", renderManagerAllRequests);
-  }
-
-  const btnRefreshAll = document.getElementById("btn-refresh-mgr-all");
-  if (btnRefreshAll && !btnRefreshAll.hasAttribute("data-bound")) {
-    btnRefreshAll.setAttribute("data-bound", "true");
-    btnRefreshAll.addEventListener("click", () => {
-      loadAllRequests();
-      showToast("Đã làm mới hồ sơ đơn!", "info");
-    });
   }
 }
 
@@ -3043,16 +4499,58 @@ async function viewAuditTrail(requestId) {
     const res = await apiFetch(`${API_BASE}/api/leave/${requestId}`);
     if (res.ok) {
       const json = await res.json();
+      const req = json.data || {};
       const logs = json.audit_trail || [];
-      if (logs.length === 0) {
+      const eventTimeline = [];
+      const hasManagerApproval = logs.some(log => String(log.action || '').toUpperCase() === 'APPROVE_OVERRIDE');
+      if (req.submitted_at) {
+        eventTimeline.push({
+          title: 'Nhân viên nộp đơn',
+          action: 'Đã tiếp nhận',
+          time: req.submitted_at,
+          details: `Hồ sơ ${req.id || requestId} được ghi nhận vào hệ thống.`
+        });
+      }
+      logs.forEach(log => {
+        const action = String(log.action || '').toUpperCase();
+        if (action === 'HUMAN_APPROVAL') return;
+        let event = null;
+        if (action === 'EVALUATED') {
+          let evaluated = {};
+          try { evaluated = JSON.parse(log.details || '{}'); } catch (_) {}
+          const decision = String(evaluated.decision || req.decision || '').toUpperCase();
+          if (hasManagerApproval && decision === 'AUTO_APPROVE') return;
+          const eventMap = {
+            AUTO_APPROVE: ['AI chấp nhận tự động', 'Đơn hợp lệ và đủ điều kiện tự động duyệt.'],
+            ESCALATE: ['AI chuyển tiếp', `Đã chuyển ${getRoleLabel(evaluated.target_role || req.target_role)} xử lý.`],
+            NEED_CORRECTION: ['AI yêu cầu bổ sung', 'Hồ sơ cần nhân viên sửa hoặc bổ sung thông tin.'],
+            AUTO_REJECT: ['AI từ chối', 'Hồ sơ bị từ chối theo quy tắc.'],
+            NO_LEAVE_REQUIRED: ['AI kết luận không phát sinh phép', 'Khoảng thời gian không có ngày làm việc cần ghi nhận.']
+          };
+          const mapped = eventMap[decision] || ['AI hoàn tất đánh giá', 'Decision Tree đã hoàn tất đánh giá hồ sơ.'];
+          event = { title: mapped[0], action: 'AI Engine', time: log.created_at, details: mapped[1] };
+        } else if (action === 'APPROVE_OVERRIDE') {
+          event = { title: 'Manager chấp nhận', action: 'Đã duyệt', time: log.created_at, details: log.details || 'Manager đã phê duyệt đơn.' };
+        } else if (action === 'REQUEST_MORE_INFO') {
+          event = { title: 'Manager yêu cầu bổ sung', action: 'Chờ nhân viên', time: log.created_at, details: log.details || 'Manager yêu cầu bổ sung thông tin.' };
+        } else if (action === 'REJECT') {
+          event = { title: 'Manager từ chối', action: 'Đã từ chối', time: log.created_at, details: log.details || 'Manager đã từ chối đơn.' };
+        } else if (action === 'CANCEL' || action === 'REVOKE') {
+          event = { title: action === 'CANCEL' ? 'Nhân viên hủy đơn' : 'Thu hồi quyết định', action: 'Đã cập nhật', time: log.created_at, details: log.details || '' };
+        } else if (action === 'EMPLOYEE_RESUBMIT') {
+          event = { title: 'Nhân viên nộp lại hồ sơ', action: 'Đã tiếp nhận', time: log.created_at, details: 'Hồ sơ đã được gửi lại để Decision Tree đánh giá.' };
+        }
+        if (event) eventTimeline.push(event);
+      });
+      if (eventTimeline.length === 0) {
         timeline.innerHTML = `<div style="color: var(--text-dim);">Chưa có nhật ký ghi nhận.</div>`;
       } else {
-        timeline.innerHTML = logs.map(l => `
+        timeline.innerHTML = eventTimeline.map(l => `
           <div class="timeline-item">
             <div class="timeline-dot"></div>
-            <div class="timeline-title">${l.step_name || 'XỬ LÝ'} — <span style="font-weight: 600; color: var(--primary);">${l.action || ''}</span></div>
-            <div class="timeline-time">${formatTime(l.created_at)}</div>
-            <div class="timeline-desc">${l.details || ''}</div>
+            <div class="timeline-title">${escapeHtml(l.title)} — <span style="font-weight: 600; color: var(--primary);">${escapeHtml(l.action)}</span></div>
+            <div class="timeline-time">${formatTime(l.time)}</div>
+            <div class="timeline-desc">${escapeHtml(l.details)}</div>
           </div>
         `).join("");
       }
@@ -3170,21 +4668,29 @@ async function loadPolicyDocument() {
               </div>
               <div class="policy-toc-divider"></div>
               <div class="policy-toc-pills">
-                <button type="button" class="policy-toc-item" onclick="scrollPolicyTo('CHƯƠNG I')">
+                <button type="button" class="policy-toc-item" data-target-id="policy-${slugifyPolicyHeading('1. Nguyên tắc chung')}" onclick="scrollPolicyToId(this.dataset.targetId)">
                   <span class="toc-badge">I</span>
-                  <span class="toc-name">Chế độ nghỉ phép</span>
+                  <span class="toc-name">Nguyên tắc chung</span>
                 </button>
-                <button type="button" class="policy-toc-item" onclick="scrollPolicyTo('CHƯƠNG II')">
+                <button type="button" class="policy-toc-item" data-target-id="policy-${slugifyPolicyHeading('2. Các chế độ nghỉ phép')}" onclick="scrollPolicyToId(this.dataset.targetId)">
                   <span class="toc-badge">II</span>
-                  <span class="toc-name">Tiếp nhận đơn</span>
+                  <span class="toc-name">Các chế độ nghỉ phép</span>
                 </button>
-                <button type="button" class="policy-toc-item" onclick="scrollPolicyTo('CHƯƠNG III')">
+                <button type="button" class="policy-toc-item" data-target-id="policy-${slugifyPolicyHeading('3. Thẩm quyền phê duyệt')}" onclick="scrollPolicyToId(this.dataset.targetId)">
                   <span class="toc-badge">III</span>
-                  <span class="toc-name">Thẩm quyền duyệt</span>
+                  <span class="toc-name">Thẩm quyền phê duyệt</span>
                 </button>
-                <button type="button" class="policy-toc-item" onclick="scrollPolicyTo('CHƯƠNG IV')">
+                <button type="button" class="policy-toc-item" data-target-id="policy-${slugifyPolicyHeading('4. Thời hạn báo trước và hồ sơ')}" onclick="scrollPolicyToId(this.dataset.targetId)">
                   <span class="toc-badge">IV</span>
-                  <span class="toc-name">Điều khoản thi hành</span>
+                  <span class="toc-name">Thời hạn & hồ sơ</span>
+                </button>
+                <button type="button" class="policy-toc-item" data-target-id="policy-${slugifyPolicyHeading('5. Xử lý hồ sơ không hợp lệ')}" onclick="scrollPolicyToId(this.dataset.targetId)">
+                  <span class="toc-badge">V</span>
+                  <span class="toc-name">Xử lý hồ sơ không hợp lệ</span>
+                </button>
+                <button type="button" class="policy-toc-item" data-target-id="policy-${slugifyPolicyHeading('6. Hiệu lực')}" onclick="scrollPolicyToId(this.dataset.targetId)">
+                  <span class="toc-badge">VI</span>
+                  <span class="toc-name">Hiệu lực</span>
                 </button>
               </div>
             </div>
@@ -3216,9 +4722,27 @@ window.scrollToPolicyTop = function() {
   });
 };
 
-// Helper: scroll policy container to heading containing text
+window.scrollPolicyToId = function(id) {
+  if (!id) return;
+  const target = document.getElementById(id);
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  const els = document.querySelectorAll('.policy-content .policy-h2, .policy-content .policy-h3, .policy-content .policy-h1');
+  const slug = String(id).replace(/^policy-/, '');
+  for (const el of els) {
+    if ((el.id || '').replace(/^policy-/, '') === slug) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+  }
+};
+
+// Legacy fallback for old links
 window.scrollPolicyTo = function(text) {
-  const els = document.querySelectorAll('.policy-content .policy-h2, .policy-content .policy-h1');
+  const els = document.querySelectorAll('.policy-content .policy-h2, .policy-content .policy-h3, .policy-content .policy-h1');
   const target = (text || '').toUpperCase();
   for (const el of els) {
     if ((el.textContent || '').toUpperCase().includes(target)) {
@@ -3334,6 +4858,17 @@ function formatTime(isoStr) {
   }
 }
 
+function slugifyPolicyHeading(text) {
+  return String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
 function formatMarkdown(md) {
   // ====== Multi-pass Markdown → HTML renderer (no external lib) ======
   const lines = md.split('\n');
@@ -3382,10 +4917,13 @@ function formatMarkdown(md) {
     const h1 = line.match(/^#\s+(.*)/);
     if (h1 || h2 || h3 || h4) {
       closeOpenBlocks();
-      if (h4) out.push(`<h4 class="policy-h4">${inlineFormat(h4[1])}</h4>`);
-      else if (h3) out.push(`<h3 class="policy-h3">${inlineFormat(h3[1])}</h3>`);
-      else if (h2) out.push(`<h2 class="policy-h2">${inlineFormat(h2[1])}</h2>`);
-      else if (h1) out.push(`<h1 class="policy-h1">${inlineFormat(h1[1])}</h1>`);
+      const headingText = h4 ? h4[1] : h3 ? h3[1] : h2 ? h2[1] : h1[1];
+      const headingId = `policy-${slugifyPolicyHeading(headingText)}`;
+
+      if (h4) out.push(`<h4 id="${headingId}" class="policy-h4">${inlineFormat(h4[1])}</h4>`);
+      else if (h3) out.push(`<h3 id="${headingId}" class="policy-h3">${inlineFormat(h3[1])}</h3>`);
+      else if (h2) out.push(`<h2 id="${headingId}" class="policy-h2">${inlineFormat(h2[1])}</h2>`);
+      else if (h1) out.push(`<h1 id="${headingId}" class="policy-h1">${inlineFormat(h1[1])}</h1>`);
       continue;
     }
 

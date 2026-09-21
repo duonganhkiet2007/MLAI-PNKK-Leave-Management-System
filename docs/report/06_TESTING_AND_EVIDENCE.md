@@ -54,7 +54,7 @@ Mock-based tests assert:
 
 - Structured auto/escalate: zero LLM calls.
 - Free-text submission: exactly one LLM call.
-- Form with proof: exactly one VLM call and zero LLM calls.
+- One form-with-proof evaluation: exactly one VLM call and zero LLM calls. Later re-evaluations of the same proof-bearing request may each add one VLM call.
 - Manager button: zero LLM calls.
 - Manager free text: exactly one LLM call.
 - Deterministic summary contains expected fields/timings and `llm_generation_ms == 0.0`.
@@ -65,7 +65,7 @@ These establish orchestration call contracts. They do not measure real-model acc
 
 `POST /api/verify/escalation` reads only the five marked JSON cases, invokes `LeaveRuleEngine` directly, does not call LLM and does not write the production DB. It expects:
 
-- 5/5 cases matching selected fields;
+- all five marked cases matching the selected fields;
 - 3 `AUTO_APPROVE`;
 - 2 `ESCALATE`;
 - 0 LLM calls;

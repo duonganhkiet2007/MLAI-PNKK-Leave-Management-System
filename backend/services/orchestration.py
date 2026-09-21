@@ -306,6 +306,10 @@ class LeaveOrchestratorService:
             'UNPAID_OTHER':'Nghỉ không lương khác',
         }
         ltype_vi = LTYPE_VI.get(ltype, ltype or 'Không xác định')
+        proof_relevant = ltype in {
+            'SPECIAL_PAID', 'STATUTORY_UNPAID', 'SICK_MEDICAL',
+            'MEDICAL_EMERGENCY', 'WORK_ACCIDENT', 'MATERNITY',
+        }
         from_d = _v_enum(facts.from_date)
         to_d = _v_enum(facts.to_date)
         reason = (getattr(facts, 'reason', None) or '').strip()
@@ -321,7 +325,7 @@ class LeaveOrchestratorService:
             f"• Bàn giao & Quỹ phép: Người nhận bàn giao là {handover_name}; số dư quỹ phép đủ điều kiện.",
         ]
 
-        if vlm_fields_present:
+        if vlm_fields_present and proof_relevant:
             doc_parts = []
             if doc_patient: doc_parts.append(f"Tên trên giấy: {doc_patient}")
             if diag: doc_parts.append(f"Chẩn đoán: {diag}")
@@ -444,7 +448,9 @@ class LeaveOrchestratorService:
             info_suf.append(f"Người nhận bàn giao công việc: {handover_name}")
 
         rem_days = getattr(ctx, 'remaining_leave_days', 0)
-        if error_code != 'BALANCE_EXCEEDED' and rem_days >= requested_wd:
+        if (should_deduct_annual_balance(ltype)
+            and error_code != 'BALANCE_EXCEEDED'
+            and rem_days >= requested_wd):
             info_suf.append(f"Số dư phép năm hiện có ({rem_days} ngày) đủ cho đơn")
 
         if result.decision == DecisionType.AUTO_APPROVE:
@@ -462,8 +468,6 @@ class LeaveOrchestratorService:
                 info_mis.append(f"Tên trên chứng từ ({doc_patient}) KHÔNG khớp với nhân viên nộp đơn ({emp_n})")
             if tamper is True: info_mis.append("Chứng từ có dấu hiệu chỉnh sửa giả mạo (tampered)")
             if ai_ed is True: info_mis.append("Chứng từ nghi vấn được tạo bởi công cụ AI")
-        else:
-            info_suf.append(f"Loại nghỉ '{ltype_vi}' không bắt buộc chứng từ")
 
         if error_code == 'TEAM_QUOTA_EXCEEDED':
             info_mis.append("Tỷ lệ vắng mặt trong bộ phận vượt ngưỡng an toàn 30% tại ngày xin nghỉ")
@@ -472,7 +476,7 @@ class LeaveOrchestratorService:
         elif error_code == 'DURATION_OVER_AI_LIMIT':
             info_mis.append(f"Số ngày nghỉ ({requested_wd} ngày) vượt hạn mức phê duyệt tự động")
         elif error_code == 'PROOF_REVIEW_REQUIRED':
-            info_mis.append("Chứng từ y tế / xác minh cần người có thẩm quyền (HR/Quản lý) đối chiếu trực tiếp")
+            info_mis.append("Chứng từ y tế chưa được xác minh")
         elif error_code == 'PROOF_MISSING':
             info_mis.append("Thiếu chứng từ đính kèm bắt buộc theo quy định của loại nghỉ này")
         elif error_code == 'DOC_ILLEGIBLE':
@@ -487,9 +491,12 @@ class LeaveOrchestratorService:
             if msg and msg not in info_mis and not any(m in msg for m in info_mis):
                 info_mis.append(msg)
 
-        # Keep the employee-facing correction list separate from manager-only
-        # suspicion/risk findings. The UI can safely expose each audience's view.
-        staff_errors = list(dict.fromkeys(info_mis))
+        # Keep employee-facing correction errors separate from escalation rules.
+        # An escalation can be valid and only needs the authority decision below.
+        staff_errors = list(dict.fromkeys(info_mis)) if result.decision in (
+            DecisionType.NEED_CORRECTION,
+            DecisionType.AUTO_REJECT,
+        ) else []
         staff_next_steps = []
         if result.decision == DecisionType.NEED_CORRECTION:
             staff_next_steps.append('Sửa hoặc bổ sung các mục đang báo lỗi rồi nộp lại đơn.')
@@ -506,11 +513,11 @@ class LeaveOrchestratorService:
         if doc_patient and emp_n and not names_approximately_match(doc_patient, emp_n):
             manager_suspicions.append(f'Tên trên chứng từ ({doc_patient}) không khớp nhân viên ({emp_n}).')
         if error_code == 'FLAG_ABUSE_PATTERN':
-            manager_suspicions.append('Mẫu nghỉ phép năm trong tháng có dấu hiệu lạm dụng/tách đơn.')
+            manager_suspicions.append('Có nhiều đơn phép năm rời rạc trong cùng tháng.')
         if error_code in ('TEAM_QUOTA_EXCEEDED', 'NOTICE_PERIOD_VIOLATED', 'NOTICE_PERIOD_VIOLATION'):
-            manager_suspicions.append(ERROR_VI.get(error_code, 'Có rủi ro vận hành cần xác minh.'))
+            manager_suspicions.append(ERROR_VI.get(error_code, 'Có sai lệch về điều kiện vận hành.'))
         if corr_score is not None and float(corr_score) < 0.7:
-            manager_suspicions.append('Mức khớp giữa đơn và chứng từ thấp, cần đối chiếu thêm.')
+            manager_suspicions.append('Mức khớp giữa đơn và chứng từ thấp.')
         manager_suspicions = list(dict.fromkeys(manager_suspicions))
         if manager_suspicions:
             manager_risk_level = 'CAO' if tamper is True or ai_ed is True else 'TRUNG BÌNH'
@@ -622,6 +629,11 @@ class LeaveOrchestratorService:
                     response_model=ManagerSummaryLLMResponse,
                 )
                 llm_parsed.update(llm_out)
+                # Error lists are evidence-backed deterministic findings. Do not
+                # let a generative summary add comments, recommendations, or routing.
+                llm_parsed['info_missing_vn'] = list(info_mis)
+                llm_parsed['staff_errors_vn'] = list(staff_errors)
+                llm_parsed['manager_suspicions_vn'] = list(manager_suspicions)
                 llm_engine_used = "qwen2.5:3b-instruct (Ollama)"
                 llm_gen_ms = round((time.perf_counter() - t_llm_0) * 1000, 3)
             except Exception as e:

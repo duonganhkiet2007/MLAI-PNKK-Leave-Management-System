@@ -41,29 +41,38 @@ def run_verify_harness():
         'auto_approved_cases':auto,'escalated_cases':esc,'target_auto':3,'target_escalate':2,
         'overall_status':'PASS' if passed else 'FAIL','latency_seconds':elapsed,'llm_calls':0},'details':details}
 
-class CustomVerifyInput(RequestFacts):
+class CustomVerifyInput(LeaveRequest):
+    model_config = ConfigDict(extra='ignore')
+    request_id: str = 'VERIFY'
     employee_id: str = 'VERIFY_EMPLOYEE'
     employee_name: str = 'Nhân sự kiểm thử'
     department: str = 'VERIFY'
-    remaining_leave_days: float = Field(default=10,ge=0,allow_inf_nan=False)
-    submitted_at: datetime = datetime(2026,9,1,8)
-    team_absent_count: int = Field(default=0,ge=0)
-    total_team_members: int = Field(default=10,ge=1)
-    handover: dict | None = None
-    proof: VerifiedProof = Field(default_factory=VerifiedProof)
+    remaining_leave_days: float = Field(default=10, ge=0, allow_inf_nan=False)
+    submitted_at: datetime = Field(default_factory=lambda: datetime(2026, 9, 1, 8))
+    proof: VerifiedProof | None = Field(default_factory=VerifiedProof)
     raw_text: str | None = None
 
 @router.post('/custom')
 def verify_custom_case(payload: CustomVerifyInput):
-    begin=time.perf_counter()
-    data=payload.model_dump(exclude={'raw_text'})
-    calls=0
+    begin = time.perf_counter()
+    data = payload.model_dump(exclude={'raw_text'})
+    if not data.get('proof'):
+        data['proof'] = VerifiedProof()
+    calls = 0
     if payload.raw_text:
         from agent_orchestrator import LeaveApprovalAgent
-        extracted=LeaveApprovalAgent().parse_natural_language(payload.raw_text,current_date=payload.submitted_at.date())
-        for k,v in extracted.model_dump().items(): data[k]=v
-        calls=1
-    actual=evaluate_case(data)
-    return {'success':True,**actual,'plain_reason':actual['human_readable_explanation'],
-        'calculated_workdays':actual['requested_working_days'],'latency_seconds':time.perf_counter()-begin,
-        'llm_calls':calls,'simulation_only':True}
+        extracted = LeaveApprovalAgent().parse_natural_language(payload.raw_text, current_date=payload.submitted_at.date())
+        for k, v in extracted.model_dump().items(): data[k] = v
+        calls = 1
+    actual = evaluate_case(data)
+    elapsed = time.perf_counter() - begin
+    return {
+        'success': True,
+        'actual': actual,
+        **actual,
+        'plain_reason': actual.get('human_readable_explanation', ''),
+        'calculated_workdays': actual.get('requested_working_days', 0),
+        'latency_seconds': elapsed,
+        'llm_calls': calls,
+        'simulation_only': True
+    }

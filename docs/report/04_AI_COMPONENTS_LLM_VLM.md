@@ -89,7 +89,7 @@ Signals such as `is_tampered`, `ai_edited`, red stamp or correlation score are m
 | LLM Parser | Employee free text, current date | Typed request facts | None | 1 per free-text submission; 0 for form |
 | LLM Human-action parser | Human free text | Whitelisted action + allowed edits | None | 1 per free-text action; 0 for button |
 | Optional LLM summary | Engine/VLM/context JSON | Presentation text/arrays | None | 0 on current route; opt-in +1 |
-| VLM Inspector | Uploaded file + request context | Proof facts and diagnostic signals | None | 1 per evaluation that has proof/attachment |
+| VLM Inspector | Uploaded file + request context | Proof facts and diagnostic signals | None | 1 per evaluation that has proof/attachment; re-evaluations can add calls |
 | Calendar Service | Date range + verified JSON config | Day types, working dates, notice days | Deterministic calendar authority | Called by engine/context; no model |
 | Rule Engine | Trusted `LeaveRequest` | Decision, routing, error, trace, deduction intent | Final policy decision | Once per evaluation/re-evaluation |
 | Backend/Storage | Actor, request, DB state, engine result | State transition, audit, booking, ledger mutation | Workflow/state authority | Every request/action |

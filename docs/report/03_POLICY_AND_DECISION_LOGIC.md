@@ -2,7 +2,7 @@
 
 ## Source hierarchy
 
-`Leave_Application/policy_rules.md` là policy authoritative. `raw_policy.json` chỉ là nguồn lịch sử và có các khác biệt đã được policy mới thay thế, ví dụ mẫu/ch期限 hồ sơ y tế và các rule nội bộ bổ sung. Bảng dưới đây ghi hành vi code hiện tại; khi code chưa bao phủ policy, trạng thái được nêu rõ.
+`Leave_Application/policy_rules.md` là policy authoritative. `raw_policy.json` chỉ là nguồn lịch sử và có các khác biệt đã được policy mới thay thế, ví dụ mẫu/thời hạn hồ sơ y tế và các rule nội bộ bổ sung. Bảng dưới đây ghi hành vi code hiện tại; khi code chưa bao phủ policy, trạng thái được nêu rõ.
 
 ## Policy-to-implementation matrix
 
@@ -36,7 +36,6 @@
 
 ### Policy/code gaps visible in this matrix
 
-- Policy routes `SICK` over 5 days to HR/out-of-policy, but code assigns `DIRECT_MANAGER` for every medical request of two or more days. This is a current mismatch, not a supported feature.
 - Policy contains detailed maternity entitlement and HR Ops flow; code short-circuits all maternity requests to HR as unsupported automation.
 - Work accident exists in domain/VLM/UI but has no automated decision rules.
 - Policy names `PUBLIC_HOLIDAY`/`WEEKLY_REST` as leave concepts, while code represents them as `DayType`, not submit-able `LeaveType` values.
@@ -51,7 +50,7 @@ Only `ANNUAL` uses `should_deduct_annual_balance`. The engine rejects a request 
 
 ### Notice period
 
-For `ANNUAL` and `UNPAID_OTHER`, required working-day notice is 1 day for ≤3 days, 3 days for 4–5 days, and 7 days for unpaid or >5 days. For medical types, submission after 08:30 Asia/Ho_Chi_Minh on the first working day is a violation. Violations escalate and may be waived by authorized approval; they do not auto-reject.
+For `ANNUAL`, required notice is at least 1 working day for a 1–3-day request, at least 3 working days for 4–5 days, and at least 7 working days for more than 5 days. `UNPAID_OTHER` requires at least 7 working days for every duration. For medical types, submission after 08:30 Asia/Ho_Chi_Minh on the first working day is a violation. Violations escalate and may be waived by authorized approval; they do not auto-reject.
 
 ### Quota 30%
 
@@ -79,7 +78,7 @@ Annual leave during `PROBATION` returns correction asking for a separate `UNPAID
 
 ### Authority
 
-Authority is deterministic and encoded as ordered roles. Annual uses no role / Direct Manager / Department Head / CEO based on duration. Other unpaid uses Direct Manager, Department Head + HRD, or Department Head + HRD + CEO. Special/statutory unpaid use Direct Manager. Medical code currently uses Direct Manager for every request from two days upward. Granted roles are removed from `remaining`, allowing sequential re-evaluation.
+Authority is deterministic and encoded as ordered roles. Annual uses no role for ≤2 working days, Direct Manager for 3–5, Department Head for 6–19, and CEO for ≥20. Other unpaid uses Direct Manager, Department Head + HRD, or Department Head + HRD + CEO. Special/statutory unpaid use Direct Manager. `SICK_MEDICAL` uses auto-approval for 1 working day with valid/verified proof and Direct Manager for every request of 2 or more working days. Granted roles are removed from `remaining`, allowing sequential re-evaluation.
 
 ### Anti-abuse
 

@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/static/vendor/tabler/tabler.min.css">
   
   <!-- Custom Styling & Refinements -->
-  <link rel="stylesheet" href="styles.css?v=20260920_v8">
+  <link rel="stylesheet" href="styles.css?v=20260920_v11">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e40af'/><text x='16' y='22' font-family='sans-serif' font-size='16' font-weight='bold' fill='white' text-anchor='middle'>HR</text></svg>">
 </head>
 <body>
@@ -39,13 +39,15 @@
         <div class="saas-selector-wrap" id="header-staff-selector">
           <span class="saas-selector-label">Nhân viên:</span>
           <select id="demo-employee-select" class="saas-select" title="Chọn nhân viên giả lập đăng nhập">
-            <!-- Populated dynamically via JS -->
+            <option value="EMP012" selected>Nguyễn Văn An</option>
           </select>
         </div>
 
         <div class="saas-selector-wrap" id="header-manager-selector" style="display: none;">
           <span class="saas-selector-label">Vai trò:</span>
-          <select id="manager-role-select" class="saas-select"></select>
+          <select id="manager-role-select" class="saas-select">
+            <option value="EMP001" selected>Lê Thị Bình · HR Manager</option>
+          </select>
         </div>
       </div>
 
@@ -201,8 +203,8 @@
               <div class="saas-hero-avatar" id="staff-avatar">NV</div>
             </div>
             <div class="saas-hero-info">
-              <h1 class="saas-hero-greeting"><span id="staff-name">Dương Anh Kiệt</span></h1>
-              <div class="saas-hero-subtitle" id="staff-role-dept">Thực tập sinh AI - Trung tâm Công nghệ AI</div>
+              <h1 class="saas-hero-greeting"><span id="staff-name">Nguyễn Văn An</span></h1>
+              <div class="saas-hero-subtitle" id="staff-role-dept">Software Engineer - Engineering</div>
             </div>
             <!-- REMAINING LEAVE BADGE (Right aligned) -->
             <div class="saas-hero-leave-card" id="staff-hero-leave-card" title="Số ngày phép năm còn lại">
@@ -801,46 +803,54 @@
                     <div class="dt-stat-chip dt-stat-orange"><span class="dt-stat-num">Full Traversal</span><span class="dt-stat-label">Tích lũy hết lỗi vi phạm</span></div>
                   </div>
 
-                  <!-- Legend -->
-                  <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; align-items:center; font-size:0.78rem; color: var(--text-muted, #94a3b8);">
-                    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#3b82f6;display:inline-block;"></span> Nút Quy chế</span>
-                    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#8b5cf6;display:inline-block;"></span> Nút VLM</span>
-                    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#10b981;display:inline-block;"></span> PASS → Tiếp theo</span>
-                    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:#ef4444;display:inline-block;"></span> FAIL → Cập nhật lỗi</span>
+                  <!-- Top Legend Quick Guide -->
+                  <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; align-items:center; font-size:0.8rem; font-weight:600; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 16px;">
+                    <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#3b82f6;display:inline-block;"></span> Nút Quy chế (Policy)</span>
+                    <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#8b5cf6;display:inline-block;"></span> Nút VLM (Vision AI)</span>
+                    <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#10b981;display:inline-block;"></span> PASS → Tiếp theo</span>
+                    <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#ef4444;display:inline-block;"></span> FAIL → Xử lý / Báo lỗi</span>
                   </div>
 
-                  <!-- Tree container with horizontal scroll & grab drag support -->
-                  <div id="dt-tree-container" class="dt-tree-panning-container" style="max-height:75vh; overflow-y:auto; overflow-x:auto; cursor:grab; user-select:none; touch-action:pan-x pan-y;">
-                    <!-- Root node -->
-                    <div class="dt-node dt-node-input" id="dt-root">
-                      <div class="dt-node-icon">📥</div>
-                      <div class="dt-node-body">
-                        <div class="dt-node-title">Tiếp nhận Đơn Nghỉ Phép</div>
-                        <div class="dt-node-desc">Hệ thống nhận đơn, trích xuất dữ liệu cơ bản & VLM (nếu có chứng từ đính kèm)</div>
-                      </div>
+                  <!-- Mindmap Interactive Toolbar -->
+                  <div class="mm-toolbar" id="mm-toolbar">
+                    <div class="mm-toolbar-left">
+                      <span class="mm-tool-hint"><i class="bi bi-arrows-move"></i> <strong>Kéo chuột (Drag/Pan)</strong> để di chuyển · <strong>Phóng to / Thu nhỏ (Zoom)</strong> tự do như Mindmap</span>
                     </div>
-                    <div class="dt-connector dt-connector-down"></div>
-
-                    <!-- Check nodes will be dynamically rendered here -->
-                    <div id="dt-nodes-container" class="dt-nodes-container">
-                      <div style="text-align:center; padding:40px; color: var(--text-muted, #94a3b8);">
-                        <div style="font-size:2rem; margin-bottom:12px;">⏳</div>
-                        <div>Đang tải cấu trúc cây...</div>
+                    <div class="mm-toolbar-right">
+                      <div class="mm-pan-controls" role="group" aria-label="Điều hướng cây quyết định">
+                        <button type="button" class="btn btn-sm mm-btn mm-pan-up" onclick="mindmapPan(0, 80)" title="Di chuyển lên" aria-label="Di chuyển lên"><i class="bi bi-chevron-up"></i></button>
+                        <button type="button" class="btn btn-sm mm-btn mm-pan-left" onclick="mindmapPan(80, 0)" title="Di chuyển sang trái" aria-label="Di chuyển sang trái"><i class="bi bi-chevron-left"></i></button>
+                        <button type="button" class="btn btn-sm mm-btn mm-pan-down" onclick="mindmapPan(0, -80)" title="Di chuyển xuống" aria-label="Di chuyển xuống"><i class="bi bi-chevron-down"></i></button>
+                        <button type="button" class="btn btn-sm mm-btn mm-pan-right" onclick="mindmapPan(-80, 0)" title="Di chuyển sang phải" aria-label="Di chuyển sang phải"><i class="bi bi-chevron-right"></i></button>
                       </div>
+                      <button type="button" class="btn btn-sm mm-btn" id="mm-btn-zoom-in" onclick="mindmapZoomIn()" title="Phóng to (Zoom In)">
+                        <i class="bi bi-zoom-in"></i> <span>+</span>
+                      </button>
+                      <button type="button" class="btn btn-sm mm-btn" id="mm-btn-zoom-out" onclick="mindmapZoomOut()" title="Thu nhỏ (Zoom Out)">
+                        <i class="bi bi-zoom-out"></i> <span>-</span>
+                      </button>
+                      <span class="mm-zoom-badge" id="mm-zoom-badge" title="Tỉ lệ hiện tại">100%</span>
+                      <button type="button" class="btn btn-sm mm-btn mm-btn-accent" id="mm-btn-zoom-reset" onclick="mindmapZoomReset()" title="Reset tỉ lệ 100%">
+                        <i class="bi bi-arrow-counterclockwise"></i> 100%
+                      </button>
+                      <button type="button" class="btn btn-sm mm-btn mm-btn-primary" id="mm-btn-fit" onclick="mindmapFitView()" title="Thu phóng vừa màn hình">
+                        <i class="bi bi-arrows-fullscreen"></i> Fit View
+                      </button>
                     </div>
+                  </div>
 
-                    <div class="dt-connector dt-connector-down"></div>
-
-                    <!-- Leaf: Authority Scope -->
-                    <div class="dt-leaf-section" id="dt-leaf-authority">
-                      <div class="dt-leaf-header">
-                        <span class="dt-leaf-icon">⚖️</span>
-                        <div>
-                          <div class="dt-leaf-title">Phân cấp Thẩm quyền Phê duyệt</div>
-                          <div class="dt-leaf-sub dt-leaf-sub">Điều 5.1 — Tất cả 11 nút PASS → Phân cấp theo số ngày nghỉ</div>
+                  <!-- Mindmap Tree Canvas Viewport with Zoom & Pan Support -->
+                  <div id="dt-tree-container" class="mm-viewport dt-tree-panning-container" tabindex="0" aria-label="Khung xem cây quyết định. Dùng phím mũi tên hoặc WASD để di chuyển.">
+                    <div id="mm-world" class="mm-world">
+                      <svg id="mm-svg-canvas" class="mm-svg-canvas"></svg>
+                      <!-- All decision tree mindmap tiers & node boxes will be dynamically rendered here -->
+                      <div id="dt-nodes-container" class="dt-nodes-container mm-tree-root-container">
+                        <div style="text-align:center; padding:50px 20px; color: #64748b;">
+                          <div style="font-size:2.2rem; margin-bottom:12px; animation: spin 2s linear infinite;">⚙️</div>
+                          <div style="font-weight:600; font-size:0.95rem; color:#334155;">Đang tải cấu trúc cây Mindmap quy chế nghiệp vụ...</div>
                         </div>
                       </div>
-                      <div class="dt-leaf-branches"><p>NO_LEAVE_REQUIRED · AUTO_APPROVE · AUTO_REJECT · NEED_CORRECTION · ESCALATE</p></div></div></div></div>
+                    </div>
                   </div>
                 </div>
 
@@ -962,8 +972,8 @@
         <div class="modal-content shadow-lg border-0">
           <div class="modal-header bg-dark text-white py-3">
             <div>
-              <h5 class="modal-title fw-bold text-white mb-0" id="modal-attach-title">CHỨNG TỪ & KẾT QUẢ KIỂM TRA</h5>
-              <div class="text-white-50 small" id="modal-attach-sub">Chứng từ thực tế, xác minh HR và trace từ engine</div>
+              <h5 class="modal-title fw-bold text-white mb-0" id="modal-attach-title">ẢNH CHỨNG TỪ GỐC</h5>
+              <div class="text-white-50 small" id="modal-attach-sub">Xem file gốc nhân viên đã nộp</div>
             </div>
             <button type="button" class="btn-close btn-close-white" id="btn-close-attach-modal" aria-label="Close"></button>
           </div>
@@ -1040,7 +1050,7 @@
               <div class="pipeline-step-item d-flex align-items-center justify-content-between p-2.5 rounded-3" id="p-step-2" style="background: #f8fafc; border: 1px solid #e2e8f0;">
                 <div class="d-flex align-items-center gap-2.5">
                   <span class="step-icon" style="font-size: 1rem;">🤖</span>
-                  <span class="step-text small fw-semibold text-secondary">VLM trích xuất & OCR chứng từ</span>
+                  <span class="step-text small fw-semibold text-secondary">VLM qwen2.5vl:7b đọc chứng từ</span>
                 </div>
                 <span class="step-status badge bg-secondary-lt text-secondary" style="font-size: 0.72rem;">Chờ</span>
               </div>
@@ -1056,7 +1066,7 @@
               <div class="pipeline-step-item d-flex align-items-center justify-content-between p-2.5 rounded-3" id="p-step-4" style="background: #f8fafc; border: 1px solid #e2e8f0;">
                 <div class="d-flex align-items-center gap-2.5">
                   <span class="step-icon" style="font-size: 1rem;">🧠</span>
-                  <span class="step-text small fw-semibold text-secondary">LLM Qwen 2.5 7B tổng hợp báo cáo</span>
+                  <span class="step-text small fw-semibold text-secondary">Tổng hợp hồ sơ (template, không gọi LLM)</span>
                 </div>
                 <span class="step-status badge bg-secondary-lt text-secondary" style="font-size: 0.72rem;">Chờ</span>
               </div>
@@ -1087,6 +1097,6 @@
   <script src="/static/vendor/tabler/tabler.min.js" defer></script>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20260920_v14"></script>
+  <script src="app.js?v=20260921_tree_node_tags"></script>
 </body>
 </html>

@@ -61,6 +61,7 @@ const ERROR_CODE_LABELS = {
   FLAG_ABUSE_PATTERN: 'Gắn cờ nghi vấn chia nhỏ phép (Anti-Abuse)',
   LEAVE_TYPE_MISSING: 'Thiếu loại nghỉ phép',
   REASON_REQUIRED: 'Yêu cầu nêu rõ lý do',
+  RELATIONSHIP_UNCLEAR: 'Quan hệ thân nhân chưa rõ, cần Quản lý xác minh',
   ENTITLEMENT_EXCEEDED: 'Vượt định mức chế độ',
   HANDOVER_REQUIRED: 'Cần người nhận bàn giao',
   HANDOVER_INVALID: 'Người nhận bàn giao không hợp lệ',
@@ -438,6 +439,12 @@ function initModeSwitcher() {
 /* ========================================================================= */
 function autoResizeSelect(selectEl) {
   if (!selectEl) return;
+  const selectedOpt = (selectEl.selectedIndex >= 0) ? selectEl.options[selectEl.selectedIndex] : (selectEl.options[0] || null);
+  const text = selectedOpt ? selectedOpt.text.trim() : "";
+  if (!text) {
+    selectEl.style.width = "180px";
+    return;
+  }
   let measurer = document.getElementById("select-width-measurer");
   if (!measurer) {
     measurer = document.createElement("span");
@@ -451,19 +458,14 @@ function autoResizeSelect(selectEl) {
     document.body.appendChild(measurer);
   }
 
-  const comp = window.getComputedStyle(selectEl);
-  measurer.style.fontFamily = comp.fontFamily || "'Inter', sans-serif";
-  measurer.style.fontSize = comp.fontSize || "0.82rem";
-  measurer.style.fontWeight = comp.fontWeight || "600";
-  measurer.style.letterSpacing = comp.letterSpacing || "normal";
-
-  const selectedOpt = selectEl.options[selectEl.selectedIndex];
-  const text = selectedOpt ? selectedOpt.text.trim() : "";
+  measurer.style.fontFamily = "'Inter', -apple-system, sans-serif";
+  measurer.style.fontSize = "0.84rem";
+  measurer.style.fontWeight = "600";
   measurer.textContent = text;
 
-  const textWidth = measurer.getBoundingClientRect().width || measurer.offsetWidth;
-  // padding-left (14px) + gap (8px) + icon (11px) + padding-right (10px) + border (2px) = 45px
-  const targetWidth = Math.ceil(textWidth) + 45;
+  const textWidth = measurer.getBoundingClientRect().width || measurer.offsetWidth || 0;
+  // padding-left (14px) + gap (8px) + icon (12px) + padding-right (14px) + border (4px)
+  const targetWidth = Math.max(175, Math.min(320, Math.ceil(textWidth) + 52));
   selectEl.style.width = `${targetWidth}px`;
 }
 
@@ -478,7 +480,9 @@ function initDemoLoginAndRoles() {
       renderStaffDashboard();
       renderStaffRequests();
       renderWeeklyCalendar();
-      showToast(`Đã chuyển sang nhân viên: ${getCurrentEmployee().name}`, "info");
+      const curr = getCurrentEmployee();
+      const empName = curr ? curr.name : (demoSelect.options[demoSelect.selectedIndex]?.text || currentEmployeeId);
+      showToast(`Đã chuyển sang nhân viên: ${empName}`, "info");
     });
     autoResizeSelect(demoSelect);
   }
@@ -523,9 +527,12 @@ async function loadEmployees() {
   }
   const managers = employeesCache.filter(e => e.status === 'ACTIVE' && e.actor_roles?.length);
   const selector = document.getElementById('manager-role-select');
-  if (selector) selector.innerHTML = managers.map(e => `<option value="${escapeHtml(e.employee_id)}">${escapeHtml(e.name)} · ${escapeHtml(e.actor_roles.map(r=>r.role).join('/'))}</option>`).join('');
-  if (!managers.some(e=>e.employee_id===currentManagerRoleId)) currentManagerRoleId=managers[0]?.employee_id || '';
-  if (selector) selector.value=currentManagerRoleId;
+  if (selector) {
+    selector.innerHTML = managers.map(e => `<option value="${escapeHtml(e.employee_id)}">${escapeHtml(e.name)} · ${escapeHtml(e.actor_roles.map(r=>r.role).join('/'))}</option>`).join('');
+    if (!managers.some(e=>e.employee_id===currentManagerRoleId)) currentManagerRoleId=managers[0]?.employee_id || '';
+    selector.value = currentManagerRoleId;
+    autoResizeSelect(selector);
+  }
   populateEmployeeDropdowns();
   renderStaffDashboard();
   renderWeeklyCalendar();
@@ -702,21 +709,21 @@ async function loadAIStackStatus() {
       const llmErr = llm.last_error || llm.error;
       if (llmText) {
         let ok = false, label = "LLM Lỗi", extra = "";
-        if (llmOk) { ok = true; label = "LLM Sẵn sàng"; extra = (llm.target_model || "Qwen 7B"); }
-        else if (llmLoading) { ok = false; label = "LLM Đang nạp..."; extra = "Vui lòng đợi 30–90 giây"; }
+        if (llmOk) { ok = true; label = "LLM Sẵn sàng"; extra = llm.target_model || "qwen2.5:3b-instruct"; }
+        else if (llmLoading) { ok = false; label = "LLM Đang nạp..."; extra = llm.target_model || "qwen2.5:3b-instruct"; }
         else if (llmErr) { ok = false; label = "LLM Lỗi"; extra = (llmErr || "").slice(0, 40); }
-        else { ok = false; label = "LLM Offline"; extra = "Hệ thống khởi chạy nền"; }
+        else { ok = false; label = "LLM Offline"; extra = llm.target_model || "qwen2.5:3b-instruct"; }
         setBadge(llmText, ok, label, extra);
       }
 
-      const vlmOk = vlm.ollama_reachable && vlm.model_loaded;
-      const vlmFb = vlm.fallback_mode;
+      const vlmPulled = vlm.ollama_reachable && vlm.model_loaded;
+      const vlmOnGpu = Number(vlm.size_vram || 0) > 0;
       if (vlmText) {
-        let ok = vlmOk, label = "", extra = "";
-        if (vlmOk) { label = "VLM Sẵn sàng"; extra = `Ollama ping ${vlm.last_ping_ms || '?'} ms`; }
-        else if (vlm.ollama_reachable && !vlm.model_loaded) { ok = false; label = "VLM thiếu model"; extra = "Cần pull qwen2.5-vl:3b"; }
-        else if (vlmFb) { ok = false; label = "VLM Fallback"; extra = "Chờ HR xác minh chứng từ"; }
-        else { ok = false; label = "VLM Offline"; extra = vlm.last_error || "localhost:11434 không phản hồi"; }
+        let ok = false, label = "", extra = vlm.target_model || "qwen2.5vl:7b";
+        if (vlmPulled && vlmOnGpu) { ok = true; label = "VLM Sẵn sàng"; extra = extra + " · GPU"; }
+        else if (vlmPulled && !vlmOnGpu) { label = "VLM trên CPU"; extra = extra + " · size_vram=0"; }
+        else if (vlm.ollama_reachable && !vlm.model_loaded) { label = "VLM thiếu model"; extra = "Cần pull qwen2.5vl:7b"; }
+        else { label = "VLM Offline"; extra = vlm.last_error || "Ollama không phản hồi"; }
         setBadge(vlmText, ok, label, extra);
       }
     }
@@ -757,9 +764,10 @@ async function loadDecisionTree() {
   const containers = document.querySelectorAll(".dt-nodes-container");
   if (!containers.length) return;
 
+  // Check if tree has already been rendered (look for the new mindmap structure)
   let needsRender = false;
   containers.forEach(c => {
-    if (!c.querySelector(".dt-tier-common-inputs")) needsRender = true;
+    if (!c.querySelector(".mm-tree-structure")) needsRender = true;
   });
   if (!needsRender) return;
 
@@ -778,383 +786,422 @@ async function loadDecisionTree() {
 
     renderDecisionTree(t);
   } catch (err) {
-    console.warn("loadDecisionTree fallback:", err);
-    renderDecisionTreeStatic();
+    console.warn("loadDecisionTree error:", err);
+    // Show error state inside containers
+    document.querySelectorAll(".dt-nodes-container").forEach(c => {
+      c.innerHTML = `<div style="text-align:center;padding:40px 20px;color:#ef4444;">
+        <div style="font-size:2rem;margin-bottom:8px;">⚠️</div>
+        <div style="font-weight:600;">Không tải được dữ liệu cây quyết định</div>
+        <div style="font-size:0.82rem;color:#94a3b8;margin-top:4px;">${err.message}</div>
+      </div>`;
+    });
   }
 }
 
-function renderDecisionTree(tree) {
-  // Ưu tiên dùng cấu trúc cây cha-con (nếu có) để vẽ dạng cây thật, connector line SVG)
-  if (tree.tree_visual) {
-    const html = `
-      <div class="dt-tree-wrap">
-        <div class="dt-tree-scroll">
-          ${renderTreeNode(tree.tree_visual, 0)}
-        </div>
-      </div>
-      ${renderTreeLegend(tree)}
-    `;
-    document.querySelectorAll('.dt-nodes-container').forEach(c => { c.innerHTML = html; });
-    requestAnimationFrame(drawTreeConnectors);
-    return;
-  }
+// Empty fallback — no longer used but kept to prevent reference errors
+function renderDecisionTreeStatic() {
+  console.info("renderDecisionTreeStatic called — no static tree available in this version.");
+}
 
+/* ========================================================================= */
+/* 3b. MINDMAP DECISION TREE ENGINE (Interactive Zoom, Pan & Branching Tree)  */
+/* ========================================================================= */
+
+let mmState = {
+  zoom: 1.0,
+  panX: 0,
+  panY: 0,
+  isDragging: false,
+  startX: 0,
+  startY: 0
+};
+
+window.mindmapZoomIn = function() {
+  setMindmapZoom(mmState.zoom + 0.15);
+};
+
+window.mindmapZoomOut = function() {
+  setMindmapZoom(mmState.zoom - 0.15);
+};
+
+window.mindmapPan = function(deltaX, deltaY) {
+  mmState.panX += deltaX;
+  mmState.panY += deltaY;
+  applyMindmapTransform();
+  requestAnimationFrame(drawMindmapConnectors);
+};
+
+window.mindmapZoomReset = function() {
+  mmState.zoom = 1.0;
+  mmState.panX = 0;
+  mmState.panY = 0;
+  applyMindmapTransform();
+  requestAnimationFrame(drawMindmapConnectors);
+};
+
+window.mindmapFitView = function() {
+  const container = document.getElementById("dt-tree-container");
+  const root = document.querySelector(".mm-tree-root-container");
+  if (!container || !root) return;
+  const cRect = container.getBoundingClientRect();
+  const rRect = root.getBoundingClientRect();
+  if (!rRect.width || !rRect.height) return;
+
+  const unscaledW = rRect.width / mmState.zoom;
+  const unscaledH = rRect.height / mmState.zoom;
+  const scaleX = (cRect.width - 60) / unscaledW;
+  const scaleY = (cRect.height - 60) / unscaledH;
+  const fitScale = Math.max(0.35, Math.min(1.0, Math.min(scaleX, scaleY)));
+
+  mmState.zoom = fitScale;
+  mmState.panX = (cRect.width - unscaledW * fitScale) / 2;
+  mmState.panY = 20;
+  applyMindmapTransform();
+  requestAnimationFrame(drawMindmapConnectors);
+};
+
+function setMindmapZoom(newZoom) {
+  mmState.zoom = Math.max(0.3, Math.min(2.5, newZoom));
+  applyMindmapTransform();
+  requestAnimationFrame(drawMindmapConnectors);
+}
+
+function applyMindmapTransform() {
+  const world = document.getElementById("mm-world");
+  const badge = document.getElementById("mm-zoom-badge");
+  if (badge) badge.textContent = `${Math.round(mmState.zoom * 100)}%`;
+  if (world) {
+    world.style.transform = `translate(${mmState.panX}px, ${mmState.panY}px) scale(${mmState.zoom})`;
+    world.style.transformOrigin = "0 0";
+  }
+}
+
+function setupTreeContainerPanning() {
+  const viewport = document.getElementById("dt-tree-container");
+  if (!viewport || viewport.dataset.mindmapSetup) return;
+  viewport.dataset.mindmapSetup = "true";
+  viewport.tabIndex = 0;
+  viewport.setAttribute("aria-label", "Khung xem cây quyết định. Dùng phím mũi tên hoặc WASD để di chuyển.");
+
+  viewport.addEventListener("mousedown", (e) => {
+    if (e.button !== 0 || e.target.closest("button, a, input")) return;
+    mmState.isDragging = true;
+    viewport.style.cursor = "grabbing";
+    mmState.startX = e.clientX - mmState.panX;
+    mmState.startY = e.clientY - mmState.panY;
+    e.preventDefault();
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!mmState.isDragging) return;
+    mmState.panX = e.clientX - mmState.startX;
+    mmState.panY = e.clientY - mmState.startY;
+    applyMindmapTransform();
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (mmState.isDragging) {
+      mmState.isDragging = false;
+      if (viewport) viewport.style.cursor = "grab";
+      requestAnimationFrame(drawMindmapConnectors);
+    }
+  });
+
+  viewport.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const rect = viewport.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const zoomDelta = e.deltaY < 0 ? 1.1 : 0.9;
+    const newZoom = Math.max(0.3, Math.min(2.5, mmState.zoom * zoomDelta));
+
+    mmState.panX = mouseX - (mouseX - mmState.panX) * (newZoom / mmState.zoom);
+    mmState.panY = mouseY - (mouseY - mmState.panY) * (newZoom / mmState.zoom);
+    mmState.zoom = newZoom;
+
+    applyMindmapTransform();
+    requestAnimationFrame(drawMindmapConnectors);
+  }, { passive: false });
+
+  viewport.addEventListener("keydown", (e) => {
+    const panStep = e.shiftKey ? 160 : 80;
+    const keyPan = {
+      ArrowLeft: [panStep, 0],
+      ArrowRight: [-panStep, 0],
+      ArrowUp: [0, panStep],
+      ArrowDown: [0, -panStep],
+      a: [panStep, 0],
+      d: [-panStep, 0],
+      w: [0, panStep],
+      s: [0, -panStep]
+    }[e.key];
+    if (!keyPan) return;
+    e.preventDefault();
+    window.mindmapPan(...keyPan);
+  });
+
+  window.addEventListener("resize", () => {
+    requestAnimationFrame(drawMindmapConnectors);
+  });
+}
+
+function renderDecisionTree(tree) {
   const branches = tree.branches || tree.leave_type_branches || [];
 
-  const tier1 = `
-    <div class="dt-tier dt-tier-common-inputs">
-      <div class="dt-tier-header">
-        <span class="dt-tier-icon">🛂</span>
-        <span class="dt-tier-title">${escapeHtml(tree.common_tier_title || 'Bước chung mọi loại nghỉ')}</span>
-      </div>
-      <div class="dt-tier-children">
-        ${(tree.common_inputs || []).map((nd, i, arr) => renderMiniNode(nd, i, arr.length, null)).join('')}
-      </div>
-      <div class="dt-funnel-out">
-        <div class="dt-funnel-arrow">Chia vào ${branches.length} loại hình nghỉ phép</div>
+  // 1. Gốc Mindmap (Root Box)
+  const rootNode = `
+    <div class="mm-node-root mm-box" id="mm-root-box" data-color="#2563eb">
+      <div class="mm-root-badge">CỘT MỐC GỐC · TIẾP NHẬN HỒ SƠ</div>
+      <div class="mm-root-body">
+        <div class="mm-root-icon">📥</div>
+        <div class="mm-root-content">
+          <div class="mm-root-title">Tiếp nhận & Chuẩn hóa Đơn Nghỉ Phép</div>
+        </div>
       </div>
     </div>
   `;
 
-  const tier2 = `
-    <div class="dt-tier dt-tier-branches">
-      <div class="dt-tier-header">
-        <span class="dt-tier-icon">🌿</span>
-        <span class="dt-tier-title">${escapeHtml(tree.branch_tier_title || 'Loại hình nghỉ phép (mỗi loại 1 luồng riêng)')}</span>
+  // 2. Tầng 1: Tiền kiểm tra chung (3 Hộp con)
+  const tier1Html = `
+    <div class="mm-branch-block mm-branch-t1" data-branch-color="#0284c7">
+      <div class="mm-branch-trunk-head mm-box" data-color="#0284c7" id="mm-t1-head">
+        <div class="mm-trunk-tag" style="background:#0284c7; color:#fff;">TẦNG 1</div>
+        <div class="mm-trunk-title">Tiền kiểm tra điều kiện chung</div>
+        <div class="mm-trunk-sub">3 bước bắt buộc áp dụng cho 100% mọi loại đơn</div>
       </div>
-      <div class="dt-branches-grid">
-        ${branches.map((b, bi, arr) => renderBranch(b, bi, arr.length)).join('')}
-      </div>
-      <div class="dt-funnel-in">
-        <div class="dt-funnel-arrow">Tổng hợp lại các loại → bước chung cuối</div>
-      </div>
-    </div>
-  `;
-
-  const tier3 = `
-    <div class="dt-tier dt-tier-common-final">
-      <div class="dt-tier-header">
-        <span class="dt-tier-icon">📐</span>
-        <span class="dt-tier-title">${escapeHtml(tree.final_tier_title || 'Bước chung cuối trước khi ra quyết định')}</span>
-      </div>
-      <div class="dt-tier-children">
-        ${(tree.common_final || []).map((nd, i, arr) => renderMiniNode(nd, i, arr.length, null)).join('')}
+      <div class="mm-branch-children-row" id="mm-t1-children">
+        ${(tree.common_inputs || []).map((nd, i) => renderMindmapNode(nd, '#0284c7')).join('')}
       </div>
     </div>
   `;
 
-  const tierOutcomes = `
-    <div class="dt-tier dt-tier-outcomes">
-      <div class="dt-tier-header">
-        <span class="dt-tier-icon">🌱</span>
-        <span class="dt-tier-title">${escapeHtml(tree.outcomes_title || 'Kết quả cuối cùng')}</span>
+  // 3. Tầng 2: 8 Nhánh quy chế (8 Cụm nhánh con)
+  const tier2Html = `
+    <div class="mm-branch-block mm-branch-t2" data-branch-color="#6366f1">
+      <div class="mm-branch-trunk-head mm-box" data-color="#6366f1" id="mm-t2-head">
+        <div class="mm-trunk-tag" style="background:#6366f1; color:#fff;">TẦNG 2</div>
+        <div class="mm-trunk-title">8 Phân nhánh Quy chế nghiệp vụ</div>
+        <div class="mm-trunk-sub">Mỗi hình thức nghỉ phép vận hành luồng điều kiện & phân cấp riêng</div>
       </div>
-      <div class="dt-outcomes-grid">
+      <div class="mm-branch-children-row mm-branches-grid-row" id="mm-t2-children">
+        ${branches.map((b, i) => renderMindmapBranchCard(b, i)).join('')}
+      </div>
+    </div>
+  `;
+
+  // 4. Tầng 3: Hậu kiểm tra & Tổng hợp Thẩm quyền (2 Hộp con)
+  const tier3Html = `
+    <div class="mm-branch-block mm-branch-t3" data-branch-color="#0d9488">
+      <div class="mm-branch-trunk-head mm-box" data-color="#0d9488" id="mm-t3-head">
+        <div class="mm-trunk-tag" style="background:#0d9488; color:#fff;">TẦNG 3</div>
+        <div class="mm-trunk-title">Hậu kiểm tra & Tổng hợp Thẩm quyền</div>
+        <div class="mm-trunk-sub">Kiểm tra xung đột lịch và xác định người ký duyệt cuối cùng</div>
+      </div>
+      <div class="mm-branch-children-row" id="mm-t3-children">
+        ${(tree.common_final || []).map((nd, i) => renderMindmapNode(nd, '#0d9488')).join('')}
+      </div>
+    </div>
+  `;
+
+  // 5. Tầng 4: 3 nhóm xử lý cuối cùng
+  const tierOutcomesHtml = `
+    <div class="mm-branch-block mm-branch-t4" data-branch-color="#15803d">
+      <div class="mm-branch-trunk-head mm-box" data-color="#15803d" id="mm-t4-head">
+        <div class="mm-trunk-tag" style="background:#15803d; color:#fff;">TẦNG 4</div>
+        <div class="mm-trunk-title">3 hướng xử lý cuối cùng</div>
+        <div class="mm-trunk-sub">Kết quả tất định của Rule Engine chuyển vào Fast-Path hoặc AI Copilot</div>
+      </div>
+      <div class="mm-branch-children-row mm-outcomes-row" id="mm-t4-children">
         ${(tree.outcomes || []).map(o => `
-          <div class="dt-outcome-card" style="border-color: ${o.color}; background: ${hexToRgba(o.color, 0.08)};">
-            <div class="dt-outcome-title" style="color: ${o.color};">${escapeHtml(o.title || o.id)}</div>
-            <div class="dt-outcome-desc">${escapeHtml(o.body || o.desc || '')}</div>
+          <div class="mm-outcome-box mm-box" style="border-left: 4px solid ${o.color};" data-color="${o.color}">
+            <div class="mm-outcome-tag" style="color:${o.color};">
+              <span class="mm-outcome-dot" style="background:${o.color};"></span>
+              <span class="mm-outcome-title">${escapeHtml(o.title || o.id)}</span>
+              <span class="mm-outcome-code">${escapeHtml(o.id)}</span>
+            </div>
+            <div class="mm-outcome-content">
+              <div class="mm-outcome-desc">${escapeHtml(o.body || o.desc || '')}</div>
+              ${o.route ? `<div class="mm-outcome-route">${escapeHtml(o.route)}</div>` : ''}
+            </div>
           </div>
         `).join('')}
       </div>
     </div>
   `;
 
-  const legend = (tree.legend && Object.keys(tree.legend).length) ? `
-      <div class="dt-legend-row">
-        <div class="dt-tier-header" style="margin-bottom: 6px;">
-          <span class="dt-tier-icon">🧾</span>
-          <span class="dt-tier-title">Chú thích</span>
-        </div>
-        <div class="dt-outcomes-grid dt-legend-grid">
-          <div class="dt-outcome-card" style="border-color: #10b981; background: rgba(16,185,129,0.08);">
-            <div class="dt-outcome-title" style="color: #10b981;">✓ Đạt (Pass)</div>
-            <div class="dt-outcome-desc">${escapeHtml(tree.legend.PASS || '')}</div>
-          </div>
-          <div class="dt-outcome-card" style="border-color: #ef4444; background: rgba(239,68,68,0.08);">
-            <div class="dt-outcome-title" style="color: #ef4444;">✕ Chưa đạt (Fail)</div>
-            <div class="dt-outcome-desc">${escapeHtml(tree.legend.FAIL || '')}</div>
-          </div>
-          <div class="dt-outcome-card" style="border-color: #f59e0b; background: rgba(245,158,11,0.08);">
-            <div class="dt-outcome-title" style="color: #f59e0b;">⚠ Đặc cách</div>
-            <div class="dt-outcome-desc">${escapeHtml(tree.legend.WAIVABLE || '')}</div>
-          </div>
-          <div class="dt-outcome-card" style="border-color: #a855f7; background: rgba(168,85,247,0.08);">
-            <div class="dt-outcome-title" style="color: #a855f7;">🤖 Máy đọc (VLM)</div>
-            <div class="dt-outcome-desc">${escapeHtml(tree.legend.VLM || '')}</div>
-          </div>
-        </div>
+  // Lắp ráp toàn bộ cây Mindmap vào khung chứa
+  const fullMindmapHtml = `
+    <div class="mm-tree-structure">
+      <div class="mm-root-row">
+        ${rootNode}
       </div>
-  ` : '';
-
-  const html = tier1 + tier2 + tier3 + tierOutcomes + legend;
+      <div class="mm-trunks-grid">
+        ${tier1Html}
+        ${tier2Html}
+        ${tier3Html}
+        ${tierOutcomesHtml}
+      </div>
+    </div>
+  `;
 
   document.querySelectorAll('.dt-nodes-container').forEach(c => {
-    c.innerHTML = html;
+    c.innerHTML = fullMindmapHtml;
   });
+
+  setupTreeContainerPanning();
+  applyMindmapTransform();
+  setTimeout(() => {
+    requestAnimationFrame(drawMindmapConnectors);
+  }, 60);
 }
 
-// --- Render dạng cây thật (cha-con, có connector) ---
-function renderTreeNode(node, depth) {
-  const children = node.children || [];
-  const c = node.color || '#475569';
-  const note = node.note ? `<div class="tv-node-note">${escapeHtml(node.note)}</div>` : '';
-  const childrenHtml = children.length ? `
-    <div class="tv-children" data-level="${depth + 1}">
-      ${children.map(ch => renderTreeNode(ch, depth + 1)).join('')}
-    </div>` : '';
-  return `
-    <div class="tv-node-col" data-level="${depth}">
-      <div class="tv-node" data-node-id="${node.node_id}" style="border-color: ${c}; background: ${hexToRgba(c, 0.08)};">
-        <div class="tv-node-title" style="color: ${c};">${escapeHtml(node.label)}</div>
-        ${note}
-      </div>
-      ${childrenHtml}
-    </div>`;
-}
-
-function renderTreeLegend(tree) {
-  return (tree.legend && Object.keys(tree.legend).length) ? `
-      <div class="dt-legend-row">
-        <div class="dt-tier-header" style="margin-bottom: 6px;">
-          <span class="dt-tier-icon">🧾</span>
-          <span class="dt-tier-title">Chú thích cây</span>
-        </div>
-        <div class="dt-outcomes-grid dt-legend-grid">
-          <div class="dt-outcome-card" style="border-color: #0ea5e9; background: rgba(14,165,233,0.08);">
-            <div class="dt-outcome-title" style="color: #0ea5e9;">📥 Bước chung</div>
-            <div class="dt-outcome-desc">Mọi loại nghỉ đều đi qua</div>
-          </div>
-          <div class="dt-outcome-card" style="border-color: #6366f1; background: rgba(99,102,241,0.08);">
-            <div class="dt-outcome-title" style="color: #6366f1;">🌿 Chia nhánh</div>
-            <div class="dt-outcome-desc">8 loại hình nghỉ (luồng riêng)</div>
-          </div>
-          <div class="dt-outcome-card" style="border-color: #a855f7; background: rgba(168,85,247,0.08);">
-            <div class="dt-outcome-title" style="color: #a855f7;">🤖 VLM</div>
-            <div class="dt-outcome-desc">${escapeHtml(tree.legend.VLM || 'Máy đọc chứng từ')}</div>
-          </div>
-          <div class="dt-outcome-card" style="border-color: #475569; background: rgba(71,85,105,0.08);">
-            <div class="dt-outcome-title" style="color: #475569;">🌳 Lá</div>
-            <div class="dt-outcome-desc">5 kết quả cuối cùng hệ thống trả về</div>
-          </div>
-        </div>
-      </div>` : '';
-}
-
-// Vẽ connector SVG nối cha → con giữa các node (sau khi layout xong)
-function drawTreeConnectors() {
-  document.querySelectorAll('.dt-tree-scroll').forEach(root => {
-    // Xóa SVG cũ (nếu có)
-    root.querySelectorAll('svg.tv-svg-connector').forEach(s => s.remove());
-
-    const childrenRows = root.querySelectorAll('.tv-children');
-    childrenRows.forEach(childRow => {
-      const parentCol = childRow.parentElement;
-      const parentNode = parentCol.querySelector(':scope > .tv-node');
-      if (!parentNode) return;
-      const childCols = Array.from(childRow.children); // các cột con
-      if (!childCols.length) return;
-      const parentBox = (el) => {
-        const r = el.getBoundingClientRect();
-        const rr = root.getBoundingClientRect();
-        return { left: r.left - rr.left + root.scrollLeft, top: r.top - rr.top + root.scrollTop,
-                 right: r.right - rr.left + root.scrollLeft, bottom: r.bottom - rr.top + root.scrollTop,
-                 width: r.width, height: r.height };
-      };
-      const p = parentBox(parentNode);
-      const rootRect = root.getBoundingClientRect();
-
-      // Tạo 1 svg phủ lên container (chiều cao = khoảng từ dưới parent đến dưới con xa nhất)
-      let minTop = p.bottom;
-      let maxBottom = p.bottom;
-      const childCenters = childCols.map(c => {
-        const cn = c.querySelector(':scope > .tv-node');
-        const b = parentBox(cn);
-        minTop = Math.min(minTop, b.top);
-        maxBottom = Math.max(maxBottom, b.bottom);
-        return { box: b, cx: (b.left + b.width / 2), cy: b.top };
-      });
-      const padX = 8, padY = 8;
-      const svgW = rootRect.width + 16;
-      const svgH = (maxBottom - p.bottom) + padY * 2;
-      if (svgH <= 0 || svgW <= 0) return;
-      const svgNS = 'http://www.w3.org/2000/svg';
-      const svg = document.createElementNS(svgNS, 'svg');
-      svg.setAttribute('class', 'tv-svg-connector');
-      svg.style.left = (-padX) + 'px';
-      svg.style.top = (p.bottom - padY) + 'px';
-      svg.setAttribute('width', svgW);
-      svg.setAttribute('height', svgH);
-      root.appendChild(svg);
-      const parentCx = p.left + p.width / 2 - (-padX);
-      const parentCy = p.bottom - (p.bottom - padY);
-      const trunkY = parentCy + 10;
-      // trunk từ parent xuống trunkY
-      {
-        const l = document.createElementNS(svgNS, 'line');
-        l.setAttribute('x1', parentCx); l.setAttribute('y1', parentCy);
-        l.setAttribute('x2', parentCx); l.setAttribute('y2', trunkY);
-        l.setAttribute('stroke', '#94a3b8'); l.setAttribute('stroke-width', '1.5');
-        svg.appendChild(l);
-      }
-      // horizontal line: giữa trái và phải các con
-      const xs = childCenters.map(c => c.cx - (-padX));
-      const minX = Math.min(parentCx, ...xs);
-      const maxX = Math.max(parentCx, ...xs);
-      {
-        const l = document.createElementNS(svgNS, 'line');
-        l.setAttribute('x1', minX); l.setAttribute('y1', trunkY);
-        l.setAttribute('x2', maxX); l.setAttribute('y2', trunkY);
-        l.setAttribute('stroke', '#94a3b8'); l.setAttribute('stroke-width', '1.5');
-        svg.appendChild(l);
-      }
-      // từ trunk ngang xuống mỗi con
-      childCenters.forEach(cc => {
-        const cx = cc.cx - (-padX);
-        const cy = cc.cy - (p.bottom - padY);
-        // đứng xuống từ trunkY đến cy
-        const v = document.createElementNS(svgNS, 'line');
-        v.setAttribute('x1', cx); v.setAttribute('y1', trunkY);
-        v.setAttribute('x2', cx); v.setAttribute('y2', cy);
-        v.setAttribute('stroke', '#94a3b8'); v.setAttribute('stroke-width', '1.5');
-        svg.appendChild(v);
-      });
-    });
-  });
-}
-
-function renderBranch(b, bi, total) {
+function renderMindmapBranchCard(b, index) {
   const steps = b.steps || b.nodes || [];
   const hex = b.color || '#475569';
-  const badgeStyle = `background: ${hex}14; border-color: ${hex}55; color: ${hex};`;
+
   return `
-    <div class="dt-branch-card" style="border-top: 4px solid ${hex}; border-left-color: ${hex}55;">
-      <div class="dt-branch-head">
-        <span class="dt-branch-icon" style="background: ${hex}18; color: ${hex};">${escapeHtml(b.icon || '🏷️')}</span>
-        <div class="dt-branch-head-body">
-          <div class="dt-branch-title" style="color: ${hex};">${escapeHtml(b.title || b.label)}</div>
+    <div class="mm-branch-card mm-box" style="border-top: 4px solid ${hex};" data-color="${hex}">
+      <div class="mm-branch-card-head">
+        <span class="mm-branch-icon" style="background:${hex}15; color:${hex}; border:1.5px solid ${hex}40;">${escapeHtml(b.icon || '🏷️')}</span>
+        <div class="mm-branch-card-info">
+          <div class="mm-branch-card-title" style="color:${hex};">${escapeHtml(b.title || b.label)}</div>
         </div>
       </div>
-      <div class="dt-branch-tagline">
-        <div><span class="dt-twolabel">Đối tượng</span>${escapeHtml(b.who || '')}</div>
-        <div><span class="dt-twolabel">Mục đích</span>${escapeHtml(b.what || b.tagline || '')}</div>
-        <div><span class="dt-twolabel">Cách làm</span>${escapeHtml(b.how || '')}</div>
+
+      <div class="mm-subnodes-list">
+        ${steps.map((s, si) => renderMindmapMiniNode(s, hex)).join('')}
       </div>
-      <div class="dt-branch-badge" style="${badgeStyle}">${steps.length} bước</div>
-      <div class="dt-branch-nodes">
-        ${steps.map((nd, i, arr) => renderMiniNode(nd, i, arr.length, hex)).join('')}
-      </div>
-      <div class="dt-branch-authority">
-        <span>⚖️</span>${escapeHtml(b.next || b.authority_rule || '')}
-      </div>
+
     </div>
   `;
 }
 
-function renderMiniNode(node, index, totalSiblings, branchColor) {
+function renderMindmapNode(node, branchColor) {
   const kind = (node.kind || node.type || 'POLICY').toString().toUpperCase();
   const isVlm = kind === 'VLM';
-  const tagClass = isVlm ? 'dt-tag-vlm' : 'dt-tag-policy';
-  const tagLabel = isVlm ? 'VLM' : 'Check';
-  const cardClass = isVlm ? 'dt-node-vlm' : 'dt-node-check';
-  const waivable = node.waivable ? `<span class="dt-node-badge dt-badge-trigger">Đặc cách</span>` : '';
-
+  const hex = isVlm ? '#8b5cf6' : (branchColor || '#0284c7');
+  const tagClass = isVlm ? 'mm-tag-vlm' : 'mm-tag-policy';
+  const tagLabel = isVlm ? '🤖 VLM Vision' : '📋 Quy chế';
   const whenPass = (node.when_pass || node.pass_action || '').trim();
   const whenFail = (node.when_fail || node.fail_action || '').trim();
 
-  const passBox = whenPass ? `
-    <div class="dt-mini-pass">
-      <div class="dt-mini-pass-head"><span>✓</span>Tiếp theo</div>
-      <div class="dt-mini-pass-text">${escapeHtml(whenPass)}</div>
-    </div>` : '';
-
-  const failBox = whenFail ? `
-    <div class="dt-mini-fail">
-      <div class="dt-mini-fail-head"><span>✕</span>Xử lý</div>
-      <div class="dt-mini-fail-text">${escapeHtml(whenFail)}</div>
-    </div>` : '';
-
-  const hint = node.hint ? `<div class="dt-mini-hint">💡 ${escapeHtml(node.hint)}</div>` : '';
-
-  const branchStyle = branchColor ? `border-left-color: ${branchColor}55;` : '';
-
-  const card = `
-    <div class="dt-graph-main ${cardClass}" style="${branchStyle}">
-      <div class="dt-graph-header">
-        <div class="dt-graph-title">
-          <span>${escapeHtml(node.label || node.node_id)}</span>
+  return `
+    <div class="mm-node-item mm-box" style="border-left: 4px solid ${hex};" data-color="${hex}">
+      <div class="mm-node-item-head">
+        <div class="mm-node-tags">
+          <span class="mm-node-id">${escapeHtml(node.node_id || '')}</span>
+          <span class="mm-node-tag ${tagClass}">${tagLabel}</span>
         </div>
-        <span class="dt-badge-tag ${tagClass}">${tagLabel}</span>
+        <span class="mm-node-name">${escapeHtml(node.label || '')}</span>
       </div>
-      <div class="dt-graph-desc">${escapeHtml(node.note || node.description || '')}</div>
-      <div class="dt-graph-meta">
-        ${waivable}
-      </div>
-      ${hint}
-      <div class="dt-mini-pair">
-        ${passBox}
-        ${failBox}
+      <div class="mm-node-outcomes">
+        ${whenFail ? `<div class="mm-cond mm-cond-fail"><span class="mm-cond-icon">✕</span><span class="mm-cond-text"><strong>SAI:</strong> ${escapeHtml(whenFail)}</span></div>` : (whenPass ? `<div class="mm-cond mm-cond-pass"><span class="mm-cond-icon">→</span><span class="mm-cond-text">${escapeHtml(whenPass)}</span></div>` : '')}
       </div>
     </div>
   `;
-
-  const trunk = index < totalSiblings - 1
-    ? `<div class="dt-trunk-connector"><div class="dt-trunk-line"></div></div>`
-    : `<div style="height:2px;"></div>`;
-
-  return card + trunk;
 }
 
-function hexToRgba(hex, alpha) {
-  const h = (hex || '#334155').replace('#','');
-  const r = parseInt(h.substring(0,2),16);
-  const g = parseInt(h.substring(2,4),16);
-  const b = parseInt(h.substring(4,6),16);
-  return `rgba(${r},${g},${b},${alpha})`;
+function renderMindmapMiniNode(node, hex) {
+  const isVlm = (node.kind || node.type || '').toString().toUpperCase() === 'VLM';
+  const whenPass = (node.when_pass || node.pass_action || '').trim();
+  const whenFail = (node.when_fail || node.fail_action || '').trim();
+
+  return `
+    <div class="mm-subnode-item ${isVlm ? 'mm-subnode-vlm' : ''}">
+      <div class="mm-subnode-head">
+        <span class="mm-subnode-id">${escapeHtml(node.node_id || '')}</span>
+        <span class="mm-subnode-name">${escapeHtml(node.label || '')}</span>
+        ${isVlm ? '<span class="mm-vlm-pill">🤖 VLM</span>' : ''}
+      </div>
+      ${whenFail || whenPass ? `
+        <div class="mm-subnode-branches">
+          ${whenFail ? `<div class="mm-sub-fail">SAI → ${escapeHtml(whenFail)}</div>` : `<div class="mm-sub-pass">→ ${escapeHtml(whenPass)}</div>`}
+        </div>
+      ` : ''}
+    </div>
+  `;
 }
 
-function renderDecisionTreeStatic() {
-  document.querySelectorAll('.dt-nodes-container').forEach(c => c.textContent='Chưa tải được cấu trúc policy. Vui lòng thử lại.');
-}
+// Vẽ đường nối cong SVG tự động giữa các khối hộp Mindmap
+function drawMindmapConnectors() {
+  const svg = document.getElementById("mm-svg-canvas");
+  const world = document.getElementById("mm-world");
+  if (!svg || !world) return;
 
+  svg.innerHTML = "";
+  const worldRect = world.getBoundingClientRect();
+  const zoom = mmState.zoom || 1.0;
 
-// Hàm khởi tạo kéo-thả di chuyển container Cây Quyết Định (Panning)
-function setupTreeContainerPanning() {
-  const container = document.getElementById("dt-tree-container");
-  if (!container || container.dataset.panningSetup) return;
-  container.dataset.panningSetup = "true";
+  // Size SVG to cover the full unscaled content area
+  const svgW = Math.max(world.scrollWidth, worldRect.width / zoom);
+  const svgH = Math.max(world.scrollHeight, worldRect.height / zoom);
+  svg.setAttribute("width", svgW);
+  svg.setAttribute("height", svgH);
 
-  let isDown = false;
-  let startX, startY, scrollLeft, scrollTop;
+  const rootBox = document.getElementById("mm-root-box");
+  if (!rootBox) return;
 
-  container.addEventListener("mousedown", (e) => {
-    isDown = true;
-    container.style.cursor = "grabbing";
-    startX = e.pageX - container.offsetLeft;
-    startY = e.pageY - container.offsetTop;
-    scrollLeft = container.scrollLeft;
-    scrollTop = container.scrollTop;
-  });
+  const getUnscaledBox = (el) => {
+    const r = el.getBoundingClientRect();
+    return {
+      x: (r.left - worldRect.left) / zoom,
+      y: (r.top - worldRect.top) / zoom,
+      w: r.width / zoom,
+      h: r.height / zoom,
+      cx: (r.left - worldRect.left + r.width / 2) / zoom,
+      cy: (r.top - worldRect.top + r.height / 2) / zoom,
+      bottom: (r.top - worldRect.top + r.height) / zoom,
+      top: (r.top - worldRect.top) / zoom
+    };
+  };
 
-  container.addEventListener("mouseleave", () => {
-    isDown = false;
-    container.style.cursor = "grab";
-  });
+  const rootCoords = getUnscaledBox(rootBox);
 
-  container.addEventListener("mouseup", () => {
-    isDown = false;
-    container.style.cursor = "grab";
-  });
+  // Nối từ Root sang 4 Tầng chính (T1, T2, T3, T4)
+  const trunkHeads = [
+    { id: "mm-t1-head", color: "#0284c7" },
+    { id: "mm-t2-head", color: "#6366f1" },
+    { id: "mm-t3-head", color: "#0d9488" },
+    { id: "mm-t4-head", color: "#15803d" }
+  ];
 
-  container.addEventListener("mousemove", (e) => {
-    if (!isDown) return;
-    e.preventDefault();
-    const x = e.pageX - container.offsetLeft;
-    const y = e.pageY - container.offsetTop;
-    const walkX = (x - startX) * 1.5;
-    const walkY = (y - startY) * 1.5;
-    container.scrollLeft = scrollLeft - walkX;
-    container.scrollTop = scrollTop - walkY;
+  trunkHeads.forEach(trunk => {
+    const headEl = document.getElementById(trunk.id);
+    if (!headEl) return;
+    const headCoords = getUnscaledBox(headEl);
+
+    // Đường cong Bézier từ Root Bottom sang Head Top
+    const p1 = { x: rootCoords.cx, y: rootCoords.bottom };
+    const p2 = { x: headCoords.cx, y: headCoords.top };
+    const midY = (p1.y + p2.y) / 2;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const d = `M ${p1.x} ${p1.y} C ${p1.x} ${midY}, ${p2.x} ${midY}, ${p2.x} ${p2.y}`;
+    path.setAttribute("d", d);
+    path.setAttribute("stroke", trunk.color);
+    path.setAttribute("stroke-width", "2.5");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("opacity", "0.85");
+    svg.appendChild(path);
+
+    // Chấm tròn gốc (root side)
+    const rootDot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    rootDot.setAttribute("cx", p1.x);
+    rootDot.setAttribute("cy", p1.y);
+    rootDot.setAttribute("r", "3");
+    rootDot.setAttribute("fill", trunk.color);
+    rootDot.setAttribute("opacity", "0.6");
+    svg.appendChild(rootDot);
+
+    // Chấm tròn đầu mút kết nối (head side)
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("cx", p2.x);
+    dot.setAttribute("cy", p2.y);
+    dot.setAttribute("r", "3.5");
+    dot.setAttribute("fill", trunk.color);
+    svg.appendChild(dot);
   });
 }
 
@@ -1491,10 +1538,17 @@ function initFileUploadDropzone() {
   }
 }
 
-/* ── THANH TIẾN TRÌNH XỬ LÝ ĐƠN (PIPELINE PROGRESS) ──────────────────────── */
+/* ── THANH TIẾN TRÌNH: % theo thời lượng phase thật, không cộng % bừa ──
+ * Form nộp đơn: VLM (nếu có file) → Rule Engine → template. Không gọi LLM.
+ * qwen2.5vl:7b ảnh A4 1280px GPU ~8–18s → lấy mốc 12s.
+ * Upload ~1s; Rule+template+save <0.5s (chìm trong thời gian VLM nếu có file).
+ */
 let _progressInterval = null;
+let _progressHasFile = false;
 
 function showSubmitProgress(hasFile = false) {
+  _progressHasFile = !!hasFile;
+  const startedAt = performance.now();
   const modal = document.getElementById("modal-submit-progress");
   if (!modal) return;
   modal.style.display = "block";
@@ -1502,75 +1556,84 @@ function showSubmitProgress(hasFile = false) {
   const bar = document.getElementById("submit-progress-bar");
   const pLabel = document.getElementById("progress-percent-label");
   const sLabel = document.getElementById("progress-step-label");
-
-  if (bar) {
-    bar.style.width = "12%";
-    bar.style.background = "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)";
+  const sub = document.getElementById("progress-modal-sub");
+  if (sub) {
+    sub.textContent = hasFile
+      ? "VLM qwen2.5vl:7b ~12s (8–18s) · Rule Engine <0.3s · form không gọi LLM"
+      : "Không chứng từ: bỏ qua VLM · Rule Engine <0.3s · form không gọi LLM";
   }
-  if (pLabel) pLabel.innerText = "12%";
-  if (sLabel) sLabel.innerText = "Bước 1: Tiếp nhận dữ liệu...";
+  if (bar) bar.style.background = "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)";
 
   _setStepState(1, "processing", "Đang xử lý");
-  _setStepState(2, "waiting", "Chờ");
+  _setStepState(2, hasFile ? "waiting" : "done", hasFile ? "Chờ" : "Bỏ qua (không chứng từ)");
   _setStepState(3, "waiting", "Chờ");
   _setStepState(4, "waiting", "Chờ");
   _setStepState(5, "waiting", "Chờ");
 
-  let currentPct = 10;
-  let subStepCounter = 0;
-  clearInterval(_progressInterval);
-  _progressInterval = setInterval(() => {
-    subStepCounter++;
-    if (currentPct < 96) {
-      if (hasFile) {
-        // ĐƠN CÓ ẢNH: Chạy 2 mô hình AI (VLM ~2-3s + LLM ~2s = Tổng ~5s)
-        if (currentPct < 18) {
-          currentPct += 4; // Bước 1: Upload (0.4s)
-        } else if (currentPct < 55) {
-          currentPct += 2.2; // Bước 2: VLM OCR ảnh (mất ~2.5 giây)
-        } else if (currentPct < 62) {
-          currentPct += 4.5; // Bước 3: Rule Engine (nhanh)
-        } else {
-          // Bước 4: LLM Qwen 7B tổng hợp (mất ~1.5 giây)
-          currentPct += (currentPct < 85 ? 2.0 : currentPct < 92 ? 1.0 : 0.4);
-        }
-      } else {
-        // ĐƠN KHÔNG ẢNH / KHÔNG CẦN CHỨNG TỪ: Bỏ qua VLM, chỉ chạy Rule Engine & LLM (~1.5s)
-        if (currentPct < 30) {
-          currentPct += 14;
-        } else if (currentPct < 60) {
-          currentPct += 12;
-        } else {
-          currentPct += (currentPct < 85 ? 3.0 : currentPct < 92 ? 1.5 : 0.5);
-        }
-      }
+  const UPLOAD_MS = 1000;
+  const VLM_MS = 12000;
+  const RECV_MS = 250;
+  const RULE_MS = 250;
 
-      const displayPct = Math.min(96, Math.round(currentPct));
-      if (bar) bar.style.width = `${displayPct}%`;
-      if (pLabel) pLabel.innerText = `${displayPct}%`;
-
-      if (displayPct >= 18 && displayPct < 55) {
-        _setStepState(1, "done", "Xong ✓");
-        if (hasFile) {
-          _setStepState(2, "processing", "Đang OCR & trích xuất");
-          const dots = ".".repeat((subStepCounter % 4) + 1);
-          if (sLabel) sLabel.innerText = `Bước 2: VLM đang OCR & phân tích chứng từ${dots}`;
-        } else {
-          _setStepState(2, "done", "Bỏ qua (Không cần chứng từ)");
-          if (sLabel) sLabel.innerText = "Bước 2: Bỏ qua VLM (Loại nghỉ không yêu cầu chứng từ)...";
-        }
-      } else if (displayPct >= 55 && displayPct < 65) {
-        _setStepState(2, "done", hasFile ? "Xong ✓" : "Bỏ qua (Không cần chứng từ)");
-        _setStepState(3, "processing", "Đang đối soát");
-        if (sLabel) sLabel.innerText = "Bước 3: Rule Engine đang đối soát chính sách...";
-      } else if (displayPct >= 65) {
-        _setStepState(3, "done", "Xong ✓");
-        _setStepState(4, "processing", "Đang suy luận");
-        const dots = ".".repeat((subStepCounter % 4) + 1);
-        if (sLabel) sLabel.innerText = `Bước 4: LLM Qwen 2.5 7B đang tổng hợp báo cáo${dots}`;
-      }
+  const paint = (pct, label) => {
+    const display = Math.max(0, Math.min(96, Math.round(pct)));
+    if (bar) {
+      bar.style.width = `${display}%`;
+      bar.setAttribute("aria-valuenow", String(display));
     }
-  }, 160);
+    if (pLabel) pLabel.innerText = `${display}%`;
+    if (sLabel) sLabel.innerText = label;
+  };
+
+  const tick = () => {
+    const elapsed = performance.now() - startedAt;
+    const dots = ".".repeat((Math.floor(elapsed / 400) % 4) + 1);
+
+    if (hasFile) {
+      if (elapsed < UPLOAD_MS) {
+        _setStepState(1, "processing", "Đang tải lên");
+        paint((elapsed / UPLOAD_MS) * 6, "Bước 1: Tải chứng từ lên máy chủ...");
+        return;
+      }
+      _setStepState(1, "done", "Xong ✓");
+      _setStepState(2, "processing", "Đang OCR");
+      const vlmElapsed = elapsed - UPLOAD_MS;
+      let pct;
+      let remainLabel;
+      if (vlmElapsed < VLM_MS) {
+        pct = 6 + (vlmElapsed / VLM_MS) * 80;
+        remainLabel = `~${Math.max(1, Math.ceil((VLM_MS - vlmElapsed) / 1000))}s`;
+      } else {
+        pct = 86 + 10 * (1 - Math.exp(-(vlmElapsed - VLM_MS) / 8000));
+        remainLabel = "vượt mốc 12s";
+      }
+      _setStepState(2, "processing", remainLabel);
+      paint(pct, `Bước 2: VLM qwen2.5vl:7b đang đọc chứng từ (${remainLabel})${dots}`);
+      return;
+    }
+
+    _setStepState(2, "done", "Bỏ qua (không chứng từ)");
+    if (elapsed < RECV_MS) {
+      _setStepState(1, "processing", "Đang tiếp nhận");
+      paint((elapsed / RECV_MS) * 25, "Bước 1: Tiếp nhận dữ liệu đơn...");
+      return;
+    }
+    _setStepState(1, "done", "Xong ✓");
+    if (elapsed < RECV_MS + RULE_MS) {
+      _setStepState(3, "processing", "Đang đối soát");
+      paint(25 + ((elapsed - RECV_MS) / RULE_MS) * 50, "Bước 3: Rule Engine đối soát chính sách...");
+      return;
+    }
+    _setStepState(3, "done", "Xong ✓");
+    _setStepState(4, "processing", "Đang ghi nhận");
+    _setStepState(5, "processing", "Đang lưu");
+    const extra = elapsed - RECV_MS - RULE_MS;
+    paint(75 + 21 * (1 - Math.exp(-extra / 400)), `Bước 4–5: Tổng hợp template & lưu hồ sơ${dots}`);
+  };
+
+  clearInterval(_progressInterval);
+  tick();
+  _progressInterval = setInterval(tick, 100);
 }
 
 function finishSubmitProgress(success = true, callback) {
@@ -1587,7 +1650,7 @@ function finishSubmitProgress(success = true, callback) {
   if (sLabel) sLabel.innerText = success ? "Hoàn tất thẩm định!" : "Xử lý thất bại";
 
   _setStepState(1, "done", "Xong ✓");
-  _setStepState(2, "done", "Xong ✓");
+  _setStepState(2, "done", _progressHasFile ? "Xong ✓" : "Bỏ qua (không chứng từ)");
   _setStepState(3, "done", "Xong ✓");
   _setStepState(4, "done", "Xong ✓");
   _setStepState(5, success ? "done" : "error", success ? "Hoàn tất ✓" : "Lỗi");
@@ -1892,6 +1955,7 @@ function renderSingleRequestCard(req, isStaffView=false) {
             <div style="font-size: 1.05rem; font-weight: 700; color: #0f172a; letter-spacing: -0.01em;">
               ${escapeHtml(getLeaveTypeLabel(req.leave_type))}
             </div>
+            ${renderLeavePolicyTags(req)}
             <div class="d-flex align-items-center gap-1 text-secondary mt-1" style="font-size: 0.84rem;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -2049,45 +2113,59 @@ function openRequestDetailModal(requestId) {
   const _hasLlm = !!(req.llm_summary_json);
   let _llmSection = '';
   if (_hasLlm) {
-    const _sumTxt = _llm.summary_natural_vn || '';
-    const _whyEsc = _llm.why_escalated || '';
+    const _isManagerAudience = currentMode === 'manager';
+    const _audienceSummary = _isManagerAudience
+      ? (_llm.manager_summary || {suspicions_vn: _llm.info_missing_vn || [], risk_level_vn: '—'})
+      : (_llm.staff_summary || {errors_vn: _llm.info_missing_vn || []});
+    const _sumTxt = _audienceSummary.summary_natural_vn || (_isManagerAudience ? _llm.summary_natural_vn : '');
+    const _whyEsc = _isManagerAudience ? (_llm.why_escalated || '') : '';
     const _tier = _llm.correlation_tier_vn || '';
-    const _aq = _llm.actionable_question || '';
-    const _pvn = _llm.applied_policy_clauses_vn || [];
-    const _qvn = _llm.quick_action_options_vn || [];
-    const _warns = _llm.warnings || [];
+    const _aq = _isManagerAudience ? (_llm.actionable_question || '') : '';
+    const _pvn = _isManagerAudience ? (_llm.applied_policy_clauses_vn || []) : [];
+    const _qvn = _isManagerAudience ? (_llm.quick_action_options_vn || []) : [];
+    const _warns = _isManagerAudience ? (_llm.warnings || []) : [];
+    const _riskLevel = _audienceSummary.risk_level_vn || _llm.manager_risk_level_vn || '';
     const _engine = _llm.engine || '';
-    const _isReal = _engine.includes('qwen_2.5_7b');
+    const _isReal = /qwen2\.5:3b-instruct|Ollama/i.test(_engine);
     const _isRule = _engine.includes('decision_tree');
     const _tierC = _tier === 'RẤT KHỚP' ? '#059669' : _tier === 'KHỚP' ? '#2563eb' : _tier === 'CHƯA KHỚP' ? '#d97706' : _tier === 'KHÔNG KHỚP' ? '#dc2626' : '#059669';
 
     // Đủ & thiếu thông tin do LLM / Rule Engine tổng hợp
-    let _infoSuf = _llm.info_sufficient_vn || [];
-    let _infoMis = _llm.info_missing_vn || [];
+    let _infoSuf = _isManagerAudience ? [] : (_audienceSummary.errors_vn || _llm.info_missing_vn || []);
+    let _infoMis = _isManagerAudience
+      ? (_audienceSummary.suspicions_vn || _llm.manager_suspicions_vn || [])
+      : (_llm.info_missing_vn || []);
 
     // Fallback thông minh nếu cả 2 mảng rỗng
-    if (_infoSuf.length === 0 && _infoMis.length === 0) {
+    if (!_isManagerAudience && _infoSuf.length === 0 && _infoMis.length === 0) {
       if (req.employee_name) _infoSuf.push('Nhân viên nộp đơn: ' + req.employee_name);
       if (req.from_date && req.to_date) _infoSuf.push('Thời gian xin nghỉ: ' + req.from_date + ' → ' + req.to_date);
-      if (_hasAttachment && _vlmDoc.diagnosis) _infoSuf.push('Chẩn đoán trên giấy: ' + _vlmDoc.diagnosis);
+      if (hasAttachment && _vlmDoc && _vlmDoc.diagnosis) _infoSuf.push('Chẩn đoán trên giấy: ' + _vlmDoc.diagnosis);
 
-      if (_hasAttachment) {
-        if (_vlmFlags.has_red_stamp === false) _infoMis.push('Thiếu dấu mộc đỏ bệnh viện/phòng khám');
-        if (_vlmFlags.has_doctor_signature === false) _infoMis.push('Thiếu chữ ký bác sĩ / người cấp giấy');
-        if (!_vlmDoc.patient_name) _infoMis.push('Chưa đọc được tên trên chứng từ');
+      if (hasAttachment) {
+        if (_vlmFlags && _vlmFlags.has_red_stamp === false) _infoMis.push('Thiếu dấu mộc đỏ bệnh viện/phòng khám');
+        if (_vlmFlags && _vlmFlags.has_doctor_signature === false) _infoMis.push('Thiếu chữ ký bác sĩ / người cấp giấy');
+        if (_vlmDoc && !_vlmDoc.patient_name) _infoMis.push('Chưa đọc được tên trên chứng từ');
       } else {
         _infoSuf.push('Không yêu cầu chứng từ đối với loại nghỉ này');
       }
     }
 
+    const _timings = _llm.timings || {};
+    const _timingBadge = (_timings.rule_engine_ms !== undefined && _timings.template_ms !== undefined)
+      ? '<span style="font-size:0.72rem;color:#6b21a8;background:#f3e8ff;padding:2px 8px;border-radius:4px;font-weight:600;" title="Rule Engine: ' + _timings.rule_engine_ms + 'ms, Template: ' + _timings.template_ms + 'ms">⚡ ' + (_timings.total_eval_ms || Math.round((_timings.rule_engine_ms + _timings.template_ms)*10)/10) + 'ms</span>'
+      : '';
+
     _llmSection = '<div class="col-12" style="margin-top:4px;">'
       + '<div style="border:1px solid #c084fc;border-radius:12px;overflow:hidden;background:#ffffff;box-shadow:0 2px 8px rgba(147,51,234,0.06);">'
       + '<div style="background:linear-gradient(135deg,#faf5ff,#f3e8ff);padding:12px 16px;border-bottom:1px solid #e9d5ff;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
-      + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.1rem;">🧠</span><span style="font-weight:700;color:#4c1d95;font-size:0.95rem;">Tổng hợp &amp; Đề xuất xử lý (HR Copilot)</span>'
-      + (_isReal ? '<span style="background:#dcfce7;color:#166534;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">✓ Qwen 7B Copilot</span>' : '<span style="background:#f3e8ff;color:#6b21a8;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">✓ Decision Tree Engine</span>')
+      + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:1.1rem;">🧠</span><span style="font-weight:700;color:#4c1d95;font-size:0.95rem;">' + (_isManagerAudience ? 'Nhận định nghi vấn cho Manager' : 'Lỗi cần Staff bổ sung') + '</span>'
+      + (_isReal ? '<span style="background:#dcfce7;color:#166534;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">✓ qwen2.5:3b-instruct</span>' : '<span style="background:#f3e8ff;color:#6b21a8;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">✓ Decision Tree Engine</span>')
+      + _timingBadge
       + '</div>'
       + (_tier && _tier !== '—' ? '<span style="background:' + _tierC + '20;color:' + _tierC + ';font-size:0.78rem;padding:3px 10px;border-radius:5px;font-weight:700;">' + escapeHtml(_tier) + '</span>' : '')
       + '</div>'
+      + (_isManagerAudience && _riskLevel ? '<div style="padding:8px 16px;border-bottom:1px solid #f3e8ff;font-size:0.8rem;color:#92400e;font-weight:700;">Mức nghi vấn: ' + escapeHtml(_riskLevel) + '</div>' : '')
       
       // 1. Tóm tắt súc tích tách từng ý rõ ràng
       + (_sumTxt ? (function() {
@@ -2120,9 +2198,10 @@ function openRequestDetailModal(requestId) {
         })() : '')
       
       // 2. Phân tách rõ ràng: Đủ vs Thiếu
-      + '<div style="padding:12px 16px;border-bottom:1px solid #f3e8ff;display:grid;grid-template-columns:1fr 1fr;gap:16px;background:#faf5ff50;">'
-      + '<div><div style="font-size:0.74rem;color:#059669;font-weight:700;text-transform:uppercase;margin-bottom:6px;">\u2713 Th\u00f4ng tin \u0111\u00e3 \u0111\u1ea7y \u0111\u1ee7 (' + _infoSuf.length + ')</div>' + (_infoSuf.length > 0 ? _infoSuf.map(function(s){ return '<div style="font-size:0.81rem;color:#166534;padding:2px 0;">&bull; ' + escapeHtml(String(s)) + '</div>'; }).join('') : '<div style="font-size:0.8rem;color:#94a3b8;">\u2014 Ch\u01b0a c\u00f3 th\u00f4ng tin h\u1ee3p l\u1ec7</div>') + '</div>'
-      + '<div><div style="font-size:0.74rem;color:#dc2626;font-weight:700;text-transform:uppercase;margin-bottom:6px;">\u2717 Th\u00f4ng tin c\u00f2n thi\u1ebfu / C\u1ea7n l\u00e0m r\u00f5 (' + _infoMis.length + ')</div>' + (_infoMis.length > 0 ? _infoMis.map(function(m){ return '<div style="font-size:0.81rem;color:#991b1b;padding:2px 0;">&bull; ' + escapeHtml(String(m)) + '</div>'; }).join('') : '<div style="font-size:0.8rem;color:#059669;">\u2014 H\u1ed3 s\u01a1 \u0111\u1ea7y \u0111\u1ee7 kh\u00f4ng thi\u1ebfu g\u00ec</div>') + '</div>'
+      + '<div style="padding:12px 16px;border-bottom:1px solid #f3e8ff;background:#faf5ff50;">'
+      + (_isManagerAudience
+        ? '<div><div style="font-size:0.74rem;color:#dc2626;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Nghi vấn / rủi ro cần xác minh (' + _infoMis.length + ')</div>' + (_infoMis.length > 0 ? _infoMis.map(function(m){ return '<div style="font-size:0.81rem;color:#991b1b;padding:2px 0;">&bull; ' + escapeHtml(String(m)) + '</div>'; }).join('') : '<div style="font-size:0.8rem;color:#059669;">\u2014 Không phát hiện nghi vấn</div>') + '</div>'
+        : '<div><div style="font-size:0.74rem;color:#dc2626;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Lỗi cần sửa / bổ sung (' + _infoSuf.length + ')</div>' + (_infoSuf.length > 0 ? _infoSuf.map(function(m){ return '<div style="font-size:0.81rem;color:#991b1b;padding:2px 0;">&bull; ' + escapeHtml(String(m)) + '</div>'; }).join('') : '<div style="font-size:0.8rem;color:#059669;">\u2014 Không có lỗi cần bổ sung</div>') + '</div>')
       + '</div>'
 
       // 3. Câu hỏi & Đề xuất giải quyết cho Manager
@@ -2145,6 +2224,7 @@ function openRequestDetailModal(requestId) {
         <label class="form-label text-secondary small fw-semibold mb-1">Lo\u1ea1i ngh\u1ec9 ph\u00e9p</label>
         <div class="modal-readonly-field">
           <span class="text-dark fw-semibold">${getLeaveTypeLabel(req.leave_type)}</span>
+          ${renderLeavePolicyTags(req, true)}
         </div>
       </div>
 
@@ -2208,7 +2288,7 @@ function openRequestDetailModal(requestId) {
           </div>
           ${hasAttachment ? `
             <button type="button" class="btn btn-sm btn-outline-primary px-3" onclick="openAttachmentModal('${req.id}', '${req.attachment_type}', '${req.employee_name}')" style="font-size: 0.8rem; font-weight: 500;">
-              Xem file ch\u1ee9ng t\u1eeb
+              Xem ảnh gốc
             </button>
           ` : ''}
         </div>
@@ -2362,6 +2442,7 @@ function renderManagerQueue() {
             ${escapeHtml(r.employee_name || 'Nhân viên')}
           </span>
         </div>
+        ${renderLeavePolicyTags(r, true)}
 
         <!-- Khối Thông Tin: 3 thẻ pill riêng biệt theo hình mẫu -->
         <div class="esc-pills-row">
@@ -2849,8 +2930,17 @@ async function openAttachmentModal(id) {
   if(!res.ok){content.textContent=JSON.stringify(data.detail);return;}
   const actorId=currentMode==='staff'?currentEmployeeId:currentManagerRoleId;
   const isHR=currentMode==='manager' && employeesCache.find(e=>e.employee_id===actorId)?.actor_roles?.some(r=>r.role==='HR');
-  content.innerHTML=`${req.proof_id?`<a class="btn btn-primary mb-3" href="/api/leave/proofs/${req.proof_id}?actor_id=${encodeURIComponent(actorId)}" target="_blank" rel="noopener">Tải chứng từ gốc</a>`:'<p>Không có file chứng từ.</p>'}
-    <pre>${escapeHtml(JSON.stringify(data.proof,null,2))}</pre>${renderVlmAndLlmAnalysisSection(req)}
+  const proofUrl=req.proof_id?`${API_BASE}/api/leave/proofs/${req.proof_id}?actor_id=${encodeURIComponent(actorId)}`:'';
+  const mime=(data.proof_source&&data.proof_source.mime_type)||'';
+  const fileName=escapeHtml((data.proof_source&&data.proof_source.original_file_name)||'Chứng từ gốc');
+  const isPdf=mime==='application/pdf'||/\.pdf$/i.test(fileName);
+  const viewer=req.proof_id?(isPdf
+    ?`<div class="proof-original-viewer"><iframe class="proof-original-frame" src="${proofUrl}" title="${fileName}"></iframe></div>`
+    :`<div class="proof-original-viewer"><img class="proof-original-image" src="${proofUrl}" alt="${fileName}"></div>`)
+    :'<p class="text-secondary mb-0">Không có file chứng từ.</p>';
+  content.innerHTML=`${viewer}
+    ${req.proof_id?`<div class="d-flex justify-content-between align-items-center mt-3 mb-2"><span class="small text-secondary">${fileName}</span><a class="btn btn-sm btn-outline-secondary" href="${proofUrl}" target="_blank" rel="noopener">Mở tab mới</a></div>`:''}
+    ${renderVlmAndLlmAnalysisSection(req)}
     ${isHR && req.proof_id && req.status!=='COMPLETED'?`<form id="proof-verification-form">
       <h4>Xác minh chứng từ</h4>
       <label>Loại chứng từ<select class="form-select" name="proof_type">${document.getElementById('staff-proof-type').innerHTML}</select></label>
@@ -3190,6 +3280,38 @@ function getLeaveTypeLabel(type) {
     SPECIAL_FUNERAL_EXTENDED: 'Việc riêng không lương luật định'
   };
   return map[normalized] || map[type] || type;
+}
+
+function getLeavePolicyTags(req) {
+  if (req && req.leave_policy_tags) return req.leave_policy_tags;
+  const type = String(req?.canonical_leave_type || req?.leave_type || '').toUpperCase();
+  const fallback = {
+    ANNUAL: ['Phép năm (Annual Leave)', 'Hưởng nguyên lương', 'Doanh nghiệp', 'Có'],
+    SPECIAL_PAID: ['Nghỉ chế độ (Marriage/Bereavement)', 'Hưởng nguyên lương', 'Doanh nghiệp', 'Không'],
+    SICK_MEDICAL: ['Nghỉ BHXH (Sick Leave)', 'Hưởng trợ cấp BHXH', 'Quỹ BHXH', 'Không'],
+    MEDICAL_EMERGENCY: ['Nghỉ BHXH (Sick Leave)', 'Hưởng trợ cấp BHXH', 'Quỹ BHXH', 'Không'],
+    MATERNITY: ['Nghỉ BHXH (Maternity Leave)', 'Hưởng trợ cấp BHXH', 'Quỹ BHXH', 'Không'],
+    STATUTORY_UNPAID: ['Nghỉ không lương (Statutory Unpaid Leave)', 'Không hưởng lương', '—', 'Không'],
+    UNPAID_OTHER: ['Nghỉ không lương (Unpaid Leave)', 'Không hưởng lương', '—', 'Không']
+  }[type];
+  return fallback
+    ? {tag: fallback[0], pay_type: fallback[1], payer: fallback[2], annual_balance: fallback[3], status: 'MAPPED'}
+    : {tag: 'Chưa phân loại theo policy', pay_type: 'Chưa xác định', payer: 'Chưa xác định', annual_balance: 'Chưa xác định', status: 'UNMAPPED'};
+}
+
+function renderLeavePolicyTags(req, detail=false) {
+  const tags = getLeavePolicyTags(req);
+  const unknown = tags.status === 'UNMAPPED';
+  const base = 'display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:0.7rem;font-weight:600;line-height:1.25;';
+  const tagStyle = `${base}background:${unknown ? '#fef3c7' : '#eff6ff'};color:${unknown ? '#92400e' : '#1d4ed8'};border:1px solid ${unknown ? '#fde68a' : '#bfdbfe'};`;
+  const infoStyle = `${base}background:#f8fafc;color:#475569;border:1px solid #e2e8f0;`;
+  const wrapper = detail ? 'display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;' : 'display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;';
+  return `<div style="${wrapper}" title="Phân loại theo policy">
+    <span style="${tagStyle}">${escapeHtml(tags.tag)}</span>
+    <span style="${infoStyle}">${escapeHtml(tags.pay_type)}</span>
+    <span style="${infoStyle}">Chi: ${escapeHtml(tags.payer)}</span>
+    <span style="${infoStyle}">Trừ quỹ phép: ${escapeHtml(tags.annual_balance)}</span>
+  </div>`;
 }
 
 function getAttachmentLabel(type) {

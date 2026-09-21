@@ -3,7 +3,7 @@ marriage/death extracts, and identity papers.
 
 Design:
   * NEVER fabricate facts.  The deterministic engine must not receive "invented" claims.
-  * When a real model (Ollama qwen2.5-vl:3b) is reachable we run structured JSON extraction.
+  * When a real model (Ollama qwen2.5vl:7b) is reachable we run structured JSON extraction.
   * Otherwise we fall back to a type-safe persona-driven mock profile, keyed off of the
     legacy ``attachment_type`` string.  The mock still exercises every downstream column
     and the correlation engine so the UI (Manager panels, Attachment Modal, checklists)
@@ -13,21 +13,69 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Any, Dict, Optional
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
+_kiet = Path(__file__).resolve().parents[1] / "LLM-KIET"
+if str(_kiet) not in sys.path:
+    sys.path.insert(0, str(_kiet))
+
 from domain import ProofExtraction, ProofType
-
-
-VLM_OLLAMA_BASE = os.getenv("VLM_OLLAMA_BASE", "http://localhost:11434")
-VLM_TARGET_MODEL = os.getenv("VLM_TARGET_MODEL", "qwen2.5-vl:3b")
-VLM_TIMEOUT_SEC = float(os.getenv("VLM_TIMEOUT_SEC", "180.0"))
+from ai_stack import (
+    OLLAMA_BASE as VLM_OLLAMA_BASE,
+    VLM_TARGET_MODEL,
+    VLM_TIMEOUT_SEC,
+    OLLAMA_KEEP_ALIVE,
+    has_model,
+    ollama_generate,
+    ollama_tags,
+)
 VLM_FORCE_MOCK = os.getenv("VLM_FORCE_MOCK", "0").strip().casefold() in ("1", "true", "yes", "on")
 VLM_MOCK_FALLBACK_ALLOWED = os.getenv("VLM_ALLOW_MOCK_FALLBACK", "0").strip().casefold() in ("1", "true", "yes", "on")
 
+VLM_LEAVE_TYPE_PROFILES = {
+    "SICK_MEDICAL": {
+        "persona": "Bác sĩ kiểm định hồ sơ y tế",
+        "json_variant": "medical_certificate",
+        "decision_tree": "patient_name -> medical_dates -> issuer -> signature -> integrity",
+        "required": "patient_name, diagnosis, issue_date, recommended_from_date, recommended_to_date, issuer",
+    },
+    "MEDICAL_EMERGENCY": {
+        "persona": "Điều phối viên hồ sơ cấp cứu",
+        "json_variant": "emergency_record",
+        "decision_tree": "patient_name -> emergency_or_hospital_evidence -> issuer -> integrity",
+        "required": "patient_name, diagnosis_or_emergency_evidence, issuer, issue_date",
+    },
+    "SPECIAL_PAID": {
+        "persona": "Chuyên viên xác minh sự kiện gia đình",
+        "json_variant": "family_event",
+        "decision_tree": "event_type -> related_person -> event_date -> issuer -> integrity",
+        "required": "subject_name, event_reason, recommended_from_date, issuer, issue_date",
+    },
+    "STATUTORY_UNPAID": {
+        "persona": "Chuyên viên xác minh quan hệ thân nhân theo luật",
+        "json_variant": "statutory_relationship",
+        "decision_tree": "event_type -> relationship -> evidence -> confidence -> manager_if_unclear",
+        "required": "subject_name, relationship, event_reason, issue_date, issuer",
+    },
+    "MATERNITY": {
+        "persona": "Chuyên viên hồ sơ thai sản BHXH",
+        "json_variant": "maternity_record",
+        "decision_tree": "maternity_phase -> mother_or_child -> dates -> issuer -> integrity",
+        "required": "subject_name, maternity_phase, recommended_from_date, recommended_to_date, issuer",
+    },
+    "WORK_ACCIDENT": {
+        "persona": "Chuyên viên hồ sơ tai nạn lao động",
+        "json_variant": "work_accident_record",
+        "decision_tree": "injury_event -> workplace_or_commute -> dates -> issuer -> integrity",
+        "required": "subject_name, injury_event, issue_date, issuer",
+    },
+}
 
 VLM_SYSTEM_PROMPT = """Bạn là chuyên gia kiểm định chứng từ nghỉ phép Nhân sự Việt Nam (VLM-Officer).
 Nhiệm vụ: đọc ảnh CHỨNG TỪ đính kèm của đơn nghỉ phép và trả về JSON THUẦN TÚY theo schema đã định nghĩa.
@@ -67,6 +115,14 @@ QUY TẮC BẮT BUỘC:
  10. ai_edited = True nếu nghi vấn ảnh được chỉnh sửa bởi photoshop / AI (chữ không đều, chồng lấn pixel, text clone, dấu đỏ bị tái tạo...).
  11. is_tampered = True nếu nghi vấn giấy tờ bị SỬA NỘI DUNG SAU KHI KÝ (xóa chữ, sửa ngày tháng, đổi tên, dán chữ lên ảnh...).
 """
+
+
+def _leave_type_prompt(leave_type: str) -> str:
+    profile = VLM_LEAVE_TYPE_PROFILES.get(leave_type, {"persona": "Chuyên viên đối soát chứng từ hành chính", "json_variant": "general_leave_proof", "decision_tree": "proof_type -> subject -> dates -> issuer -> integrity", "required": "subject_name, event_reason, issue_date, issuer"})
+    return (f"LOẠI NGHỈ: {leave_type}. Đóng vai {profile['persona']}. "
+            f"Biến thể JSON: {profile['json_variant']}. Trường bắt buộc ưu tiên: {profile['required']}. "
+            f"Thứ tự kiểm tra: {profile['decision_tree']}. "
+            "Nếu không đọc rõ quan hệ hoặc trường bắt buộc, ghi null/uncertain; không tự suy diễn.")
 
 
 class _PersonaRegistry:
@@ -499,7 +555,7 @@ def inspect_document_with_vlm(
     doc_flags: Optional[Dict[str, Any]] = None,
     allow_mock_fallback: Optional[bool] = None,
 ) -> VLMInspectionOutput:
-    """Entry point.  Chạy VLM thật (Ollama qwen2.5-vl:3b) trên ảnh thực tế.
+    """Entry point.  Chạy VLM thật (Ollama qwen2.5vl:7b) trên ảnh thực tế.
 
     Mô hình chạy (ưu tiên từ cao xuống thấp):
       1. mock_data được truyền trực tiếp  -> dùng mock này (chế độ test tường minh)
@@ -546,7 +602,7 @@ def inspect_document_with_vlm(
             profile_raw = real_result
             mode_used = "OLLAMA_REAL_QWEN25_VL_3B"
         else:
-            vlm_error = error_detail or "VLM (qwen2.5-vl:3b) không thể xử lý chứng từ này."
+            vlm_error = error_detail or f"VLM ({VLM_TARGET_MODEL}) không thể xử lý chứng từ này."
             if fallback_allowed:
                 key = _profile_key(
                     str(attachment_path_or_type or "none"),
@@ -671,23 +727,16 @@ def inspect_document_with_vlm(
     return out
 
 
-# ---------------- Real Ollama integration (optional when model pulled) ----------------
+# ---------------- Real Ollama integration ----------------
 
 def _ollama_reachable() -> bool:
-    try:
-        with urlrequest.urlopen(f"{VLM_OLLAMA_BASE}/api/tags", timeout=2.0) as r:
-            return r.status == 200
-    except Exception:
-        return False
+    ok, _, _ = ollama_tags(timeout=2.0)
+    return ok
 
 
 def _ollama_loaded_models() -> list[str]:
-    try:
-        with urlrequest.urlopen(f"{VLM_OLLAMA_BASE}/api/tags", timeout=2.0) as r:
-            data = json.loads(r.read().decode() or "{}")
-        return [m.get("name", "") for m in data.get("models", [])]
-    except Exception:
-        return []
+    _, names, _ = ollama_tags(timeout=2.0)
+    return names
 
 
 def _resolve_persona_by_proof_type(proof_type_str: Optional[str]) -> str:
@@ -705,7 +754,7 @@ def _resolve_persona_by_proof_type(proof_type_str: Optional[str]) -> str:
     return _PersonaRegistry.PERSONA_HR_ADJUDICATOR
 
 
-def _try_ollama_extract(attachment_path_or_type: Optional[str]) -> tuple[Optional[Dict[str, Any]], Optional[str]]:
+def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str = '') -> tuple[Optional[Dict[str, Any]], Optional[str]]:
     """Thực thi VLM thật qua Ollama.
 
     Returns:
@@ -720,22 +769,12 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str]) -> tuple[Optiona
         )
     # 2. Kiểm tra model VLM có sẵn trong Ollama
     loaded = _ollama_loaded_models()
-    matched_model = None
-    for m in loaded:
-        if VLM_TARGET_MODEL in m:
-            matched_model = m
-            break
-    if not matched_model:
-        for m in loaded:
-            m_low = m.lower()
-            if any(k in m_low for k in ("vl", "vision", "llava", "minicpm", "bakllava", "moondream")):
-                matched_model = m
-                break
-    if not matched_model:
+    if not has_model(loaded, VLM_TARGET_MODEL):
         return None, (
-            f"Model VLM '{VLM_TARGET_MODEL}' chưa có trong Ollama (hiện có: {loaded or '<none>'}). "
-            f"Hãy chọn đúng model hoặc pull: `ollama pull {VLM_TARGET_MODEL}`"
+            f"Model VLM '{VLM_TARGET_MODEL}' chưa được pull. "
+            f"Chạy: `ollama pull {VLM_TARGET_MODEL}`"
         )
+    matched_model = VLM_TARGET_MODEL
     # 3. Kiểm tra đường dẫn file ảnh thật có tồn tại không
     path = attachment_path_or_type or ""
     if not path or not os.path.isfile(path):
@@ -796,12 +835,13 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str]) -> tuple[Optiona
         "stream": False,
         "format": "json",
         "images": [img],
+        "keep_alive": OLLAMA_KEEP_ALIVE,
         "options": {
             "num_predict": 1024,
             "temperature": 0.0,
         },
         "prompt": (
-            VLM_SYSTEM_PROMPT + "\n\n" +
+            VLM_SYSTEM_PROMPT + "\n\n" + _leave_type_prompt(leave_type) + "\n\n" +
             _PROOF_TYPE_TAXONOMY +
             "\nSchema keys (trả JSON THUẦN TÚY, KHÔNG text giải thích, KHÔNG markdown, CHỈ 1 object duy nhất):\n"
             "  1. proof_type                       → enum 1 trong 13 giá trị trên, BẮT BUỘC CHỌN, KHÔNG được tùy ý thêm.\n"
@@ -824,17 +864,10 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str]) -> tuple[Optiona
             "  18. fields_detected                 → list[string] các trường dữ liệu ĐƯỢC ĐỌC THÀNH CÔNG trên giấy (vd: ['patient_name','diagnosis','issue_date','red_stamp','signature']...).\n"
         ),
     }
-    req = urlrequest.Request(
-        f"{VLM_OLLAMA_BASE}/api/generate",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
     try:
-        with urlrequest.urlopen(req, timeout=VLM_TIMEOUT_SEC) as r:
-            body = json.loads(r.read().decode("utf-8") or "{}")
+        body = ollama_generate(payload, timeout=VLM_TIMEOUT_SEC)
     except TimeoutError as e:
-        return None, f"VLM timeout sau {VLM_TIMEOUT_SEC}s khi gọi Ollama: {e}. Tăng VLM_TIMEOUT_SEC hoặc kiểm tra GPU."
+        return None, f"VLM timeout sau {VLM_TIMEOUT_SEC}s khi gọi Ollama: {e}. Kiểm tra GPU / size_vram."
     except urlerror.URLError as e:
         return None, f"Lỗi network gọi Ollama /api/generate: {type(e).__name__}: {e}"
     except json.JSONDecodeError as e:

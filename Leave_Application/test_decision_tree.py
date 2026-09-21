@@ -32,8 +32,14 @@ def test_compensatory_rest_and_configurable_saturday():
     assert CalendarService(working_week=[0,1,2,3,4,5]).classify(date(2026,10,10))==DayType.WORKING_DAY
 
 def test_unknown_year():
-    r=evaluate(from_date='2027-01-04',to_date='2027-01-05')
+    r=evaluate(from_date='2028-01-04',to_date='2028-01-05')
     assert (r.decision,r.error_code,r.target_role,r.requested_working_days)==('ESCALATE','LEGAL_REVIEW_REQUIRED','HR',None)
+
+def test_span_into_configured_2027_counts_workdays():
+    proof={**PROOF,'issue_date':'2026-09-29','recommended_from_date':'2026-09-30','recommended_to_date':'2027-02-13'}
+    r=evaluate(from_date='2026-09-30',to_date='2027-02-13',leave_type='SICK_MEDICAL',proof=proof)
+    assert r.error_code!='LEGAL_REVIEW_REQUIRED'
+    assert (r.requested_working_days or 0) > 80
 
 def test_notice_excludes_holidays_and_weekends():
     r=evaluate(from_date='2026-05-04',to_date='2026-05-04',submitted_at='2026-04-30T08:00:00+07:00')
@@ -114,3 +120,24 @@ def test_anti_abuse_pattern_flag():
     assert r.target_role == 'DIRECT_MANAGER'
     assert r.error_code == 'FLAG_ABUSE_PATTERN'
     assert r.uncertainty_category == 'OUT_OF_POLICY'
+
+def test_unclear_statutory_relationship_goes_to_manager():
+    r = evaluate(leave_type='STATUTORY_UNPAID', reason_category=None, to_date='2026-10-05')
+    assert (r.decision, r.target_role, r.error_code) == ('ESCALATE', 'DIRECT_MANAGER', 'RELATIONSHIP_UNCLEAR')
+
+@pytest.mark.parametrize(('leave_type', 'persona', 'variant'), [
+    ('SICK_MEDICAL', 'Bác sĩ kiểm định hồ sơ y tế', 'medical_certificate'),
+    ('STATUTORY_UNPAID', 'Chuyên viên xác minh quan hệ thân nhân theo luật', 'statutory_relationship'),
+])
+def test_vlm_prompt_uses_leave_specific_profile(leave_type, persona, variant):
+    from vlm_inspector import _leave_type_prompt
+    prompt = _leave_type_prompt(leave_type)
+    assert persona in prompt
+    assert f'Biến thể JSON: {variant}' in prompt
+
+@pytest.mark.parametrize('patient_name', ['Lê Văn Nam', 'Lê Nam', 'Nam', 'Le Van Nam'])
+def test_small_name_variations_are_accepted(patient_name):
+    proof = {**PROOF, 'patient_name': patient_name, 'recommended_to_date': '2026-10-05'}
+    r = evaluate(leave_type='SICK_MEDICAL', employee_name='Ông Lê văn Năm',
+                 from_date='2026-10-05', to_date='2026-10-05', proof=proof)
+    assert r.error_code != 'NAME_MISMATCH'

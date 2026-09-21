@@ -47,10 +47,19 @@ YÊU CẦU TRÌNH BÀY (TUYỆT ĐỐI KHÔNG VIẾT 1 ĐOẠN VĂN DÍNH LIỀN
   "quick_action_options_vn": ["✅ Duyệt", "❓ Yêu cầu giải trình", "❌ Từ chối"],
   "applied_policy_clauses_vn": ["Danh sách điều khoản chính sách áp dụng"],
   "correlation_tier_vn": "RẤT KHỚP / KHỚP / CHƯA KHỚP / KHÔNG KHỚP / HỢP LỆ",
-  "integrity_assessment_vn": "Đánh giá ngắn về tính xác thực chứng từ hoặc ghi Không yêu cầu chứng từ"
+   "integrity_assessment_vn": "Đánh giá ngắn về tính xác thực chứng từ hoặc ghi Không yêu cầu chứng từ",
+   "staff_errors_vn": ["Chỉ lỗi nhân viên cần sửa/bổ sung; không ghi nghi vấn của Manager"],
+   "staff_next_steps_vn": ["Việc nhân viên cần làm tiếp theo"],
+   "manager_suspicions_vn": ["Chỉ nghi vấn/rủi ro cần Manager xác minh; hồ sơ bình thường để []"],
+   "manager_risk_level_vn": "THẤP / TRUNG BÌNH / CAO / —",
+   "manager_recommendation_vn": "Khuyến nghị ngắn cho Manager"
 }
 
 QUY TẮC:
-- Viết TIẾNG VIỆT, cực kỳ ngắn gọn, đi thẳng vào dữ liệu thật.
+- Viết TIẾNG VIỆT, ngắn gọn, chỉ nêu lỗi hoặc sai lệch thực tế cần xử lý.
+- info_missing_vn, staff_errors_vn và manager_suspicions_vn chỉ chứa lỗi tương ứng; không ghi hướng xử lý, chuyển HR, hay mô tả chung.
+- Nếu không có lỗi hoặc nghi vấn, trả [] cho các mảng lỗi và không hiển thị phần lỗi trong summary.
+- Tôn trọng sai khác nhỏ khi đối chiếu tên (bỏ dấu, danh xưng, tên rút gọn, một lỗi chính tả nhẹ); chỉ báo lỗi khi khác biệt không thể nhận diện hợp lý.
+- Tóm tắt tối đa 3 dòng ngắn; không lặp lại cùng một lỗi ở nhiều mục.
 - Chỉ trả về DUY NHẤT 1 JSON object hợp lệ, không markdown giải thích ngoài.'''
 

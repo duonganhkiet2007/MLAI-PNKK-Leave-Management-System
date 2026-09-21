@@ -2,7 +2,8 @@
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from pydantic import Field
-from domain import RequestFacts, VerifiedProof, LeaveType, should_deduct_annual_balance
+from domain import (RequestFacts, VerifiedProof, LeaveType,
+                    names_approximately_match, should_deduct_annual_balance)
 from calendar_service import CalendarService, CalendarUnavailable, calculate_workdays
 from taxonomy import (DecisionType as D, UncertaintyCategory as C, TargetApproverRole as R,
                       ErrorCode as E, EscalationDetail, ApprovalResult)
@@ -109,7 +110,12 @@ class LeaveRuleEngine:
         if q.leave_type in {'SPECIAL_PAID','STATUTORY_UNPAID'}:
             entitlements = PAID_ENTITLEMENTS if q.leave_type == 'SPECIAL_PAID' else UNPAID_ENTITLEMENTS
             entitlement = entitlements.get(q.reason_category)
-            if entitlement is None: return correction(E.REASON_REQUIRED,'Vui lòng chọn sự kiện/quan hệ thân nhân thuộc chế độ.','ENT-01')
+            if entitlement is None:
+                if q.leave_type == 'STATUTORY_UNPAID':
+                    return finish(D.ESCALATE, E.RELATIONSHIP_UNCLEAR,
+                                  'Quan hệ thân nhân chưa đủ rõ để xác định chế độ luật định; chuyển Quản lý xác minh.',
+                                  C.UNCERTAIN_FACTS, R.DIRECT_MANAGER, 'ENT-01')
+                return correction(E.REASON_REQUIRED,'Vui lòng chọn sự kiện/quan hệ thân nhân thuộc chế độ.','ENT-01')
             if n > entitlement: return correction(E.ENTITLEMENT_EXCEEDED,f'Chế độ này ghi nhận tối đa {entitlement} ngày làm việc. Hãy điều chỉnh hoặc gửi đơn riêng cho phần dư.','ENT-01')
         trace('ENTITLEMENT')
         if q.leave_type == 'UNPAID_OTHER' and not q.reason.strip():
@@ -133,7 +139,7 @@ class LeaveRuleEngine:
             if q.leave_type in MEDICAL:
                 if not p.patient_name or not p.recommended_from_date or not p.recommended_to_date or not (p.signature_present or p.digital_signature_present):
                     return correction(E.DOC_FIELD_MISSING,'Cần tên bệnh nhân, khoảng nghỉ được chỉ định và chữ ký/chữ ký số.','MED-01')
-                if ' '.join(p.patient_name.casefold().split()) != ' '.join(q.employee_name.casefold().split()):
+                if not names_approximately_match(p.patient_name, q.employee_name):
                     return correction(E.NAME_MISMATCH,'Tên bệnh nhân không khớp người nghỉ; vui lòng làm rõ.','MED-01')
                 if p.recommended_from_date > p.recommended_to_date or any(not p.recommended_from_date <= d <= p.recommended_to_date for d in dates):
                     return correction(E.MEDICAL_DAYS_MISMATCH,'Ngày nghỉ yêu cầu nằm ngoài khoảng bác sĩ chỉ định.','MED-01')

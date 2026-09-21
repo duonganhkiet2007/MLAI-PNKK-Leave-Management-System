@@ -27,7 +27,7 @@ class AgentPipelineResult(BaseModel):
     history_log: list[str] = Field(default_factory=list)
 
 class ManagerSummaryLLMResponse(BaseModel):
-    """Schema cho LLM (Qwen 2.5 7B) tổng hợp đơn nghỉ và chứng từ cho Manager."""
+    """Schema cho LLM (qwen2.5:3b-instruct) tổng hợp đơn nghỉ và chứng từ cho Manager."""
     summary_natural_vn: str = Field(default='', description="Đoạn văn ngắn gọn 3-5 câu tổng hợp các thông tin cốt lõi nhất.")
     info_sufficient_vn: list[str] = Field(default_factory=list, description="Danh sách các thông tin ĐÃ ĐẦY ĐỦ / HỢP LỆ.")
     info_missing_vn: list[str] = Field(default_factory=list, description="Danh sách các thông tin CÒN THIẾU / BẤT THƯỜNG / CẦN LÀM RÕ.")
@@ -41,3 +41,8 @@ class ManagerSummaryLLMResponse(BaseModel):
     correlation_tier_vn: str = Field(default='—', description="Độ khớp: RẤT KHỚP / KHỚP / CHƯA KHỚP / KHÔNG KHỚP.")
     integrity_assessment_vn: str = Field(default='—', description="Đánh giá tính toàn vẹn chứng từ.")
     leave_type_vn: str = Field(default='', description="Tên loại nghỉ.")
+    staff_errors_vn: list[str] = Field(default_factory=list, description="Chỉ các lỗi nhân viên cần sửa hoặc bổ sung; không viết nhận định nghi vấn.")
+    staff_next_steps_vn: list[str] = Field(default_factory=list, description="Việc nhân viên cần làm tiếp theo.")
+    manager_suspicions_vn: list[str] = Field(default_factory=list, description="Chỉ các điểm nghi vấn/rủi ro Manager cần xác minh.")
+    manager_risk_level_vn: str = Field(default='—', description="Mức rủi ro hoặc nghi vấn dành cho Manager.")
+    manager_recommendation_vn: str = Field(default='', description="Khuyến nghị ngắn cho Manager.")

@@ -3,6 +3,8 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+import re
+import unicodedata
 
 class LeaveType(str, Enum):
     ANNUAL = 'ANNUAL'
@@ -13,6 +15,76 @@ class LeaveType(str, Enum):
     MEDICAL_EMERGENCY = 'MEDICAL_EMERGENCY'
     WORK_ACCIDENT = 'WORK_ACCIDENT'
     MATERNITY = 'MATERNITY'
+
+
+# Display metadata is derived from policy_rules.md and is returned with every
+# serialized request so employee and manager views use the same classification.
+LEAVE_POLICY_METADATA = {
+    'ANNUAL': {
+        'tag': 'Phép năm (Annual Leave)',
+        'pay_type': 'Hưởng nguyên lương',
+        'payer': 'Doanh nghiệp',
+        'annual_balance': 'Có',
+    },
+    'SPECIAL_PAID': {
+        'tag': 'Nghỉ chế độ (Marriage/Bereavement)',
+        'pay_type': 'Hưởng nguyên lương',
+        'payer': 'Doanh nghiệp',
+        'annual_balance': 'Không',
+    },
+    'SICK_MEDICAL': {
+        'tag': 'Nghỉ BHXH (Sick Leave)',
+        'pay_type': 'Hưởng trợ cấp BHXH',
+        'payer': 'Quỹ BHXH',
+        'annual_balance': 'Không',
+    },
+    'MEDICAL_EMERGENCY': {
+        'tag': 'Nghỉ BHXH (Sick Leave)',
+        'pay_type': 'Hưởng trợ cấp BHXH',
+        'payer': 'Quỹ BHXH',
+        'annual_balance': 'Không',
+    },
+    'WORK_ACCIDENT': {
+        'tag': 'Nghỉ BHXH (Work Accident)',
+        'pay_type': 'Hưởng trợ cấp BHXH',
+        'payer': 'Quỹ BHXH / Quỹ TNLĐ-BNN',
+        'annual_balance': 'Không',
+    },
+    'MATERNITY': {
+        'tag': 'Nghỉ BHXH (Maternity Leave)',
+        'pay_type': 'Hưởng trợ cấp BHXH',
+        'payer': 'Quỹ BHXH',
+        'annual_balance': 'Không',
+    },
+    'STATUTORY_UNPAID': {
+        'tag': 'Nghỉ không lương (Statutory Unpaid Leave)',
+        'pay_type': 'Không hưởng lương',
+        'payer': '—',
+        'annual_balance': 'Không',
+    },
+    'UNPAID_OTHER': {
+        'tag': 'Nghỉ không lương (Unpaid Leave)',
+        'pay_type': 'Không hưởng lương',
+        'payer': '—',
+        'annual_balance': 'Không',
+    },
+}
+
+
+def leave_policy_metadata(leave_type):
+    if isinstance(leave_type, Enum):
+        leave_type = leave_type.value
+    normalized = str(leave_type or '').upper()
+    metadata = LEAVE_POLICY_METADATA.get(normalized)
+    if metadata is None:
+        return {
+            'tag': 'Chưa phân loại theo policy',
+            'pay_type': 'Chưa xác định',
+            'payer': 'Chưa xác định',
+            'annual_balance': 'Chưa xác định',
+            'status': 'UNMAPPED',
+        }
+    return {**metadata, 'status': 'MAPPED'}
 
 class ReasonCategory(str, Enum):
     PERSONAL = 'PERSONAL'
@@ -27,6 +99,28 @@ class ReasonCategory(str, Enum):
     SIBLING_DEATH = 'SIBLING_DEATH'
     PARENT_MARRIAGE = 'PARENT_MARRIAGE'
     SIBLING_MARRIAGE = 'SIBLING_MARRIAGE'
+
+
+def _name_tokens(value: str) -> list[str]:
+    value = unicodedata.normalize('NFD', str(value or '').casefold())
+    value = ''.join(char for char in value if unicodedata.category(char) != 'Mn')
+    value = re.sub(r'\b(ong|ba|co|chu|anh|chi|em|mr|mrs|ms)\b', ' ', value)
+    return re.findall(r'[a-z0-9]+', value)
+
+
+def names_approximately_match(left: str | None, right: str | None) -> bool:
+    """Accept harmless title, accent, token and small spelling differences."""
+    from difflib import SequenceMatcher
+
+    left_tokens, right_tokens = _name_tokens(left), _name_tokens(right)
+    if not left_tokens or not right_tokens:
+        return False
+    if left_tokens == right_tokens or left_tokens[-1] == right_tokens[-1]:
+        return True
+    if left_tokens[-1] in right_tokens or right_tokens[-1] in left_tokens:
+        return True
+    return any(SequenceMatcher(None, left_token, right_token).ratio() >= 0.82
+               for left_token in left_tokens for right_token in right_tokens)
 
 class ProofType(str, Enum):
     MEDICAL_LEAVE_CERTIFICATE = 'MEDICAL_LEAVE_CERTIFICATE'

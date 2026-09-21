@@ -84,6 +84,7 @@ Chế độ nghỉ thai sản là quyền lợi luật định độc lập, tu�
 #### 2.5. Chế độ nghỉ việc riêng không hưởng lương (`STATUTORY_UNPAID` / `UNPAID_OTHER`)
 Áp dụng riêng biệt đối với các trường hợp vắng mặt việc riêng cá nhân không thuộc chế độ có lương hoặc thai sản:
 * **a) Nghỉ theo luật định – `STATUTORY_UNPAID` (01 ngày không lương):** Người lao động được nghỉ **01 ngày làm việc** không hưởng lương và phải thông báo trước cho Quản lý trong các trường hợp: Ông/bà nội, ông/bà ngoại, anh/chị/em ruột qua đời; cha hoặc mẹ kết hôn; anh/chị/em ruột kết hôn.
+  * **Khi quan hệ hoặc sự kiện chưa đủ rõ:** Không tự động yêu cầu nhân viên sửa đơn; hệ thống chuyển thẳng cho Quản lý xác minh và quyết định.
 * **b) Nghỉ việc riêng khác không hưởng lương – `UNPAID_OTHER`:** Áp dụng khi người lao động đã sử dụng hết số dư phép năm hoặc xin vắng mặt vì lý do cá nhân ngoài quy định. Người nộp đơn phải lập giải trình rõ lý do và chỉ được nghỉ khi có sự phê duyệt đặc cách của Trưởng phòng / Cấp Giám đốc.
 
 #### 2.6. Chế độ nghỉ phép đối với nhân viên thử việc

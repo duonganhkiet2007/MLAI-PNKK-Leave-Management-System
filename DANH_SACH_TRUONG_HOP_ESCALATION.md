@@ -14,13 +14,13 @@
 
 ## I. ĐIỀU KIỆN ĐỐI CHIẾU: KHI NÀO AI ĐƯỢC PHÉP TỰ DUYỆT?
 
-Hệ thống AI (Tier 0) chỉ tự động phê duyệt khi **thỏa mãn đồng thời tất cả 6 điều kiện** sau:
-1. **Thời lượng:** Nghỉ phép năm $\le 02$ ngày làm việc (hoặc nghỉ ốm $01$ ngày).
-2. **Quỹ phép:** Số dư phép năm hiện có đủ để chi trả (`workdays <= remaining_leave_days`).
-3. **Thời hạn báo trước:** Nộp đơn trước ca làm việc tối thiểu **24 giờ** (nghỉ ốm nộp trước **08:30 sáng** ngày nghỉ).
-4. **Hạn mức vận hành:** Tỷ lệ vắng mặt trong ngày của bộ phận $\le 30\%$ tổng quân số.
-5. **Chứng từ:** Có đầy đủ chứng từ hợp lệ (nếu là nghỉ ốm $\ge 2$ ngày phải có Giấy chứng nhận BHXH).
-6. **Tính minh bạch dữ liệu:** Thông tin ngày tháng rõ ràng, lý do chính đáng, không có dấu hiệu vi phạm kỷ luật lao động.
+Hệ thống AI (Tier 0) chỉ tự động phê duyệt khi **thỏa mãn đồng thời tất cả 6 điều kiện cốt lõi** sau:
+1. **(I) Thời lượng:** Nghỉ phép năm $\le 02$ ngày làm việc (hoặc nghỉ ốm $01$ ngày có toa thuốc).
+2. **(II) Quỹ phép:** Số dư phép năm hiện có đủ để chi trả (`workdays <= remaining_leave_days`, Điều 2.1).
+3. **(III) Thời hạn báo trước:** Nộp đơn trước ca làm việc tối thiểu **24 giờ** (nghỉ ốm nộp trước **08:30 sáng** ngày làm việc đầu tiên, Điều 3).
+4. **(IV) Hạn mức vận hành:** Tỷ lệ vắng mặt trong ngày của bộ phận $\le 30\%$ tổng quân số định biên (Điều 4.1).
+5. **(V) Chứng từ pháp lý:** Có đầy đủ chứng từ hợp lệ, rõ nét, có mộc đỏ và chữ ký bác sĩ (đối với nghỉ ốm $\ge 2$ ngày hoặc nghỉ việc riêng kết hôn/tang chế, Điều 2.2 & 2.3).
+6. **(VI) Bàn giao công việc (Handover - Quan trọng nhất):** Người nhận bàn giao công việc phải hợp lệ (thuộc cùng phòng ban, tài khoản đang `ACTIVE`, không có lịch vắng mặt trùng khoảng này, và tuyệt đối không được chỉ định chính bản thân người làm đơn, Điều 4.2 & 4.3).
 
 > ⚠️ **Bất kỳ vi phạm hoặc sự không chắc chắn nào ngoài 6 điều kiện trên đều kích hoạt cơ chế chuyển tiếp (Escalation).**
 
@@ -121,3 +121,25 @@ Khi một đơn rơi vào bất kỳ trường hợp nào trong 18 trường h�
    * *Nút 1:* Phê duyệt đặc cách / Đồng ý ngoại lệ.
    * *Nút 2:* Từ chối đơn và nêu rõ yêu cầu dời lịch / cập nhật.
    * *Nút 3:* Phương án thỏa hiệp (ví dụ: Chuyển số ngày thiếu sang nghỉ không lương; hoặc yêu cầu bổ sung người trực thay).
+
+---
+
+## V. QUY TRÌNH THẨM ĐỊNH CHỨNG TỪ BẰNG THỊ GIÁC MÁY TÍNH (VLM & OCR)
+
+Mô hình Vision-Language **Qwen 2.5 VL** kiểm định độc lập và bóc tách tự động:
+1. **Kiểm tra tính pháp lý:** Hiện diện của Dấu mộc đỏ tròn/vuông (`has_red_stamp`) và Chữ ký bác sĩ/chủ tọa (`has_doctor_signature`).
+2. **Kiểm tra tính toàn vẹn (Integrity):** Bắt cờ can thiệp Photoshop, sửa số liệu ngày tháng hoặc ảnh do AI tạo sinh (`is_tampered`, `ai_edited` $\rightarrow$ cờ `DOC_SUSPICIOUS`).
+3. **Đối soát chéo dữ liệu:** 
+   - Tên bệnh nhân/người thụ hưởng trên giấy (`doc_patient_name`) $\leftrightarrow$ Tên nhân sự làm đơn (`employee_name`).
+   - Số ngày bác sĩ chỉ định nghỉ (`days_granted_by_doctor`) $\leftrightarrow$ Số ngày làm việc xin nghỉ trên hệ thống (`requested_working_days`).
+
+---
+
+## VI. CẤU TRÚC LƯU TRỮ CƠ SỞ DỮ LIỆU & AUDIT TRAIL (DATABASE SPECIFICATION)
+
+Để bảo đảm tính trách nhiệm giải trình (Accountability) và phục vụ thanh kiểm tra nhân sự:
+1. **Bảng `employees`:** Quản lý hồ sơ định danh, chức vụ, quản lý trực tiếp (`manager_id`), số dư phép năm hiện có (`remaining_leave_days`), ngày vào làm (`hire_date`) và trạng thái làm việc.
+2. **Bảng `leave_requests`:** Lưu trữ toàn bộ dữ liệu đơn nộp, kết quả tính toán số ngày làm việc thực tế, phân loại quyết định (`AUTO_APPROVE` / `ESCALATE` / `AUTO_REJECT` / `NEED_CORRECTION`), mã lỗi vi phạm, cấp thẩm quyền tiếp nhận và quyết định can thiệp của Quản lý (`human_resolution`).
+3. **Bảng `proof_documents`:** Lưu trữ chứng từ đính kèm, đường dẫn tệp, kết quả quét OCR/VLM, điểm tương quan (`correlation_score`) và trạng thái xác minh.
+4. **Bảng `audit_logs`:** Ghi nhận vết hệ thống từng mili-giây (Request Ingest $\rightarrow$ Rule Engine Trace $\rightarrow$ VLM Scan $\rightarrow$ Human Decision) với đầy đủ dữ liệu trước và sau khi thay đổi, cam kết không thể xóa sửa.
+

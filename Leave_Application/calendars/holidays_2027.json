@@ -1,0 +1,86 @@
+{
+  "year": 2027,
+  "verified": true,
+  "legal_verification_date": "2026-09-20",
+  "version": "3.0.0",
+  "scope": "Vietnam domestic employee; Tet 2027 follows Bo Noi Vu proposed 04–10/02 continuous rest (statutory weekdays listed; weekends auto-compensated). Quoc khanh adjacent day 03/09. Foreign-national additional holidays require HR configuration.",
+  "holidays": [
+    {
+      "date": "2027-01-01",
+      "name": "Tết Dương lịch",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://luatvietnam.vn/lao-dong/dieu-112-bo-luat-lao-dong-2019-ngay-nghi-le-tet-183251-d1.html"
+    },
+    {
+      "date": "2027-02-04",
+      "name": "Tết Âm lịch",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://moha.gov.vn/tin-tuc/bo-noi-vu-de-xuat-nghi-04-ngay-dip-ngay-van-hoa-viet-nam-2026-va-07-ngay-lien-tuc-dip-tet-am-lich-2027---id19592"
+    },
+    {
+      "date": "2027-02-05",
+      "name": "Tết Âm lịch",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://moha.gov.vn/tin-tuc/bo-noi-vu-de-xuat-nghi-04-ngay-dip-ngay-van-hoa-viet-nam-2026-va-07-ngay-lien-tuc-dip-tet-am-lich-2027---id19592"
+    },
+    {
+      "date": "2027-02-06",
+      "name": "Tết Âm lịch",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://moha.gov.vn/tin-tuc/bo-noi-vu-de-xuat-nghi-04-ngay-dip-ngay-van-hoa-viet-nam-2026-va-07-ngay-lien-tuc-dip-tet-am-lich-2027---id19592"
+    },
+    {
+      "date": "2027-02-07",
+      "name": "Tết Âm lịch",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://moha.gov.vn/tin-tuc/bo-noi-vu-de-xuat-nghi-04-ngay-dip-ngay-van-hoa-viet-nam-2026-va-07-ngay-lien-tuc-dip-tet-am-lich-2027---id19592"
+    },
+    {
+      "date": "2027-02-08",
+      "name": "Tết Âm lịch",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://moha.gov.vn/tin-tuc/bo-noi-vu-de-xuat-nghi-04-ngay-dip-ngay-van-hoa-viet-nam-2026-va-07-ngay-lien-tuc-dip-tet-am-lich-2027---id19592"
+    },
+    {
+      "date": "2027-04-16",
+      "name": "Giỗ Tổ Hùng Vương",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://vnexpress.net/du-kien-cac-ngay-nghi-le-tet-nam-2027-5105651.html"
+    },
+    {
+      "date": "2027-04-30",
+      "name": "Ngày Chiến thắng",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://luatvietnam.vn/lao-dong/dieu-112-bo-luat-lao-dong-2019-ngay-nghi-le-tet-183251-d1.html"
+    },
+    {
+      "date": "2027-05-01",
+      "name": "Quốc tế Lao động",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://luatvietnam.vn/lao-dong/dieu-112-bo-luat-lao-dong-2019-ngay-nghi-le-tet-183251-d1.html"
+    },
+    {
+      "date": "2027-09-02",
+      "name": "Quốc khánh",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://moha.gov.vn/tin-tuc/bo-noi-vu-de-xuat-nghi-04-ngay-dip-ngay-van-hoa-viet-nam-2026-va-07-ngay-lien-tuc-dip-tet-am-lich-2027---id19592"
+    },
+    {
+      "date": "2027-09-03",
+      "name": "Quốc khánh (ngày liền kề)",
+      "holiday_type": "PUBLIC_HOLIDAY",
+      "is_paid": true,
+      "source": "https://moha.gov.vn/tin-tuc/bo-noi-vu-de-xuat-nghi-04-ngay-dip-ngay-van-hoa-viet-nam-2026-va-07-ngay-lien-tuc-dip-tet-am-lich-2027---id19592"
+    }
+  ]
+}

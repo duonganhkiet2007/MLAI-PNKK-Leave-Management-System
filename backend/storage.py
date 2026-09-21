@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, date, timedelta
 from contextlib import contextmanager
 import database as db
-from domain import RequestFacts, VerifiedProof, should_deduct_annual_balance, ProofType
+from domain import RequestFacts, VerifiedProof, should_deduct_annual_balance, ProofType, leave_policy_metadata
 from rule_engine import LeaveRequest
 from calendar_service import CalendarService, CalendarUnavailable
 
@@ -225,8 +225,27 @@ def set_steps(conn, record, roles, preserve=False):
 
 def serialize(conn, req):
     req=dict(req)
+    req['leave_policy_tags'] = leave_policy_metadata(req.get('canonical_leave_type') or req.get('leave_type'))
     req['approval_steps']=[dict(r) for r in conn.execute('SELECT * FROM approval_steps WHERE request_id=? AND revision=? ORDER BY step_index',
         (req['id'],req.get('revision',0)))]
+    for f in ('result_json', 'llm_summary_json', 'vlm_analysis_json', 'facts_json'):
+        if isinstance(req.get(f), str):
+            try: req[f] = json.loads(req[f])
+            except Exception: pass
+    summary = req.get('llm_summary_json')
+    if isinstance(summary, dict):
+        legacy_errors = list(summary.get('info_missing_vn') or [])
+        summary.setdefault('staff_summary', {
+            'errors_vn': legacy_errors,
+            'next_steps_vn': ['Sửa hoặc bổ sung các mục đang báo lỗi rồi nộp lại đơn.'] if legacy_errors else [],
+            'summary_natural_vn': '\n'.join(legacy_errors) if legacy_errors else 'Không phát hiện lỗi cần nhân viên sửa.',
+        })
+        summary.setdefault('manager_summary', {
+            'suspicions_vn': legacy_errors,
+            'risk_level_vn': '—' if not legacy_errors else 'CẦN XÁC MINH',
+            'recommendation_vn': 'Đối chiếu các điểm bất thường trước khi quyết định.' if legacy_errors else 'Không phát hiện nghi vấn rõ ràng.',
+            'summary_natural_vn': '\n'.join(legacy_errors) if legacy_errors else 'Không phát hiện nghi vấn rõ ràng.',
+        })
     result=req.get('result_json')
     if isinstance(result,dict):
         for k in ('warnings','working_dates','paid'): req[k]=result.get(k)

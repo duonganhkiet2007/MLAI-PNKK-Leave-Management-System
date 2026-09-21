@@ -165,17 +165,17 @@ def get_decision_tree():
         'STATUTORY_UNPAID', 'Nghỉ luật định (không hưởng lương)', '#06b6d4', '⚰️',
         who='Nhân viên có sự kiện gia đình họ hàng xa',
         what='Luật Điều 115 khoản 2 bắt buộc công ty cho nghỉ 1 ngày / sự kiện; không trả lương.',
-        how='Công ty không được từ chối; chỉ cần xác minh mối quan hệ họ hàng là được.',
+        how='Công ty không được từ chối; nếu quan hệ chưa rõ thì chuyển Quản lý xác minh.',
         steps=[
             n('ST_CAT', 'Thuộc 4 sự kiện luật định 1 ngày',
               'Ông bà nội ngoại mất / anh chị em mất / bố mẹ tái hôn / anh chị em kết hôn.',
-              when_fail='Yêu cầu tách riêng phần dư ra nghỉ không lương thỏa thuận hoặc phép năm'),
+              when_fail='Nếu quan hệ hoặc sự kiện chưa rõ → chuyển Quản lý xác minh'),
             n('ST_DOC', 'Có bằng chứng về mối quan hệ họ hàng',
-              'Có thể sử dụng giấy báo tử, giấy đăng ký kết hôn họ hàng; không yêu cầu nghiêm ngặt 100%.',
+              'Cho phép sai khác nhỏ về cách viết tên; chỉ cần đủ căn cứ để nhận diện quan hệ.',
               when_pass='Sang bước chung cuối; công ty không được từ chối nghỉ',
-              when_fail='Chuyển quản lý xem xét, xác minh quan hệ rồi cho nghỉ theo luật'),
+              when_fail='Chuyển Quản lý xác minh, không yêu cầu nhân viên sửa nếu chưa có lỗi rõ ràng'),
         ],
-        next_steps='Luôn → Quản lý trực tiếp xem xác minh 1 lần (không tự động duyệt; nhưng công ty phải cho nghỉ)')
+        next_steps='Quan hệ rõ → Quản lý trực tiếp xác minh | Quan hệ không rõ → vẫn chuyển Quản lý để quyết định')
 
     br_sick = branch(
         'SICK_MEDICAL', 'Nghỉ ốm đau thông thường', '#a855f7', '🏥',
@@ -272,21 +272,18 @@ def get_decision_tree():
     ]
 
     outcomes = [
-        {'id': 'NO_LEAVE_REQUIRED', 'color': '#64748b',
-         'title': 'Không cần nghỉ phép',
-         'body': 'Toàn bộ ngày yêu cầu đã là thứ 7 / chủ nhật / ngày lễ nên đóng đơn, không trừ gì cả.'},
-        {'id': 'AUTO_APPROVE', 'color': '#10b981',
-         'title': 'Duyệt tự động',
-         'body': 'Tất cả các bước đều đạt, không còn người cần phê duyệt. Hệ thống ghi nhận phép, cập nhật số dư phép nếu là phép năm.'},
-        {'id': 'AUTO_REJECT', 'color': '#ef4444',
-         'title': 'Từ chối tự động',
-         'body': 'Số dư phép âm, đơn đã tồn tại ngày trùng 100%, hoặc chứng từ đã bị từ chối lần trước.'},
-        {'id': 'NEED_CORRECTION', 'color': '#f59e0b',
-         'title': 'Yêu cầu sửa / bổ sung',
-         'body': 'Nhân viên cần sửa ngày, thêm lý do, hoặc tải lại chứng từ phù hợp.'},
-        {'id': 'ESCALATE', 'color': '#3b82f6',
-         'title': 'Chuyển người có thẩm quyền duyệt',
-         'body': 'Đơn hợp lệ nhưng cần Quản lý / Trưởng bộ phận / Nhân sự / Tổng giám đốc xem xét và phê duyệt.'},
+      {'id': 'NO_LEAVE_REQUIRED', 'color': '#64748b',
+       'title': 'Không cần nghỉ',
+       'body': 'Tất cả ngày xin nghỉ là cuối tuần/ngày lễ. Không tạo phép, không trừ quỹ, không chuyển cấp.',
+       'route': 'Điều kiện: N = 0 ngày làm việc.'},
+      {'id': 'AUTO_APPROVE', 'color': '#10b981',
+       'title': 'Duyệt tự động',
+       'body': 'Mọi node bắt buộc đều đạt: loại nghỉ hợp lệ, đủ quỹ, đúng hạn, chứng từ hợp lệ và không cần cấp duyệt.',
+       'route': 'Ghi nhận ngay; chỉ ANNUAL mới trừ quỹ phép.'},
+      {'id': 'ESCALATE', 'color': '#3b82f6',
+       'title': 'Chuyển người có thẩm quyền duyệt',
+       'body': 'Có lỗi cần người xử lý, ngoại lệ hoặc vượt ngưỡng tự động. Không tự kết luận khi còn điểm cần xác minh.',
+       'route': 'Quản lý trực tiếp → Trưởng bộ phận → HR/HRD → CEO, tùy loại nghỉ và số ngày.'},
     ]
 
     def flatten_nodes(bs):
@@ -323,7 +320,7 @@ def get_decision_tree():
                   children=branch_nodes),
             tnode('TIER_3', 'Bước chung cuối cùng', '#0ea5e9',
                   children=final_nodes),
-            tnode('TIER_OUT', '5 kết quả cuối cùng (Lá)', '#1e293b',
+            tnode('TIER_OUT', '3 hướng xử lý cuối cùng', '#1e293b',
                   children=outcome_nodes),
         ]
     )
@@ -337,7 +334,7 @@ def get_decision_tree():
         'branches': branches,
         'final_tier_title': 'Bước chung cuối cùng trước khi ra quyết định',
         'common_final': common_final,
-        'outcomes_title': '5 kết quả cuối cùng hệ thống trả về',
+        'outcomes_title': '3 hướng xử lý cuối cùng',
         'outcomes': outcomes,
         'legend': {
             'PASS': 'Điều kiện đạt → tiếp tục sang bước kế tiếp',
@@ -350,7 +347,7 @@ def get_decision_tree():
             'visual_check_steps': vlm_total,
             'policy_steps': policy_total,
             'leave_types': len(branches),
-            'final_outcomes': 5,
+            'final_outcomes': len(outcomes),
         },
         # --- Dữ liệu dành cho vẽ cây thật (dạng cha-con, connector line tự vẽ) ---
         'tree_visual': tree_visual,
@@ -372,39 +369,57 @@ def calendar(from_date: date,to_date: date):
 @router.get('/llm-status')
 def get_llm_status():
     from llm_client import get_qwen_engine
-    status=get_qwen_engine().get_status()
-    return {**status,'ready_for_inference':status['online'],'target_model':status['model'],'last_error':status['error']}
+    from ai_stack import LLM_TARGET_MODEL
+    status = get_qwen_engine().get_status()
+    pulled = status.get('model_pulled')
+    reachable = status.get('ollama_reachable')
+    resident = status.get('model_resident')
+    vram = status.get('size_vram') or 0
+    ready = bool(reachable and pulled)
+    if not reachable:
+        mode = 'OLLAMA_NOT_RUNNING'
+    elif not pulled:
+        mode = 'MODEL_NOT_PULLED'
+    elif vram <= 0 and not resident:
+        mode = 'PULLED_NOT_RESIDENT'
+    else:
+        mode = 'READY'
+    return {
+        **status,
+        'ready_for_inference': ready,
+        'target_model': LLM_TARGET_MODEL,
+        'last_error': status.get('error'),
+        'mode': mode,
+    }
 
 @router.get('/vlm-status')
 def get_vlm_status():
-    import os
-    import json
-    from urllib import request as urlrequest
-    from urllib import error as urlerror
-    base = os.getenv("VLM_OLLAMA_BASE", "http://localhost:11434")
-    model = os.getenv("VLM_TARGET_MODEL", "qwen2.5-vl:3b")
-    reachable = False
-    loaded = False
-    models_list = []
-    last_err = None
-    try:
-        with urlrequest.urlopen(f"{base}/api/tags", timeout=3.0) as r:
-            reachable = r.status == 200
-            data = json.loads(r.read().decode() or "{}")
-            models_list = [m.get("name", "") for m in data.get("models", [])]
-            loaded = any(model in m for m in models_list)
-    except (urlerror.URLError, OSError, ValueError, TimeoutError) as e:
-        last_err = f"{type(e).__name__}: {e}"
-    mode = "READY" if (reachable and loaded) else (
-        "OLLAMA_NOT_RUNNING" if not reachable else "MODEL_NOT_PULLED"
-    )
+    from ai_stack import OLLAMA_BASE, VLM_TARGET_MODEL, has_model, ollama_ps, ollama_tags
+    reachable, names, last_err = ollama_tags()
+    pulled = has_model(names, VLM_TARGET_MODEL)
+    resident = False
+    size_vram = 0
+    for m in ollama_ps():
+        if has_model([m.get('name') or ''], VLM_TARGET_MODEL):
+            resident = True
+            size_vram = int(m.get('size_vram') or 0)
+            break
+    if not reachable:
+        mode = 'OLLAMA_NOT_RUNNING'
+    elif not pulled:
+        mode = 'MODEL_NOT_PULLED'
+    elif size_vram <= 0:
+        mode = 'CPU_OR_NOT_RESIDENT'
+    else:
+        mode = 'READY'
     return {
         'ollama_reachable': reachable,
-        'model_loaded': loaded,
-        'target_model': model,
-        'base_url': base,
-        'available_models': models_list,
-        'fallback_mode': not (reachable and loaded),
+        'model_loaded': pulled,
+        'model_resident': resident,
+        'size_vram': size_vram,
+        'target_model': VLM_TARGET_MODEL,
+        'base_url': OLLAMA_BASE,
+        'fallback_mode': not (reachable and pulled),
         'mode': mode,
         'last_error': last_err,
     }

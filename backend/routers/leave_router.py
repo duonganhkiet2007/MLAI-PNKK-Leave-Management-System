@@ -1,6 +1,7 @@
 """Leave API. X-Actor-ID selects a demo actor; roles always come from the DB."""
 import json
 import os
+import time
 import uuid
 from pathlib import Path
 from typing import Optional, Literal
@@ -34,9 +35,16 @@ class HumanDecisionInput(BaseModel):
 
 @router.post('/request')
 def submit_leave_request(payload: NewLeaveRequestInput, actor_id=Depends(actor)):
+    t0 = time.perf_counter()
     if payload.employee_id and payload.employee_id!=actor_id: raise st.AccessDenied('Không được nộp thay nhân sự khác.')
     data=payload.model_dump(exclude={'employee_id','raw_text'})
-    return {'success':True,'data':service.process_new_request(payload.raw_text,actor_id,data)}
+    res=service.process_new_request(payload.raw_text,actor_id,data)
+    total_api_ms = round((time.perf_counter() - t0) * 1000, 2)
+    if isinstance(res, dict):
+        res['total_api_ms'] = total_api_ms
+        if isinstance(res.get('llm_summary_json'), dict):
+            res['llm_summary_json'].setdefault('timings', {})['total_api_ms'] = total_api_ms
+    return {'success':True,'data':res,'total_api_ms':total_api_ms}
 
 @router.get('/requests')
 def list_leave_requests(status: str | None=None,actor_id=Depends(actor)):
@@ -496,13 +504,27 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
 
 @router.post('/{request_id}/resubmit')
 def resubmit(request_id,payload: RequestFacts,actor_id=Depends(actor)):
-    return {'success':True,'data':service.resubmit(request_id,actor_id,payload.model_dump())}
+    t0 = time.perf_counter()
+    res = service.resubmit(request_id,actor_id,payload.model_dump())
+    total_api_ms = round((time.perf_counter() - t0) * 1000, 2)
+    if isinstance(res, dict):
+        res['total_api_ms'] = total_api_ms
+        if isinstance(res.get('llm_summary_json'), dict):
+            res['llm_summary_json'].setdefault('timings', {})['total_api_ms'] = total_api_ms
+    return {'success':True,'data':res,'total_api_ms':total_api_ms}
 
 @router.post('/{request_id}/human-decision')
 def submit_human_decision(request_id,payload: HumanDecisionInput,actor_id=Depends(actor)):
+    t0 = time.perf_counter()
     if payload.approver_id and payload.approver_id!=actor_id: raise st.AccessDenied('Người duyệt không khớp.')
-    return {'success':True,'data':service.process_human_decision(request_id,payload.feedback_text,actor_id,
-        payload.action_type,payload.updated_fields.model_dump(mode='json',exclude_unset=True))}
+    res = service.process_human_decision(request_id,payload.feedback_text,actor_id,
+        payload.action_type,payload.updated_fields.model_dump(mode='json',exclude_unset=True))
+    total_api_ms = round((time.perf_counter() - t0) * 1000, 2)
+    if isinstance(res, dict):
+        res['total_api_ms'] = total_api_ms
+        if isinstance(res.get('llm_summary_json'), dict):
+            res['llm_summary_json'].setdefault('timings', {})['total_api_ms'] = total_api_ms
+    return {'success':True,'data':res,'total_api_ms':total_api_ms}
 
 @router.post('/{request_id}/cancel')
 def cancel(request_id,actor_id=Depends(actor)):

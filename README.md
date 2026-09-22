@@ -14,6 +14,12 @@
 
 **Link video demo: https://youtu.be/FjoYJwa732c**
 
+**Link kiểm thử hệ thống: https://pnkk-uit.lol/**
+
+**Link dataset:** [dataset google sheets](https://docs.google.com/spreadsheets/d/1_d9vUImx0TX7yeGoFwtnWIQRDaDFpi_XKqALEeNs1KA/edit?usp=sharing)
+
+**Link báo cáo tổng hợp:** [báo cáo tổng hợp](https://docs.google.com/document/d/1IUXfhizn1Xjo514ArIZ5kM0WyxalhPdWRSEZG86i3WI/edit?tab=t.0)
+
 
 
 
@@ -271,7 +277,7 @@ MLAI/
 │   └── prompts.py                # Prompts tối ưu hóa cho Qwen 2.5
 └── tests/                         # Kịch bản kiểm thử tự động e2e & benchmark
 ```
-Link dataset: https://docs.google.com/spreadsheets/d/1_d9vUImx0TX7yeGoFwtnWIQRDaDFpi_XKqALEeNs1KA/edit?gid=1111531951#gid=1111531951
+
 
 ## 6. Cài đặt và khởi chạy
 

@@ -52,7 +52,7 @@ YÊU CẦU TRÌNH BÀY (TUYỆT ĐỐI KHÔNG VIẾT 1 ĐOẠN VĂN DÍNH LIỀN
   "info_missing_vn": ["Danh sách các điểm BẤT THƯỜNG / SAI LỆCH thực tế theo luật (nếu không có lỗi thì để rỗng [])"],
   "why_escalated": "1 câu ngắn lý do cần người duyệt xem xét dựa theo luật của Decision Tree",
   "actionable_question": "Câu hỏi hành động trực diện cho Manager kết thúc bằng dấu ?",
-  "quick_action_options_vn": ["✅ Duyệt", "❓ Yêu cầu giải trình", "❌ Từ chối"],
+  "quick_action_options_vn": ["Duyệt", "Yêu cầu giải trình", "Từ chối"],
   "applied_policy_clauses_vn": ["Danh sách điều khoản chính sách áp dụng"],
   "correlation_tier_vn": "RẤT KHỚP / KHỚP / CHƯA KHỚP / KHÔNG KHỚP / HỢP LỆ",
    "integrity_assessment_vn": "Đánh giá ngắn về tính xác thực chứng từ hoặc ghi Không yêu cầu chứng từ",

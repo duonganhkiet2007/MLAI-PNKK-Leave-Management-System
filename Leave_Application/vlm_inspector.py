@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -467,6 +468,7 @@ def _score_correlation(
     days_granted_by_doctor: Optional[int],
     requested_workdays: int,
     leave_type: str = '',
+    patient_name_on_doc: Optional[str] = None,
 ) -> tuple[float, list[str], Optional[int]]:
     """Deterministic correlation scoring between employee claim + VLM findings.
 
@@ -476,6 +478,15 @@ def _score_correlation(
     score = 0.60
     issues: list[str] = []
     is_medical = leave_type.upper() not in _NON_MEDICAL_LEAVE_TYPES
+
+    if patient_name_on_doc and employee_name:
+        norm_doc = re.sub(r"\s+", "", str(patient_name_on_doc)).casefold()
+        norm_emp = re.sub(r"\s+", "", str(employee_name)).casefold()
+        if norm_doc != norm_emp:
+            score -= 0.22
+            issues.append(f"Tên trên giấy ('{patient_name_on_doc}') không trùng với tên nhân sự ('{employee_name}').")
+        else:
+            score += 0.08
 
     # Chỉ check từ khóa y tế khi là loại nghỉ bệnh (SICK_MEDICAL, MEDICAL_EMERGENCY)
     if is_medical:
@@ -733,6 +744,7 @@ def inspect_document_with_vlm(
         days_granted_by_doctor=days_explicit,
         requested_workdays=workdays,
         leave_type=leave_type,
+        patient_name_on_doc=profile_raw.get("doc_patient_name") or proof_extraction.patient_name,
     )
     if days_explicit is None and doctor_days_final is not None:
         profile_raw["days_granted_by_doctor"] = doctor_days_final
@@ -943,12 +955,15 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
     try:
         from PIL import Image
         with Image.open(path) as pil_img:
-            max_dim = 1280
+            max_dim = 784
             w, h = pil_img.size
-            if max(w, h) > max_dim:
-                scale = max_dim / max(w, h)
-                new_size = (int(w * scale), int(h * scale))
-                pil_img = pil_img.resize(new_size, Image.Resampling.LANCZOS)
+            nw = max(28, round(w / 28) * 28)
+            nh = max(28, round(h / 28) * 28)
+            if nw > max_dim or nh > max_dim:
+                scale = max_dim / max(nw, nh)
+                nw = max(28, int(round((nw * scale) / 28) * 28))
+                nh = max(28, int(round((nh * scale) / 28) * 28))
+            pil_img = pil_img.resize((nw, nh), Image.Resampling.LANCZOS)
             if pil_img.mode in ("RGBA", "P"):
                 pil_img = pil_img.convert("RGB")
             buf = io.BytesIO()
@@ -986,6 +1001,7 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
         "images": [img],
         "keep_alive": OLLAMA_KEEP_ALIVE,
         "options": {
+            "num_ctx": 4096,
             "num_predict": 1024,
             "temperature": 0.0,
         },

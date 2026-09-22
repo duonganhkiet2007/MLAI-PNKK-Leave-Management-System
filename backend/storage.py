@@ -261,7 +261,7 @@ def commit_approval(conn, record, result):
     """Caller holds BEGIN IMMEDIATE and has just evaluated fresh authoritative context."""
     n=0
     for d in result.working_dates:
-        conn.execute('INSERT INTO leave_bookings VALUES(?,?,?,?)',(record['id'],record['employee_id'],d,record['canonical_leave_type']))
+        conn.execute('INSERT OR REPLACE INTO leave_bookings VALUES(?,?,?,?)',(record['id'],record['employee_id'],d,record['canonical_leave_type']))
         if should_deduct_annual_balance(record['canonical_leave_type']):
             conn.execute("INSERT INTO leave_transactions(request_id,employee_id,leave_date,kind,amount,created_at) VALUES(?,?,?,'DEBIT',-1,?)",
                 (record['id'],record['employee_id'],d,now_iso()))

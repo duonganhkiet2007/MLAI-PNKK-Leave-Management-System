@@ -350,12 +350,12 @@ class LeaveOrchestratorService:
 
         # ---- Quick actions (Vietnamese - template fallback) ----
         QUICK_VI = {
-            'APPROVE_OVERRIDE':'✅ Duyệt (ghi chú nếu cần)',
-            'REQUEST_MORE_INFO':'❓ Yêu cầu giải thích / bổ sung thêm thông tin',
-            'REJECT':'❌ Từ chối (nêu lý do)',
-            'ESCALATE_FURTHER':'⬆ Chuyển tiếp cấp cao hơn',
-            'WAIVE_NOTICE':'⏳ Bỏ qua quy định báo trước',
-            'WAIVE_QUOTA':'👥 Bỏ qua giới hạn team 30%',
+            'APPROVE_OVERRIDE':'Duyệt (ghi chú nếu cần)',
+            'REQUEST_MORE_INFO':'Yêu cầu giải thích / bổ sung thêm thông tin',
+            'REJECT':'Từ chối (nêu lý do)',
+            'ESCALATE_FURTHER':'Chuyển tiếp cấp cao hơn',
+            'WAIVE_NOTICE':'Bỏ qua quy định báo trước',
+            'WAIVE_QUOTA':'Bỏ qua giới hạn team 30%',
         }
         quick_vi = [QUICK_VI.get(str(x), str(x)) for x in list(result.quick_action_options or [])]
         policy_vi = []
@@ -743,6 +743,15 @@ class LeaveOrchestratorService:
                 'submitted_at':self.clock().isoformat(),'revision':1,'human_resolution':None}
         with st.transaction() as conn:
             if custom_request_id:
+                prev = conn.execute('SELECT * FROM leave_requests WHERE id=?', (custom_request_id,)).fetchone()
+                if prev:
+                    prev_dict = dict(prev)
+                    prev_debit = prev_dict.get('deducted_days') or 0
+                    if prev_debit > 0 and (prev_dict.get('canonical_leave_type') or prev_dict.get('leave_type')) == 'ANNUAL':
+                        conn.execute('UPDATE employees SET remaining_leave_days=remaining_leave_days+? WHERE employee_id=?',
+                                     (prev_debit, prev_dict['employee_id']))
+                    conn.execute('DELETE FROM leave_bookings WHERE request_id=?', (custom_request_id,))
+                    conn.execute('DELETE FROM leave_transactions WHERE request_id=?', (custom_request_id,))
                 conn.execute('DELETE FROM approval_steps WHERE request_id=?', (custom_request_id,))
             self._evaluate(conn,record,facts,enable_llm_polish=enable_llm_polish,skip_vlm=skip_vlm)
             return st.serialize(conn,st.read_request(conn,record['id']))

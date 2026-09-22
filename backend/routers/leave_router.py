@@ -349,7 +349,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             p_severity = "SUCCESS" if match_ok else "CRITICAL"
             p_note = "Tên trên giấy: {doc} — Tên trong nhân sự: {emp} — {result}.".format(
                 doc = doc_pat, emp = emp_n,
-                result = "KHỚP ✅" if match_ok else "KHÔNG KHỚP ❌ (có thể giấy của người khác / sai tên)",
+                result = "KHỚP" if match_ok else "KHÔNG KHỚP (có thể giấy của người khác / sai tên)",
             )
         add_node(5,"VLM_PATIENT",p_status, p_pass, p_note,
                                title_vi="VLM - Đối chiếu tên bệnh nhân vs. nhân sự",
@@ -394,8 +394,8 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 rf = req_from or 'N/A', rt = req_to or 'N/A', rw = req_wd,
                 df = dr_from or 'Chưa đọc được', dt = dr_to or 'Chưa đọc được',
                 dd = str(dr_days) if dr_days is not None else 'Chưa đọc được',
-                res = ('✅ Khoảng yêu cầu nằm trong khoảng bác sĩ chỉ định' if dc_pass else
-                       '⚠ Khoảng yêu cầu vượt ngoài / ngày yêu cầu nhiều hơn số ngày bác sĩ cấp')
+                res = ('Khoảng yêu cầu nằm trong khoảng bác sĩ chỉ định' if dc_pass else
+                       'Khoảng yêu cầu vượt ngoài / ngày yêu cầu nhiều hơn số ngày bác sĩ cấp')
             )
         add_node(6,"VLM_DATE_COVERAGE",dc_status, dc_pass, dc_note,
                                title_vi="VLM - Đối chiếu khoảng ngày nghỉ vs. bác sĩ chỉ định",

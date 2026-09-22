@@ -275,6 +275,7 @@ MLAI/
 │   └── prompts.py                # Prompts tối ưu hóa cho Qwen 2.5
 └── tests/                         # Kịch bản kiểm thử tự động e2e & benchmark
 ```
+Link dataset: https://docs.google.com/spreadsheets/d/1_d9vUImx0TX7yeGoFwtnWIQRDaDFpi_XKqALEeNs1KA/edit?gid=1111531951#gid=1111531951
 
 ## 6. Cài đặt và khởi chạy
 

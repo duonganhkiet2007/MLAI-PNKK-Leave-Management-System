@@ -1,5 +1,5 @@
 <div align="center">
-<h3>The Escalation Referee — Hệ Thống AI Phê Duyệt Nghỉ Phép Doanh Nghiệp 
+<h2>The Escalation Referee — Hệ Thống AI Phê Duyệt Nghỉ Phép Doanh Nghiệp 
 </div>
 <div align="center">
 

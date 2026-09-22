@@ -1,5 +1,5 @@
 <div align="center">
-<h2>The Escalation Referee — Hệ Thống AI Phê Duyệt Nghỉ Phép Doanh Nghiệp 
+<h1>The Escalation Referee — Hệ Thống AI Phê Duyệt Nghỉ Phép Doanh Nghiệp 
 </div>
 <div align="center">
 
@@ -9,7 +9,6 @@
 [![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-**Hệ thống điều phối xét duyệt nghỉ phép thông minh**
 
 </div>
 

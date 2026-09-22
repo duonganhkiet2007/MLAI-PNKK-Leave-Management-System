@@ -225,11 +225,12 @@ Việc chuyển tiếp này giúp đảm bảo tính linh hoạt, nhân văn tro
 
 Hệ thống cung cấp thanh chuyển đổi nhanh giữa 3 đối tượng người dùng:
 
-| Chế Độ | Đối Tượng | Chức Năng Chính |
-|---|---|---|
-| 🧪 **TEST** *(Mặc định)* | Đánh giá & Demo | Khởi chạy Verify tự động 5 ca chuẩn; tra cứu kho dữ liệu 38 kịch bản nghiệp vụ |
-| 👔 **MANAGER** | Cấp Quản lý | Escalation Inbox nhận ca ngoại lệ kèm Actionable Question; phê duyệt 1-chạm; xem nhật ký AI tự duyệt và thực thi nút [ Hủy Lệnh AI ] |
-| 👤 **STAFF** | Nhân viên | Nộp đơn có tính ngày tự động; chọn nhân sự bàn giao; đính kèm chứng từ y tế/kết hôn; theo dõi số dư phép tồn và lịch vắng mặt phòng ban |
+
+**TEST**: Đánh giá & demo, khởi chạy Verify tự động 5 ca chuẩn; tra cứu kho dữ liệu 38 kịch bản
+
+**MANAGER**: Escalation Inbox nhận ca ngoại lệ kèm Actionable Question, phê duyệt 1-chạm; xem nhật ký AI tự duyệt và tổng số hồ sơ submit
+
+**STAFF**: Nộp đơn có tính ngày tự động, chọn nhân sự bàn giao, đính kèm chứng từ, theo dõi số dư phép tồn và lịch vắng mặt phòng ban
 
 ## 5. Cấu trúc dự án
 

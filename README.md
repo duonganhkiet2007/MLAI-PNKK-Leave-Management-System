@@ -1,3 +1,4 @@
+<div align="center">
 # The Escalation Referee — Hệ Thống Phê Duyệt Nghỉ Phép Doanh Nghiệp AI
 
 <div align="center">
@@ -22,15 +23,15 @@ Hệ thống hướng tới một cơ chế phân xử giúp giảm tải các c
 
 ### Ba nguyên tắc thiết kế bất biến
 
-1. **Không suy đoán trên dữ liệu thiếu/mơ hồ** — thiếu thông tin hoặc chứng từ không đọc được thì dừng lại, yêu cầu bổ sung, không tự điền giả định.
+1. **Không suy đoán trên dữ liệu thiếu hay mơ hồ** — thiếu thông tin hoặc chứng từ không đọc được thì dừng lại, yêu cầu bổ sung, không tự điền giả định.
 2. **Quyết định chính sách tách khỏi mô hình sinh** — logic số dư, thẩm quyền, thử việc, vận hành chạy bằng logic tất định (deterministic), kiểm chứng và lặp lại được.
-3. **Chuyển tiếp một lượt, có căn cứ rõ ràng** — khi cần con người can thiệp, hệ thống đưa đúng một câu hỏi kèm phương án hành động rõ ràng, không hỏi-đáp nhiều vòng gây mệt mỏi cho người duyệt.
+3. **Chuyển tiếp một lượt và có căn cứ rõ ràng** — khi cần con người can thiệp, hệ thống đưa đúng một câu hỏi kèm phương án hành động rõ ràng, không hỏi-đáp nhiều vòng gây mệt mỏi cho người duyệt.
 
 ## 2. Kiến trúc hệ thống
 
 ### 2.1. Tầng Backend
 
-FastAPI, khởi tạo tại `main.py`: dựng app, đăng ký CORS, router, phục vụ frontend tĩnh, và làm nóng (warm-up) mô hình AI ngay lúc khởi động.
+FastAPI, dựng app, đăng ký CORS, router, phục vụ frontend tĩnh, và làm nóng (warm-up) mô hình AI ngay lúc khởi động.
 
 | **Router** | **Trách nhiệm** |
 |---|---|
@@ -38,13 +39,11 @@ FastAPI, khởi tạo tại `main.py`: dựng app, đăng ký CORS, router, ph�
 | `meta_router` | Trạng thái mô hình AI, chính sách, lịch làm việc, trạng thái môi trường |
 | `verify_router` | Chạy ca kiểm chứng cố định qua rule engine, không qua luồng đầy đủ |
 
-Bộ điều phối (**`LeaveOrchestratorService._evaluate()`**): nạp ngữ cảnh tin cậy từ DB → đọc facts (từ form hoặc gọi LLM nếu là văn bản tự do) → gọi VLM nếu có chứng từ → gọi rule engine → cập nhật trạng thái → lưu decision/giải trình/điều khoản chính sách → ghi audit.
-
-> Định danh hiện dùng header `X-Actor-ID` hoặc `actor_id`, vai trò được tra từ DB — đây chưa phải cơ chế token xác thực thật.
+Bộ điều phối: nạp ngữ cảnh tin cậy từ DB → đọc facts (từ form hoặc gọi LLM nếu là văn bản tự do) → gọi VLM nếu có chứng từ → gọi rule engine → cập nhật trạng thái → lưu decision/giải trình/điều khoản chính sách → ghi audit.
 
 ### 2.2. Tầng Frontend
 
-Trang tĩnh HTML/JavaScript thuần, không dùng framework.
+Trang tĩnh HTML/JavaScript thuần túy và không sử dụng framework.
 
 | **File** | **Nội dung** |
 |---|---|
@@ -54,9 +53,9 @@ Trang tĩnh HTML/JavaScript thuần, không dùng framework.
 
 Bốn chế độ dùng chung giao diện: cổng nhân viên, cổng người duyệt, trang chính sách, khu kiểm thử. Không gọi AI trực tiếp — mọi tương tác đều đi qua API backend.
 
-### 2.3. Mô hình ngôn ngữ (LLM) — trích xuất dữ liệu văn bản
+### 2.3. Mô hình ngôn ngữ LLM
 
-LLM đóng vai trò một **bộ phân tích văn bản tự do (free-text extractor)**: nó không đọc chính sách, không tính toán, không ra quyết định — nhiệm vụ duy nhất là đọc câu chữ tự nhiên của con người và chuẩn hóa thành dữ liệu có cấu trúc (structured facts) để rule engine dùng ở bước sau.
+LLM đóng vai trò một **bộ phân tích văn bản tự do**: nó không đọc chính sách, không tính toán, không ra quyết định — nhiệm vụ duy nhất là đọc câu chữ tự nhiên của con người và chuẩn hóa thành dữ liệu có cấu trúc để rule engine dùng ở bước sau.
 
 **Đầu vào (Input)**
 
@@ -260,15 +259,6 @@ MLAI/
 
 Hệ thống được kiến trúc theo mô hình monolith hiện đại: Backend xử lý logic bằng **FastAPI**, đồng thời đảm nhận việc mount và phục vụ trực tiếp Frontend (Vanilla JS/HTML/CSS) để tối ưu hóa quá trình triển khai.
 
-### 📋 Yêu cầu hệ thống (Prerequisites)
-
-Để vận hành hệ thống, môi trường của bạn cần đáp ứng:
-
-- **Python**: Phiên bản `3.9` hoặc cao hơn.
-- **Trình quản lý gói**: `pip` (khuyến nghị cài đặt trong môi trường ảo như `venv` hoặc `conda`).
-
-### 💻 Hướng dẫn cài đặt & vận hành
-
 **Bước 1: Sao chép mã nguồn**
 
 Đưa dự án về máy tính cục bộ của bạn bằng Git:
@@ -297,6 +287,5 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
-## 📄 License
 
 Dự án được phát hành theo giấy phép [MIT License](LICENSE).

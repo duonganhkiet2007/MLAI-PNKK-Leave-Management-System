@@ -10,9 +10,14 @@
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 
-</div>
 
-[![Xem demo hệ thống](https://img.youtube.com/vi/FjoYJwa732c/maxresdefault.jpg)](https://youtu.be/FjoYJwa732c)
+
+**Link video demo: https://youtu.be/FjoYJwa732c**
+
+
+
+
+</div>
 
 ## 1. Tổng quan
 

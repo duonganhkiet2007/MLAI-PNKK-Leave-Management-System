@@ -12,6 +12,8 @@
 
 </div>
 
+[![Xem demo hệ thống](https://img.youtube.com/vi/FjoYJwa732c/maxresdefault.jpg)](https://youtu.be/FjoYJwa732c)
+
 ## 1. Tổng quan
 
 Phê duyệt nghỉ phép là một quy trình lặp lại nhưng không hề đơn giản: mỗi đơn đòi hỏi đối chiếu đồng thời lịch làm việc, số dư phép, chứng từ, tỷ lệ vắng mặt và thẩm quyền phê duyệt. Dù được hỗ trợ bởi tự động hóa, quyền quyết định cuối cùng vẫn phải thuộc về đúng người có thẩm quyền.

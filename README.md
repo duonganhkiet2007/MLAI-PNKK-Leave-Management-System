@@ -35,6 +35,8 @@ Hệ thống hướng tới một cơ chế phân xử giúp giảm tải các c
 
 ## 2. Kiến trúc hệ thống
 
+![Luồng hoạt động chính](docs/report/6168185353823522853.jpg)
+
 ### 2.1. Tầng Backend
 
 FastAPI, dựng app, đăng ký CORS, router, phục vụ frontend tĩnh, và làm nóng (warm-up) mô hình AI ngay lúc khởi động.

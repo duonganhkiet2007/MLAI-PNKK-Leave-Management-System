@@ -9,6 +9,9 @@
 > **Hệ thống điều phối xét duyệt nghỉ phép kết hợp Deterministic Rule Engine, Vision-Language Model (VLM) và Human-in-the-Loop Orchestration.**  
 > *Triệt tiêu rủi ro ảo giác (Zero Hallucination) • Tự động hóa ca thường quy • Điều phối ngoại lệ chính xác*
 
+**📺 Video Demo:** [https://youtu.be/FjoYJwa732c](https://youtu.be/FjoYJwa732c)  
+**📊 Dataset Mẫu:** [Google Sheets Link](https://docs.google.com/spreadsheets/d/1_d9vUImx0TX7yeGoFwtnWIQRDaDFpi_XKqALEeNs1KA/edit?gid=1111531951#gid=1111531951)
+
 [Tổng Quan](#tổng-quan-dự-án) • [Kiến Trúc Kỹ Thuật](#kiến-trúc-kỹ-thuật--quy-trình-backend) • [Giao Diện Hoạt Động](#giao-diện-hoạt-động-3-chế-độ) • [Ma Trận Phán Quyết](#ma-trận-phán-quyết) • [Phân Loại Ngoại Lệ](#phân-loại-ngoại-lệ-taxonomy) • [Cài Đặt & Khởi Chạy](#cài-đặt--khởi-chạy)
 
 ---
@@ -18,9 +21,13 @@
 - **Thực trạng**: Phê duyệt nghỉ phép thủ công thường tốn nhiều thời gian đối chiếu giấy tờ và dễ bỏ sót sai phạm quy chế. Ngược lại, việc tự động hóa thuần túy bằng AI tạo sinh (Pure LLM) lại đối mặt với rủi ro nghiêm trọng về **ảo giác số liệu (hallucination)** — dễ tính sai ngày nghỉ cuối tuần/ngày lễ và duyệt sai thẩm quyền theo luật lao động.
 - **Giải pháp**: **The Escalation Referee** ứng dụng mô hình kết hợp **Hybrid AI & Deterministic Validation**: sử dụng bộ máy quy chế tất định (Rule Engine) để triệt tiêu 100% ảo giác số liệu theo Bộ luật Lao động 2019, mô hình thị giác **Qwen 2.5-VL** để tự động thẩm định chứng từ y tế/kết hôn, và cơ chế **Human-in-the-Loop** chỉ tự động duyệt ca thường quy (≤ 2 ngày) đồng thời điều phối ngoại lệ đến đúng người có thẩm quyền kèm câu hỏi hành động trực diện.
 
+![Tổng quan hệ thống](docs/report/Screenshot%202026-09-22%20195205.png)
+
 ---
 
 ## Kiến Trúc Kỹ Thuật & Quy Trình Backend
+
+![Luồng hoạt động chính](docs/report/6168185353823522853.jpg)
 
 Khảo sát luồng điều phối trung tâm tại dịch vụ `LeaveOrchestratorService` (`backend/services/orchestration.py`), quy trình xử lý của backend diễn ra theo 5 bước tuần tự và nguyên tử (atomic):
 
@@ -29,6 +36,8 @@ Khảo sát luồng điều phối trung tâm tại dịch vụ `LeaveOrchestrat
 3. **Đánh Giá Quy Chế Tất Định (Rule Engine Evaluation):** Đưa toàn bộ ngữ cảnh qua `LeaveRuleEngine` với 7 bộ lọc chính sách tất định (kiểm tra hạn mức phép, tỷ lệ vắng mặt đồng thời ≤ 30%, thời hạn báo trước, nhân sự bàn giao, trần tự duyệt).
 4. **Phân Nhánh Phán Quyết (Decision Routing):** Xác định 1 trong 4 phán quyết cốt lõi: `AUTO_APPROVE` (tự duyệt ca thường quy ≤ 2 ngày và trừ phép), `AUTO_REJECT` (tự từ chối khi hết phép), `NEED_CORRECTION` (yêu cầu nhân viên sửa ngày cho khớp giấy khám), hoặc `ESCALATE` (sinh `actionable_question` kèm các tùy chọn duyệt nhanh 1-chạm gửi vào Inbox của Quản lý).
 5. **Kiểm Toán & Hỗ Trợ Can Thiệp (Audit & Manager Override):** Ghi nhận chi tiết lịch sử xử lý vào SQLite; Quản lý giữ quyền tối cao để phê duyệt đặc cách hoặc bấm **Hủy Lệnh AI** nhằm thu hồi quyết định và hoàn trả ngày phép tức thì.
+
+![Sơ đồ kiến trúc Backend](docs/report/Screenshot%202026-09-22%20224316.png)
 
 ```mermaid
 flowchart TD
@@ -78,18 +87,29 @@ Hệ thống được thiết kế theo kiến trúc Single Page Application (SP
 | **STAFF** | Nhân viên | Điền form đăng ký nghỉ phép có bộ tính ngày tự động; chọn nhân sự bàn giao trong phòng ban; đính kèm file chứng từ; theo dõi số dư phép còn lại và lịch vắng mặt nội bộ. |
 | **MANAGER** | Cấp Quản lý | **Escalation Inbox** tiếp nhận các ca chuyển tiếp kèm câu hỏi tham vấn trực diện; thực hiện phê duyệt 1-chạm; theo dõi danh sách các đơn do AI tự duyệt và quyền thực thi nút **[ Hủy Lệnh AI ]**. |
 
+### Chế độ TEST
+![Giao diện TEST](docs/report/Screenshot%202026-09-22%20222018.png)
+
+### Chế độ MANAGER
+![Giao diện MANAGER](docs/report/Screenshot%202026-09-22%20221958.png)
+
+### Chế độ STAFF
+![Giao diện STAFF](docs/report/Screenshot%202026-09-22%20221850.png)
+
 ---
 
 ## Ma Trận Phán Quyết
 
 Căn cứ theo **Bộ luật Lao động 2019** (Điều 112, 113, 115) và quy định Bảo hiểm Xã hội:
 
+![Quy chế xét duyệt](docs/report/Screenshot%202026-09-22%20200113.png)
+
 | Mã Phán Quyết | Tên Quyết Định | Điều Kiện Kích Hoạt | Hành Động Hệ Thống |
 | :--- | :--- | :--- | :--- |
 | **`AUTO_APPROVE`** | Tự động duyệt | Nghỉ phép năm ≤ 2 ngày, đủ số dư phép, nộp trước ≥ 24h, quota vắng mặt team ≤ 30%, bàn giao đầy đủ. | Hệ thống tự duyệt tức thì, trừ số dư phép năm, cập nhật lịch vắng mặt và ghi Audit Log. |
-| **`AUTO_REJECT`** | Từ chối tự động | Số ngày xin nghỉ vượt quá số dư phép năm hiện có (`BALANCE_EXCEEDED`). | Tự động từ chối, không trừ phép, hướng dẫn nhân viên điều chỉnh hoặc làm đơn nghỉ không hưởng lương. |
-| **`NEED_CORRECTION`**| Cần sửa đơn | Sai lệch số ngày giữa đơn và chỉ định y tế (`MEDICAL_DAYS_MISMATCH`), chứng từ mờ hoặc người bàn giao không hợp lệ. | Chuyển trạng thái yêu cầu nhân viên điều chỉnh ngày nghỉ cho khớp với chứng từ y tế hoặc bổ sung hồ sơ. |
-| **`ESCALATE`** | Chuyển Quản lý | Vượt thẩm quyền AI (nghỉ 3-5 ngày, nghỉ việc riêng có lương 3 ngày theo Điều 115 BLLĐ, nộp gấp, vượt quota 30%). | Gửi vào Escalation Inbox của Quản lý kèm câu hỏi tham vấn tự động và đề xuất phương án xử lý nhanh. |
+| **`AUTO_REJECT`** | Từ chối tự động | Số ngày xin nghỉ vượt quá số dư phép hiện có (`BALANCE_EXCEEDED`). | Tự động từ chối, không trừ phép, hướng dẫn nhân viên điều chỉnh hoặc làm đơn nghỉ không lương. |
+| **`NEED_CORRECTION`**| Cần sửa đơn | Sai lệch số ngày giữa đơn và chỉ định y tế (`MEDICAL_DAYS_MISMATCH`), chứng từ mờ hoặc người bàn giao không hợp lệ. | Yêu cầu nhân viên điều chỉnh ngày nghỉ cho khớp với chứng từ y tế hoặc bổ sung hồ sơ. |
+| **`ESCALATE`** | Chuyển Quản lý | Vượt thẩm quyền AI (nghỉ 3-5 ngày, nghỉ việc riêng có lương 3 ngày theo Điều 115 BLLĐ, nộp gấp, vượt quota 30%). | Gửi vào Escalation Inbox của Quản lý kèm câu hỏi tham vấn tự động và đề xuất xử lý nhanh. |
 
 ---
 
@@ -111,18 +131,18 @@ Mọi trường hợp ngoại lệ đều được phân loại vào 3 nhóm b�
 | STT | Mã Lỗi (`error_code`) | Phân Nhóm | Thẩm Quyền | Mô Tả Chi Tiết |
 | :---: | :--- | :--- | :--- | :--- |
 | **1** | `DATE_RANGE_INVALID` | `UNCERTAIN_FACTS` | `EMPLOYEE` | Ngày kết thúc trước ngày bắt đầu hoặc số ngày làm việc tính ra ≤ 0. |
-| **2** | `DATE_MISSING` | `UNCERTAIN_FACTS` | `EMPLOYEE` | Đơn thiếu thông tin ngày bắt đầu hoặc ngày kết thúc cụ thể. |
-| **3** | `PROOF_MISSING` | `UNCERTAIN_FACTS` | `EMPLOYEE` | Nghỉ ốm ≥ 2 ngày hoặc nghỉ chế độ nhưng không tải lên file chứng từ xác minh. |
-| **4** | `DOC_ILLEGIBLE` | `UNCERTAIN_FACTS` | `EMPLOYEE` | Ảnh chứng từ bị mờ, mất góc, không đọc được nội dung, thiếu mộc đỏ hoặc chữ ký bác sĩ. |
-| **5** | `NAME_MISMATCH` | `UNCERTAIN_FACTS` | `HR_OPERATIONS` | Họ tên người bệnh trên giấy y tế không trùng khớp với nhân viên làm đơn. |
-| **6** | `MEDICAL_DAYS_MISMATCH` | `UNCERTAIN_FACTS` | `EMPLOYEE` / `MANAGER` | Số ngày xin nghỉ nhiều hơn số ngày bác sĩ chỉ định trên giấy chứng nhận BHXH. |
+| **2** | `DATE_MISSING` | `UNCERTAIN_FACTS` | `EMPLOYEE` | Đơn thiếu thông tin ngày bắt đầu hoặc kết thúc cụ thể. |
+| **3** | `PROOF_MISSING` | `UNCERTAIN_FACTS` | `EMPLOYEE` | Nghỉ ốm ≥ 2 ngày nhưng không tải lên chứng từ xác minh. |
+| **4** | `DOC_ILLEGIBLE` | `UNCERTAIN_FACTS` | `EMPLOYEE` | Ảnh chứng từ bị mờ, mất góc, không đọc được, thiếu mộc đỏ hoặc chữ ký. |
+| **5** | `NAME_MISMATCH` | `UNCERTAIN_FACTS` | `HR_OPERATIONS` | Họ tên người bệnh trên giấy y tế không khớp với nhân viên làm đơn. |
+| **6** | `MEDICAL_DAYS_MISMATCH` | `UNCERTAIN_FACTS` | `EMPLOYEE` / `MANAGER` | Số ngày xin nghỉ nhiều hơn ngày bác sĩ chỉ định. |
 | **7** | `DOC_SUSPICIOUS` | `UNCERTAIN_FACTS` | `HR_OPERATIONS` | Chứng từ có dấu hiệu chỉnh sửa hình ảnh hoặc tẩy xóa bất thường. |
-| **8** | `HANDOVER_INVALID` | `UNCERTAIN_FACTS` | `EMPLOYEE` | Người nhận bàn giao không cùng phòng, đã nghỉ việc, trùng lịch nghỉ hoặc trùng chính mình. |
+| **8** | `HANDOVER_INVALID` | `UNCERTAIN_FACTS` | `EMPLOYEE` | Người nhận bàn giao không hợp lệ (đã nghỉ, không cùng team, hoặc trùng lịch nghỉ). |
 | **9** | `BALANCE_EXCEEDED` | `OUT_OF_POLICY` | `EMPLOYEE` | Số ngày xin nghỉ phép năm vượt quá số dư phép hiện có của nhân viên. |
-| **10** | `NOTICE_PERIOD_VIOLATED` | `OUT_OF_POLICY` | `DIRECT_MANAGER` | Nộp đơn gấp vi phạm thời hạn báo trước (dưới 24h đối với phép năm, sau 08:30 đối với nghỉ ốm). |
-| **11** | `TEAM_QUOTA_EXCEEDED` | `OUT_OF_POLICY` | `DIRECT_MANAGER` | Tỷ lệ nhân sự vắng mặt đồng thời của phòng ban vượt quá ngưỡng an toàn 30%. |
-| **12** | `FLAG_ABUSE_PATTERN` | `OUT_OF_POLICY` | `DIRECT_MANAGER` | Chia nhỏ nhiều đơn nghỉ 1-2 ngày liên tục trong tháng nhằm tránh hạn mức duyệt của AI. |
-| **13** | `UNQUALIFIED_SPECIAL_LEAVE` | `OUT_OF_POLICY` | `EMPLOYEE` | Xin nghỉ việc riêng hưởng lương nhưng không thuộc diện quy định tại Điều 115 BLLĐ. |
+| **10** | `NOTICE_PERIOD_VIOLATED` | `OUT_OF_POLICY` | `DIRECT_MANAGER` | Nộp đơn gấp vi phạm thời hạn báo trước (dưới 24h). |
+| **11** | `TEAM_QUOTA_EXCEEDED` | `OUT_OF_POLICY` | `DIRECT_MANAGER` | Tỷ lệ nhân sự vắng mặt đồng thời của phòng ban vượt ngưỡng an toàn 30%. |
+| **12** | `FLAG_ABUSE_PATTERN` | `OUT_OF_POLICY` | `DIRECT_MANAGER` | Chia nhỏ nhiều đơn nghỉ 1-2 ngày liên tục trong tháng nhằm lách hạn mức tự duyệt của AI. |
+| **13** | `UNQUALIFIED_SPECIAL_LEAVE` | `OUT_OF_POLICY` | `EMPLOYEE` | Xin nghỉ việc riêng hưởng lương nhưng không thuộc diện Điều 115 BLLĐ. |
 | **14** | `DURATION_OVER_AI_LIMIT` | `AUTHORITY_ESCALATION` | `DIRECT_MANAGER` | Đơn hợp lệ nhưng thời lượng từ 3 đến 5 ngày làm việc (vượt trần tự duyệt 2 ngày của AI). |
 | **15** | `DURATION_OVER_MANAGER_LIMIT` | `AUTHORITY_ESCALATION` | `HR_DIRECTOR` | Đơn nghỉ phép năm dài hạn trên 5 ngày làm việc liên tiếp. |
 | **16** | `LONG_TERM_UNPAID` | `AUTHORITY_ESCALATION` | `HR_DIRECTOR` / `CEO` | Nghỉ việc riêng không hưởng lương dài hạn trên 14 ngày làm việc. |

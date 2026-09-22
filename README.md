@@ -237,9 +237,19 @@ Hệ thống cung cấp thanh chuyển đổi nhanh giữa 3 đối tượng ng�
 
 **TEST**: Đánh giá & demo, khởi chạy Verify tự động 5 ca chuẩn; tra cứu kho dữ liệu 38 kịch bản
 
+![Giao diện](docs/report/Screenshot%202026-09-22%20222018.png)
+
 **MANAGER**: Escalation Inbox nhận ca ngoại lệ kèm Actionable Question, phê duyệt 1-chạm; xem nhật ký AI tự duyệt và tổng số hồ sơ submit
 
+![Giao diện](docs/report/Screenshot%202026-09-22%20221958.png)
+
+
 **STAFF**: Nộp đơn có tính ngày tự động, chọn nhân sự bàn giao, đính kèm chứng từ, theo dõi số dư phép tồn và lịch vắng mặt phòng ban
+
+
+
+![Giao diện](docs/report/Screenshot%202026-09-22%20221850.png)
+
 
 ## 5. Cấu trúc dự án
 

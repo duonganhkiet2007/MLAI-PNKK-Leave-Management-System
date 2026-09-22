@@ -614,12 +614,12 @@
       }
     },
     "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
       "requested_working_days": 2,
       "deducted_days": 0,
       "annual_balance_change": 0,
-      "uncertainty_category": "UNCERTAIN_FACTS",
+      "uncertainty_category": "AUTHORITY_ESCALATION",
       "error_code": "DOC_ILLEGIBLE"
     },
     "is_verify_harness": false

@@ -90,15 +90,20 @@ def test_annual_reason_chan_di_lam_auto_approves():
     assert r.deducted_days == 2
     assert r.annual_balance_change == -2
 
-def test_sick_authority_1d_vs_2d():
+def test_sick_authority_under_3_days_auto_approves():
     r1 = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-05',
                   proof={**PROOF, 'recommended_to_date': '2026-10-05'})
     assert r1.decision == 'AUTO_APPROVE'
     r2 = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-06',
                   proof=PROOF)
-    assert r2.decision == 'ESCALATE'
-    assert r2.target_role == 'DIRECT_MANAGER'
-    assert r2.error_code == 'DURATION_OVER_AI_LIMIT'
+    assert r2.decision == 'AUTO_APPROVE'
+    assert r2.error_code is None
+
+    r3 = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-07',
+                  proof={**PROOF, 'recommended_to_date': '2026-10-07'})
+    assert r3.decision == 'ESCALATE'
+    assert r3.target_role == 'DIRECT_MANAGER'
+    assert r3.error_code == 'DURATION_OVER_AI_LIMIT'
 
 def test_sick_emergency_cutoff():
     r_pass = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-05',
@@ -120,6 +125,27 @@ def test_anti_abuse_pattern_flag():
     assert r.target_role == 'DIRECT_MANAGER'
     assert r.error_code == 'FLAG_ABUSE_PATTERN'
     assert r.uncertainty_category == 'OUT_OF_POLICY'
+
+
+def test_annual_and_unpaid_leave_do_not_require_proof_as_prerequisite():
+    annual = evaluate(leave_type='ANNUAL', from_date='2026-10-05', to_date='2026-10-06',
+                      remaining_leave_days=10, reason='Nghỉ phép năm')
+    assert annual.decision == 'AUTO_APPROVE'
+    assert annual.error_code is None
+
+    unpaid = evaluate(leave_type='UNPAID_OTHER', from_date='2026-09-15', to_date='2026-09-15',
+                      submitted_at='2026-09-04T08:00:00+07:00', reason='Việc gia đình', remaining_leave_days=0)
+    assert unpaid.decision == 'ESCALATE'
+    assert unpaid.error_code == 'LONG_TERM_UNPAID'
+    assert unpaid.target_role == 'DIRECT_MANAGER'
+    assert unpaid.error_code != 'PROOF_MISSING'
+
+    annual_with_proof = evaluate(leave_type='ANNUAL', from_date='2026-10-05', to_date='2026-10-06',
+                                 remaining_leave_days=10, reason='Nghỉ phép năm',
+                                 proof={**PROOF, 'proof_type': 'MEDICAL_LEAVE_CERTIFICATE'})
+    assert annual_with_proof.decision == 'AUTO_APPROVE'
+    assert annual_with_proof.error_code is None
+
 
 def test_unclear_statutory_relationship_goes_to_manager():
     r = evaluate(leave_type='STATUTORY_UNPAID', reason_category=None, to_date='2026-10-05')

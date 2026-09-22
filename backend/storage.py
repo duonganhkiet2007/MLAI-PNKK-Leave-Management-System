@@ -131,12 +131,12 @@ def load_context(conn, employee_id, facts, submitted_at, request_id, granted_rol
             elif 'fake' in att:
                 proof.proof_verification_status = 'REJECTED'
                 proof.verification_notes = 'VLM nghi ngờ chứng từ không hợp lệ (làm giả), cần đối chiếu với nguồn cấp.'
-                proof.document_readability = 'ILLEGIBLE' if 'blur' in att else 'READABLE'
+                proof.document_readability = 'UNREADABLE' if 'blur' in att else 'READABLE'
             elif 'vague' in att or 'handwritten' in att or 'photo' in att:
                 proof.proof_verification_status = 'UNVERIFIED'
-                proof.document_readability = 'ILLEGIBLE' if ('vague' in att or 'handwritten' in att) else 'READABLE'
-                proof.verification_notes = ('Chữ viết tay khó đọc / ảnh chụp không rõ nét, chờ Quản lý duyệt đặc cách.'
-                                           if 'vague' in att or 'handwritten' in att else
+                proof.document_readability = 'UNREADABLE' if ('vague' in att or 'handwritten' in att or 'blur' in att) else 'READABLE'
+                proof.verification_notes = ('Chữ viết tay / ảnh chụp không rõ nét hoặc mờ; không đọc được thông tin cần thiết, chờ Quản lý xem xét.'
+                                           if 'vague' in att or 'handwritten' in att or 'blur' in att else
                                            'Chứng từ không phải loại giấy khám bệnh hợp lệ.')
             else:
                 proof.proof_verification_status = 'UNVERIFIED'

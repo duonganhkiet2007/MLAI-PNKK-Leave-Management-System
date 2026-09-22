@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/static/vendor/tabler/tabler.min.css">
   
   <!-- Custom Styling & Refinements -->
-  <link rel="stylesheet" href="styles.css?v=20260921_v3">
+  <link rel="stylesheet" href="styles.css?v=20260922_v7">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e40af'/><text x='16' y='22' font-family='sans-serif' font-size='16' font-weight='bold' fill='white' text-anchor='middle'>HR</text></svg>">
 </head>
 <body>
@@ -27,7 +27,10 @@
       <div class="saas-topbar-left">
         <!-- Mode Switcher -->
         <div class="saas-mode-switch" role="group" aria-label="Chuyển đổi giao diện">
-          <button type="button" class="saas-mode-btn active" id="btn-mode-staff" data-mode="staff">
+          <button type="button" class="saas-mode-btn active" id="btn-mode-test" data-mode="test">
+            Test
+          </button>
+          <button type="button" class="saas-mode-btn" id="btn-mode-staff" data-mode="staff">
             Staff
           </button>
           <button type="button" class="saas-mode-btn" id="btn-mode-manager" data-mode="manager">
@@ -36,7 +39,7 @@
         </div>
 
         <!-- Role / Demo Selectors -->
-        <div class="saas-selector-wrap" id="header-staff-selector">
+        <div class="saas-selector-wrap" id="header-staff-selector" style="display: none;">
           <span class="saas-selector-label">Phòng ban:</span>
           <select id="demo-department-select" class="saas-select" title="Chọn phòng ban">
             <option value="Engineering" selected>Engineering</option>
@@ -73,12 +76,33 @@
       <!-- 2.1 SIDEBAR NAVIGATION (Slate Dark #1e293b)                           -->
       <!-- ===================================================================== -->
       <aside class="saas-sidebar">
+
+        <!-- Sidebar Navigation for TEST -->
+        <nav class="saas-nav-group" id="sidebar-test-nav">
+          <div class="saas-nav-header">DANH MỤC TÍNH NĂNG</div>
+
+          <button class="saas-nav-item active tab-btn" data-tab="tab-test-audit" id="btn-tab-test-audit">
+            <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span class="saas-nav-text">Kiểm duyệt</span>
+          </button>
+
+          <button class="saas-nav-item tab-btn" data-tab="tab-test-repo" id="btn-tab-test-repo">
+            <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"></path>
+              <path d="M8.5 2h7"></path>
+              <path d="M7 16h10"></path>
+            </svg>
+            <span class="saas-nav-text">Kho dữ liệu</span>
+          </button>
+        </nav>
         
         <!-- Sidebar Navigation for STAFF -->
-        <nav class="saas-nav-group" id="sidebar-staff-nav">
+        <nav class="saas-nav-group" id="sidebar-staff-nav" style="display: none;">
           <div class="saas-nav-header">DANH MỤC TÍNH NĂNG</div>
           
-          <button class="saas-nav-item active tab-btn" data-tab="tab-staff-dashboard" id="btn-tab-staff-dash">
+          <button class="saas-nav-item tab-btn" data-tab="tab-staff-dashboard" id="btn-tab-staff-dash">
             <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="7" height="7"></rect>
               <rect x="14" y="3" width="7" height="7"></rect>
@@ -114,13 +138,13 @@
             <span class="saas-nav-text">Quy chế</span>
           </button>
 
-          <button class="saas-nav-item tab-btn" data-tab="tab-staff-testing" id="btn-tab-staff-testing">
+
+
+          <button class="saas-nav-item" id="btn-reset-database" title="Khôi phục toàn bộ database về trạng thái demo ban đầu" style="margin-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px;">
             <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"></path>
-              <path d="M8.5 2h7"></path>
-              <path d="M7 16h10"></path>
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"></path>
             </svg>
-            <span class="saas-nav-text">Kiểm thử</span>
+            <span class="saas-nav-text">Reset DB</span>
           </button>
         </nav>
 
@@ -165,20 +189,14 @@
             <span class="saas-nav-text">Hồ sơ đơn</span>
           </button>
 
-          <button class="saas-nav-item tab-btn" data-tab="tab-mgr-verify" id="btn-tab-mgr-verify">
-            <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="4 17 10 11 4 5"></polyline>
-              <line x1="12" y1="19" x2="20" y2="19"></line>
-            </svg>
-            <span class="saas-nav-text">Kiểm thử</span>
-          </button>
+
 
           <button class="saas-nav-item tab-btn" data-tab="tab-mgr-policy" id="btn-tab-mgr-policy">
             <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
             </svg>
-            <span class="saas-nav-text">Quy chế & Cây quy tắc</span>
+            <span class="saas-nav-text">Quy chế</span>
           </button>
 
           <button class="saas-nav-item" id="btn-sidebar-allocate">
@@ -199,9 +217,248 @@
       <main class="saas-main-content">
 
         <!-- =================================================================== -->
+        <!-- VIEW 0: GIAO DIỆN KIỂM THỬ (TEST PORTAL)                            -->
+        <!-- =================================================================== -->
+        <div id="view-test-portal" class="portal-view active">
+
+          <!-- TAB T1: KIỂM DUYỆT (Bộ 5 kịch bản Sprint 1) -->
+          <section id="tab-test-audit" class="tab-pane active">
+
+            <!-- ============================================================= -->
+            <!-- 1. BỘ 5 KỊCH BẢN KIỂM THỬ SPRINT 1 (BENCHMARK SUITE)          -->
+            <!-- ============================================================= -->
+            <div class="saas-panel test-portal-card mb-4" id="sprint1-benchmark-card">
+              <div class="test-portal-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center">
+                  <h3 class="benchmark-title" style="font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;">
+                    5 Kịch Bản Kiểm Thử
+                  </h3>
+                </div>
+
+                <div>
+                  <button type="button" class="btn benchmark-btn-primary" id="btn-run-sprint1-benchmark" style="padding: 8px 22px; font-weight: 600; border-radius: 8px;">
+                    <span>Verify</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="saas-panel-body p-4">
+                <!-- 5 Test Cases Overview Table (Format Bảng chuẩn) -->
+                <div class="table-responsive rounded border mb-3" style="border-color: #e2e8f0 !important; background: #ffffff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);" id="sprint1-cases-overview">
+                  <table class="table table-vcenter card-table table-hover table-striped m-0" id="table-sprint1-overview">
+                    <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                      <tr>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Nhân viên</th>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Phòng ban</th>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Thời gian nghỉ</th>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Số ngày</th>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Chi tiết</th>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sprint1-overview-tbody">
+                      <!-- Row 1 -->
+                      <tr id="sprint1-row-TC-AI-01">
+                        <td style="padding: 12px 16px;"><b class="text-dark">Nguyễn Văn An</b></td>
+                        <td style="padding: 12px 16px;"><span class="badge bg-secondary-lt fw-semibold">Engineering</span></td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-05 &rarr; 2026-10-05</td>
+                        <td style="padding: 12px 16px;"><b class="text-dark">1 ngày</b></td>
+                        <td style="padding: 12px 16px;">
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-AI-01')" title="Xem chi tiết đơn nghỉ phép">
+                            Chi tiết
+                          </button>
+                        </td>
+                        <td style="padding: 12px 16px;">
+                          <span class="benchmark-tag benchmark-tag-approve" id="sprint1-status-TC-AI-01">1. Thường quy · Duyệt</span>
+                        </td>
+                      </tr>
+
+                      <!-- Row 2 -->
+                      <tr id="sprint1-row-TC-EMP008-03">
+                        <td style="padding: 12px 16px;"><b class="text-dark">Nguyễn Thị Kim Ngân</b></td>
+                        <td style="padding: 12px 16px;"><span class="badge bg-secondary-lt fw-semibold">Marketing & Operations</span></td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-08 &rarr; 2026-10-09</td>
+                        <td style="padding: 12px 16px;"><b class="text-dark">2 ngày</b></td>
+                        <td style="padding: 12px 16px;">
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-EMP008-03')" title="Xem chi tiết đơn nghỉ phép">
+                            Chi tiết
+                          </button>
+                        </td>
+                        <td style="padding: 12px 16px;">
+                          <span class="benchmark-tag benchmark-tag-approve" id="sprint1-status-TC-EMP008-03">2. Thường quy · Duyệt</span>
+                        </td>
+                      </tr>
+
+                      <!-- Row 3 -->
+                      <tr id="sprint1-row-TC-AI-03B">
+                        <td style="padding: 12px 16px;"><b class="text-dark">Bùi Tuấn Kiệt</b></td>
+                        <td style="padding: 12px 16px;"><span class="badge bg-secondary-lt fw-semibold">Engineering</span></td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-05 &rarr; 2026-10-06</td>
+                        <td style="padding: 12px 16px;"><b class="text-dark">2 ngày</b></td>
+                        <td style="padding: 12px 16px;">
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-AI-03B')" title="Xem chi tiết đơn nghỉ phép">
+                            Chi tiết
+                          </button>
+                        </td>
+                        <td style="padding: 12px 16px;">
+                          <span class="benchmark-tag benchmark-tag-reject" id="sprint1-status-TC-AI-03B">3. Thường quy · Từ chối</span>
+                        </td>
+                      </tr>
+
+                      <!-- Row 4 -->
+                      <tr id="sprint1-row-TC-VLM-03">
+                        <td style="padding: 12px 16px;"><b class="text-dark">Lê Văn Nam</b></td>
+                        <td style="padding: 12px 16px;"><span class="badge bg-secondary-lt fw-semibold">Engineering</span></td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-12 &rarr; 2026-10-14</td>
+                        <td style="padding: 12px 16px;"><b class="text-dark">3 ngày</b></td>
+                        <td style="padding: 12px 16px;">
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-VLM-03')" title="Xem chi tiết đơn nghỉ phép">
+                            Chi tiết
+                          </button>
+                        </td>
+                        <td style="padding: 12px 16px;">
+                          <span class="benchmark-tag benchmark-tag-correct" id="sprint1-status-TC-VLM-03">4. Chuyển tiếp · Lệch ảnh</span>
+                        </td>
+                      </tr>
+
+                      <!-- Row 5 -->
+                      <tr id="sprint1-row-TC-MGR-03">
+                        <td style="padding: 12px 16px;"><b class="text-dark">Võ Minh Khang</b></td>
+                        <td style="padding: 12px 16px;"><span class="badge bg-secondary-lt fw-semibold">Marketing & Operations</span></td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-05 &rarr; 2026-10-07</td>
+                        <td style="padding: 12px 16px;"><b class="text-dark">3 ngày</b></td>
+                        <td style="padding: 12px 16px;">
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-MGR-03')" title="Xem chi tiết đơn nghỉ phép">
+                            Chi tiết
+                          </button>
+                        </td>
+                        <td style="padding: 12px 16px;">
+                          <span class="benchmark-tag benchmark-tag-escalate" id="sprint1-status-TC-MGR-03">5. Chuyển tiếp · Vượt quyền</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Progress Bar Container (Active during run) -->
+                <div id="sprint1-progress-wrap" class="d-none benchmark-progress-box">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-semibold text-dark" style="font-size: 0.85rem;" id="sprint1-progress-label">
+                      Đang xử lý kịch bản kiểm thử...
+                    </span>
+                    <span class="badge" style="background: #2563eb; color: #fff; font-weight: 700; font-size: 0.75rem;" id="sprint1-progress-percent">0%</span>
+                  </div>
+                  <div class="benchmark-progress-track">
+                    <div id="sprint1-progress-bar" class="benchmark-progress-bar" style="width: 0%;"></div>
+                  </div>
+                </div>
+
+                <!-- Benchmark Live Results Card -->
+                <div id="sprint1-results-card" class="d-none mt-3">
+                  <!-- KPI Counters -->
+                  <div class="benchmark-kpi-grid">
+                    <div class="benchmark-kpi-card">
+                      <div class="benchmark-kpi-val text-primary" id="sprint1-stat-total">5</div>
+                      <div class="benchmark-kpi-lbl">Tổng kịch bản</div>
+                    </div>
+                    <div class="benchmark-kpi-card">
+                      <div class="benchmark-kpi-val text-success" id="sprint1-stat-auto">3 / 3</div>
+                      <div class="benchmark-kpi-lbl">Thường quy (2 Duyệt, 1 Chặn)</div>
+                    </div>
+                    <div class="benchmark-kpi-card">
+                      <div class="benchmark-kpi-val" style="color: #d97706;" id="sprint1-stat-escalate">2 / 2</div>
+                      <div class="benchmark-kpi-lbl">Chuyển tiếp / Cần làm rõ</div>
+                    </div>
+                    <div class="benchmark-kpi-card">
+                      <div class="benchmark-kpi-val text-success" id="sprint1-stat-status">100% ĐẠT</div>
+                      <div class="benchmark-kpi-lbl">Kết quả Sprint 1</div>
+                    </div>
+                  </div>
+
+                  <!-- Results Table -->
+                  <div class="table-responsive rounded border" style="border-color: #e2e8f0 !important;">
+                    <table class="table table-sm table-hover card-table m-0" id="table-sprint1-results">
+                      <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                        <tr>
+                          <th style="width: 140px; font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Mã & Nhân sự</th>
+                          <th style="width: 160px; font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Phân loại Sprint 1</th>
+                          <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Kỳ vọng</th>
+                          <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Phán quyết AI</th>
+                          <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Câu hỏi hành động (Actionable Question)</th>
+                          <th style="width: 90px; font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;" class="text-center">Đánh giá</th>
+                        </tr>
+                      </thead>
+                      <tbody id="sprint1-results-tbody">
+                        <!-- Populated dynamically via JS -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- TAB T2: KHO DỮ LIỆU (Kho 38 kịch bản) -->
+          <section id="tab-test-repo" class="tab-pane">
+
+            <!-- ============================================================= -->
+            <!-- 2. KHO TOÀN BỘ 38 KỊCH BẢN KIỂM THỬ (TOÀN CÔNG TY)           -->
+            <!-- ============================================================= -->
+            <div class="saas-panel test-portal-card mb-4" id="staff-testcase-card">
+              <div class="test-portal-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                  <h3 class="benchmark-title">Kho kịch bản</h3>
+                  <div class="benchmark-subtitle">38 kịch bản toàn công ty · 4 nhóm chính</div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge" id="badge-testcase-count">38 kịch bản</span>
+                </div>
+              </div>
+
+              <div class="saas-panel-body p-4">
+                <div class="d-flex align-items-center gap-1.5 flex-wrap mb-3" id="testcase-filter-pills">
+                  <button type="button" class="btn btn-sm btn-outline-primary active" data-filter="ALL">Tất cả</button>
+                  <button type="button" class="btn btn-sm btn-outline-success" data-filter="ROUTINE">Rõ ràng</button>
+                  <button type="button" class="btn btn-sm btn-outline-warning" data-filter="UNCERTAIN_FACTS">Cần xác minh</button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" data-filter="OUT_OF_POLICY">Ngoài quy định</button>
+                  <button type="button" class="btn btn-sm btn-outline-purple" data-filter="AUTHORITY_ESCALATION">Vượt thẩm quyền</button>
+                </div>
+
+                <div class="mb-3">
+                  <label for="staff-testcase-select" class="form-label d-flex justify-content-between align-items-center mb-2">
+                    <span>Chọn kịch bản</span>
+                    <span id="testcase-emp-hint" class="small text-muted"></span>
+                  </label>
+                  <select id="staff-testcase-select" class="form-select">
+                    <!-- Rendered dynamically via JS with <optgroup> -->
+                  </select>
+                </div>
+
+                <div id="testcase-preview-box" class="mb-3">
+                  <!-- Dynamically populated via JS -->
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" id="btn-fill-staff-testcase">
+                      <span>Nạp vào form</span>
+                    </button>
+                    <span class="text-muted small">Tự động điền dữ liệu mẫu vào form</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+        </div>
+
+
+        <!-- =================================================================== -->
         <!-- VIEW 1: CỔNG NHÂN VIÊN (STAFF PORTAL)                               -->
         <!-- =================================================================== -->
-        <div id="view-staff-portal" class="portal-view active">
+        <div id="view-staff-portal" class="portal-view">
 
           <!-- HERO WELCOME BANNER (Staff) -->
           <div class="saas-hero-banner">
@@ -463,67 +720,6 @@
             </div>
           </section>
 
-          <!-- TAB S6: TRUNG TÂM KIỂM THỬ QUY CHẾ AI -->
-          <section id="tab-staff-testing" class="tab-pane">
-            <div class="saas-panel mb-4" id="staff-testcase-card" style="border: 1px solid rgba(59, 130, 246, 0.22); box-shadow: 0 4px 16px rgba(30, 58, 138, 0.05); background: #ffffff; border-radius: 12px; overflow: hidden;">
-              <div class="saas-panel-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: linear-gradient(135deg, rgba(239, 246, 255, 0.85) 0%, rgba(248, 250, 252, 0.95) 100%); border-bottom: 1px solid rgba(59, 130, 246, 0.15); padding: 14px 20px;">
-                <div class="d-flex align-items-center gap-2.5">
-                  <div style="width: 36px; height: 36px; border-radius: 8px; background: #1e3a8a; display: flex; align-items: center; justify-content: center; color: #ffffff; flex-shrink: 0; box-shadow: 0 2px 6px rgba(30, 58, 138, 0.25);">
-                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"></path>
-                      <path d="M8.5 2h7"></path>
-                      <path d="M7 16h10"></path>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 class="saas-panel-title m-0" style="font-size: 1.05rem; font-weight: 700; color: #1e3a8a; letter-spacing: -0.01em;">
-                      KỊCH BẢN KIỂM THỬ MẪU (TEST CASES)
-                    </h3>
-                    <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
-                      Các kịch bản kiểm thử quy chế chuẩn hóa ứng với nhân viên đang được lựa chọn
-                    </div>
-                  </div>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                  <span class="badge" id="badge-testcase-count" style="background: rgba(37, 99, 235, 0.1); color: #1d4ed8; font-weight: 600; font-size: 0.78rem; border: 1px solid rgba(37, 99, 235, 0.2); padding: 5px 12px; border-radius: 20px;">
-                    Kịch bản của nhân viên
-                  </span>
-                </div>
-              </div>
-
-              <div class="saas-panel-body p-4">
-                <!-- Dropdown Select -->
-                <div class="mb-3">
-                  <label for="staff-testcase-select" class="form-label d-flex justify-content-between align-items-center mb-1.5" style="font-size: 0.84rem; font-weight: 700; color: #334155;">
-                    <span>Lựa chọn kịch bản kiểm thử:</span>
-                    <span id="testcase-emp-hint" class="small text-muted" style="font-weight: 500; font-size: 0.78rem;"></span>
-                  </label>
-                  <select id="staff-testcase-select" class="form-select" style="font-size: 0.88rem; font-weight: 500; border-radius: 8px; border-color: #cbd5e1; padding: 8px 14px; background-color: #ffffff;">
-                    <!-- Rendered dynamically via JS -->
-                  </select>
-                </div>
-
-                <!-- Test Case Preview Box -->
-                <div id="testcase-preview-box" class="p-3 mb-3" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
-                  <!-- Dynamically populated via JS -->
-                </div>
-
-                <!-- Action Buttons Toolbar -->
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                  <div>
-                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" id="btn-fill-staff-testcase" style="font-weight: 600; font-size: 0.88rem; padding: 9px 22px; border-radius: 6px; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 20h9"></path>
-                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-                      </svg>
-                      <span>Nạp vào form nộp đơn</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
         </div>
 
 
@@ -710,242 +906,42 @@
             </div>
           </section>
 
-          <!-- TAB M5: KIỂM THỬ -->
-          <section id="tab-mgr-verify" class="tab-pane">
-            <div class="saas-panel mb-4">
-              <div class="saas-panel-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                  <h3 class="saas-panel-title">BỘ KIỂM THỬ TỰ ĐỘNG</h3>
-                  <div class="saas-panel-subtitle">Thực thi 5 kịch bản kiểm thử chuẩn để xác minh khả năng tự duyệt và chuyển tiếp của AI</div>
-                </div>
-                <button id="btn-exec-harness" class="btn btn-primary">
-                  Chạy bộ kiểm thử
-                </button>
-              </div>
-              <div class="saas-panel-body">
-                <div class="row g-3 justify-content-center" id="harness-stats" style="display: none;">
-                  <div class="col-3">
-                    <div class="saas-metric-box text-center py-3">
-                      <div class="fs-1 fw-bold text-primary" id="stat-total">5</div>
-                      <div class="text-secondary small fw-bold text-uppercase">Tổng số ca</div>
-                    </div>
-                  </div>
-                  <div class="col-3">
-                    <div class="saas-metric-box text-center py-3">
-                      <div class="fs-1 fw-bold text-success" id="stat-auto">3 / 3</div>
-                      <div class="text-secondary small fw-bold text-uppercase">Tự động duyệt</div>
-                    </div>
-                  </div>
-                  <div class="col-3">
-                    <div class="saas-metric-box text-center py-3">
-                      <div class="fs-1 fw-bold text-warning" id="stat-escalate">2 / 2</div>
-                      <div class="text-secondary small fw-bold text-uppercase">Chuyển cấp duyệt</div>
-                    </div>
-                  </div>
-                  <div class="col-3">
-                    <div class="saas-metric-box text-center py-3">
-                      <div class="fs-1 fw-bold text-success" id="stat-overall">100% ĐẠT</div>
-                      <div class="text-secondary small fw-bold text-uppercase">Kết quả chung</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            <!-- BẢNG KẾT QUẢ HARNESS -->
-            <div class="saas-panel mb-4" id="card-harness-table" style="display: none;">
-              <div class="saas-panel-header">
-                <h3 class="saas-panel-title">BẢNG KẾT QUẢ KIỂM THỬ</h3>
-                <div class="saas-panel-subtitle">So sánh kết quả kỳ vọng và phán quyết thực tế của hệ thống AI</div>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-vcenter card-table table-hover table-striped" id="table-harness-results">
-                  <thead>
-                    <tr>
-                      <th>Mã</th>
-                      <th>Kịch bản kiểm thử</th>
-                      <th>Kỳ vọng</th>
-                      <th>AI Thực tế</th>
-                      <th>Phân loại</th>
-                      <th>Thẩm quyền</th>
-                      <th>Câu hỏi xử lý</th>
-                      <th>Trạng thái</th>
-                    </tr>
-                  </thead>
-                  <tbody id="harness-results-body">
-                    <!-- Rendered dynamically -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
 
-            <!-- PLAYGROUND -->
-            <div class="saas-panel">
-              <div class="saas-panel-header">
-                <h3 class="saas-panel-title">THỬ NGHIỆM CA MỚI</h3>
-                <div class="saas-panel-subtitle">Nhập thông tin đơn nghỉ để kiểm tra phản hồi phân loại thực tế của AI</div>
-              </div>
-              <div class="saas-panel-body">
-                <form id="form-custom-verify">
-                  <div class="row g-3">
-                    <div class="col-6">
-                      <label for="custom-emp-name" class="form-label required">Họ tên nhân viên</label>
-                      <input type="text" id="custom-emp-name" class="form-control" value="Nguyễn Văn A" required>
-                    </div>
-                    <div class="col-6">
-                      <label for="custom-dept" class="form-label required">Phòng ban</label>
-                      <select id="custom-dept" class="form-select">
-                        <option value="Engineering">Kỹ thuật</option>
-                        <option value="Finance">Tài chính</option>
-                        <option value="Marketing">Marketing</option>
-                        <option value="Human Resources">Nhân sự</option>
-                      </select>
-                    </div>
-                    <div class="col-6">
-                      <label for="custom-leave-type" class="form-label required">Loại nghỉ phép</label>
-                      <select id="custom-leave-type" class="form-select">
-                        <option value="Annual">📅 Nghỉ phép năm</option>
-                        <option value="Sick">🏥 Nghỉ ốm đau / Y tế</option>
-                        <option value="Special_Wedding">💒 Nghỉ đám cưới bản thân (3 ngày)</option>
-                        <option value="Special_Child_Wedding">👨‍👧 Nghỉ cưới con (1 ngày)</option>
-                        <option value="Special_Funeral_Direct">⚰️ Nghỉ tang cha/mẹ/vợ/chồng/con (3 ngày)</option>
-                        <option value="Special_Funeral_Extended">🕯️ Nghỉ tang anh/chị/em/ông/bà (1 ngày)</option>
-                        <option value="Special">📋 Nghỉ việc riêng khác</option>
-                        <option value="Maternity">🤱 Nghỉ thai sản</option>
-                        <option value="Unpaid">⏸️ Nghỉ không hưởng lương</option>
-                      </select>
-                    </div>
-                    <div class="col-6">
-                      <label for="custom-remaining-days" class="form-label required">Số ngày phép còn lại</label>
-                      <input type="number" id="custom-remaining-days" class="form-control" value="2.0" step="0.5" required>
-                    </div>
-                    <div class="col-6">
-                      <label for="custom-from-date" class="form-label required">Ngày bắt đầu</label>
-                      <input type="date" id="custom-from-date" class="form-control" value="2026-09-24" required>
-                    </div>
-                    <div class="col-6">
-                      <label for="custom-to-date" class="form-label required">Đến ngày</label>
-                      <input type="date" id="custom-to-date" class="form-control" value="2026-09-26" required>
-                    </div>
-                    
-
-                    <!-- Trường kiểm tra độ xác thực tài liệu -->
-                    
-                    <div class="col-6">
-                      <label for="custom-handover" class="form-label">Mã nhân sự nhận bàn giao</label>
-                      <input type="text" id="custom-handover" class="form-control" placeholder="Ví dụ: EMP045">
-                    </div>
-                    <div class="col-12">
-                      <label for="custom-reason" class="form-label required">Lý do xin nghỉ</label>
-                      <textarea id="custom-reason" class="form-control" rows="2" required>Xin nghỉ giải quyết việc gia đình và thăm người thân ở quê.</textarea>
-                    </div>
-                    <div class="col-12 d-flex justify-content-end">
-                      <button type="submit" class="btn btn-primary" id="btn-submit-custom">
-                        Đánh giá đơn này
-                      </button>
-                    </div>
-                  </div>
-                </form>
-                <div id="custom-result-card" class="mt-3 p-3 bg-light border rounded" style="display: none;"></div>
-              </div>
-            </div>
-          </section>
-
-          <!-- TAB M6: QUY CHẾ -->
+          <!-- TAB M6: QUY CHẾ & CÂY QUYẾT ĐỊNH -->
           <section id="tab-mgr-policy" class="tab-pane">
             <div class="saas-panel">
-              <div class="saas-panel-header">
+              <div class="saas-panel-header d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 border-bottom">
                 <div>
-                  <h3 class="saas-panel-title" id="policy-main-title">QUY CHẾ & CÂY QUYẾT ĐỊNH</h3>
-                  <div class="saas-panel-subtitle" id="policy-main-sub">Mã văn bản: POL-HR-2026-03 | Policy Engine v3.0 – MLAI Track A</div>
+                  <h3 class="saas-panel-title m-0" id="policy-main-title" style="font-size: 1.25rem;">QUY CHẾ</h3>
                 </div>
-                <!-- Sub-tab switcher -->
-                <div class="btn-group ms-auto" role="group" id="policy-subtab-group" style="gap:0;">
-                  <button type="button" class="btn btn-sm btn-primary subtab-btn-tree" id="subtab-btn-tree" onclick="switchPolicySubtab('tree')" style="border-radius:6px 0 0 6px; font-size:0.78rem; letter-spacing:0.02em;">
-                    🌳 Xem Cây Quyết Định
+                <!-- Mode switcher: 2 clean tabs -->
+                <div class="btn-group" role="group" id="policy-subtab-group">
+                  <button type="button" class="btn btn-sm btn-primary" id="btn-view-pipeline" onclick="switchPolicyViewMode('pipeline')">
+                    Quy tắc kiểm tra
                   </button>
-                  <button type="button" class="btn btn-sm btn-outline-primary subtab-btn-policy" id="subtab-btn-policy" onclick="switchPolicySubtab('policy')" style="border-radius:0 6px 6px 0; font-size:0.78rem; letter-spacing:0.02em;">
-                    📋 Xem Quy chế
+                  <button type="button" class="btn btn-sm btn-outline-primary" id="btn-view-policy" onclick="switchPolicyViewMode('policy')">
+                    Văn bản Quy chế
                   </button>
                 </div>
               </div>
+
               <div class="saas-panel-body p-0">
-
-                <!-- ============================================================ -->
-                <!-- SUB-TAB A: DECISION TREE VISUALIZATION                        -->
-                <!-- ============================================================ -->
-                <div id="subtab-tree" class="subtab-tree" style="display:block; padding: 20px; overflow-x: auto;">
-                  <!-- Stats bar -->
-                  <div id="dt-stats-bar" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
-                    <div class="dt-stat-chip dt-stat-blue"><span class="dt-stat-num dt-stat-total" id="dt-stat-total">13</span><span class="dt-stat-label">Nút kiểm tra</span></div>
-                    <div class="dt-stat-chip dt-stat-purple"><span class="dt-stat-num dt-stat-vlm" id="dt-stat-vlm">4</span><span class="dt-stat-label">Nút AI Engine</span></div>
-                    <div class="dt-stat-chip dt-stat-green"><span class="dt-stat-num dt-stat-policy" id="dt-stat-policy">9</span><span class="dt-stat-label">Nút Quy chế</span></div>
-                    <div class="dt-stat-chip dt-stat-orange"><span class="dt-stat-num">Full Traversal</span><span class="dt-stat-label">Tích lũy hết lỗi vi phạm</span></div>
-                  </div>
-
-                  <!-- Top Legend Quick Guide -->
-                  <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:18px; align-items:center; font-size:0.8rem; font-weight:600; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 16px;">
-                    <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#3b82f6;display:inline-block;"></span> Nút Quy chế (Policy)</span>
-                    <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#8b5cf6;display:inline-block;"></span> Nút AI Engine</span>
-                    <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#10b981;display:inline-block;"></span> PASS → Tiếp theo</span>
-                    <span style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:#ef4444;display:inline-block;"></span> FAIL → Xử lý / Báo lỗi</span>
-                  </div>
-
-                  <!-- Mindmap Interactive Toolbar -->
-                  <div class="mm-toolbar" id="mm-toolbar">
-                    <div class="mm-toolbar-left">
-                      <span class="mm-tool-hint"><i class="bi bi-arrows-move"></i> <strong>Kéo chuột (Drag/Pan)</strong> để di chuyển · <strong>Phóng to / Thu nhỏ (Zoom)</strong> tự do như Mindmap</span>
-                    </div>
-                    <div class="mm-toolbar-right">
-                      <div class="mm-pan-controls" role="group" aria-label="Điều hướng cây quyết định">
-                        <button type="button" class="btn btn-sm mm-btn mm-pan-up" onclick="mindmapPan(0, 80)" title="Di chuyển lên" aria-label="Di chuyển lên"><i class="bi bi-chevron-up"></i></button>
-                        <button type="button" class="btn btn-sm mm-btn mm-pan-left" onclick="mindmapPan(80, 0)" title="Di chuyển sang trái" aria-label="Di chuyển sang trái"><i class="bi bi-chevron-left"></i></button>
-                        <button type="button" class="btn btn-sm mm-btn mm-pan-down" onclick="mindmapPan(0, -80)" title="Di chuyển xuống" aria-label="Di chuyển xuống"><i class="bi bi-chevron-down"></i></button>
-                        <button type="button" class="btn btn-sm mm-btn mm-pan-right" onclick="mindmapPan(-80, 0)" title="Di chuyển sang phải" aria-label="Di chuyển sang phải"><i class="bi bi-chevron-right"></i></button>
-                      </div>
-                      <button type="button" class="btn btn-sm mm-btn" id="mm-btn-zoom-in" onclick="mindmapZoomIn()" title="Phóng to (Zoom In)">
-                        <i class="bi bi-zoom-in"></i> <span>+</span>
-                      </button>
-                      <button type="button" class="btn btn-sm mm-btn" id="mm-btn-zoom-out" onclick="mindmapZoomOut()" title="Thu nhỏ (Zoom Out)">
-                        <i class="bi bi-zoom-out"></i> <span>-</span>
-                      </button>
-                      <span class="mm-zoom-badge" id="mm-zoom-badge" title="Tỉ lệ hiện tại">100%</span>
-                      <button type="button" class="btn btn-sm mm-btn mm-btn-accent" id="mm-btn-zoom-reset" onclick="mindmapZoomReset()" title="Reset tỉ lệ 100%">
-                        <i class="bi bi-arrow-counterclockwise"></i> 100%
-                      </button>
-                      <button type="button" class="btn btn-sm mm-btn mm-btn-primary" id="mm-btn-fit" onclick="mindmapFitView()" title="Thu phóng vừa màn hình">
-                        <i class="bi bi-arrows-fullscreen"></i> Fit View
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Mindmap Tree Canvas Viewport with Zoom & Pan Support -->
-                  <div id="dt-tree-container" class="mm-viewport dt-tree-panning-container" tabindex="0" aria-label="Khung xem cây quyết định. Dùng phím mũi tên hoặc WASD để di chuyển.">
-                    <div id="mm-world" class="mm-world">
-                      <svg id="mm-svg-canvas" class="mm-svg-canvas"></svg>
-                      <!-- All decision tree mindmap tiers & node boxes will be dynamically rendered here -->
-                      <div id="dt-nodes-container" class="dt-nodes-container mm-tree-root-container">
-                        <div style="text-align:center; padding:50px 20px; color: #64748b;">
-                          <div style="font-size:2.2rem; margin-bottom:12px; animation: spin 2s linear infinite;">⚙️</div>
-                          <div style="font-weight:600; font-size:0.95rem; color:#334155;">Đang tải cấu trúc cây Mindmap quy chế nghiệp vụ...</div>
-                        </div>
-                      </div>
-                    </div>
+                <!-- VIEW 1: INTERACTIVE 3-TIER PIPELINE FLOW (DEFAULT) -->
+                <div id="subtab-pipeline" class="policy-view-pane p-4" style="display: block;">
+                  <div id="pipeline-flow-content">
+                    <div class="text-center py-5 text-secondary">Đang nạp dữ liệu quy trình thẩm định...</div>
                   </div>
                 </div>
 
-                <!-- ============================================================ -->
-                <!-- SUB-TAB B: POLICY DOCUMENT VIEWER                             -->
-                <!-- ============================================================ -->
-                <div id="subtab-policy" class="subtab-policy" style="display:none; padding: 20px;">
-                  <div id="policy-content" class="policy-content text-dark small" style="line-height: 1.8; max-height: 70vh; overflow-y: auto; font-family: 'Inter', sans-serif;">
-                    <div style="text-align:center; padding:40px; color: var(--text-muted, #94a3b8);">
-                      <div style="font-size:2rem; margin-bottom:12px;">⏳</div>
-                      <div>Đang tải quy chế nội bộ...</div>
-                    </div>
+
+
+                <!-- VIEW 3: POLICY HANDBOOK DOCUMENT -->
+                <div id="subtab-policy" class="policy-view-pane p-4" style="display: none;">
+                  <div id="policy-content" class="policy-content text-dark small" style="line-height: 1.8; max-height: 75vh; overflow-y: auto;">
+                    <div class="text-center py-5 text-secondary">Đang tải quy chế nội bộ...</div>
                   </div>
                 </div>
-
               </div>
             </div>
           </section>
@@ -1177,6 +1173,6 @@
   <script src="/static/vendor/tabler/tabler.min.js" defer></script>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20260921_v14"></script>
+  <script src="app.js?v=20260922_v10"></script>
 </body>
 </html>

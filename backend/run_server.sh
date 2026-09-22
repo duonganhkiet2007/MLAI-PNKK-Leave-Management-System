@@ -10,7 +10,8 @@ PORT=8000
 echo "=========================================================="
 echo "🚀 Khởi chạy Backend API Server tại http://0.0.0.0:$PORT"
 echo "📚 Tài liệu Swagger UI: http://localhost:$PORT/docs"
+echo "📝 Xem log realtime: tail -f server.log hoặc tmux attach -t mlai"
 echo "=========================================================="
 
-exec $PYTHON_BIN -m uvicorn main:app --host 0.0.0.0 --port $PORT --reload
+exec $PYTHON_BIN -m uvicorn main:app --host 0.0.0.0 --port $PORT --reload 2>&1 | tee -a server.log
 

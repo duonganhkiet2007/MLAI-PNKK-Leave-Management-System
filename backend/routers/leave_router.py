@@ -168,6 +168,55 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         checklist = []
         llm = req.get('llm_summary_json') or {}
         vlm_full = req.get('vlm_analysis_json') or {}
+        doc_summary = (vlm_full.get('document_summary') or {}) if isinstance(vlm_full, dict) else {}
+        readability_raw = _s(req.get('document_readability')) or _s((vlm_full.get('flags') or {}).get('document_readability')) or _s((proof or {}).get('document_readability'))
+        is_unreadable_doc = (
+            readability_raw.strip().upper() in {'UNREADABLE', 'ILLEGIBLE'}
+            or (req.get('error_code') or '').casefold() == 'doc_illegible'
+            or 'DOC_LOW_READABILITY' in (vlm_full.get('escalation_flags') or [])
+            or 'DOC_BLURRED_IMAGE' in (vlm_full.get('escalation_flags') or [])
+        )
+        if is_unreadable_doc:
+            doc_patient_name = None
+            doc_diagnosis = None
+            doc_issuer = None
+            doc_issue_date = None
+        else:
+            doc_patient_name = req.get('doc_patient_name') or (doc_summary.get('patient_name') if isinstance(doc_summary, dict) else None) or (proof.get('patient_name') if isinstance(proof, dict) else None)
+            doc_diagnosis = req.get('doc_diagnosis') or (doc_summary.get('diagnosis') if isinstance(doc_summary, dict) else None) or (proof.get('diagnosis') if isinstance(proof, dict) else None)
+            doc_issuer = (proof or {}).get('issuer') if isinstance(proof, dict) else None
+            doc_issue_date = (proof or {}).get('issue_date') if isinstance(proof, dict) else None
+        if isinstance(vlm_full, dict) and vlm_full.get('document_summary') and not is_unreadable_doc:
+            try:
+                from datetime import date as _date
+                from vlm_inspector import _score_correlation
+                doctor_range = doc_summary.get('doctor_recommended_range') or {}
+                requested_from = _date.fromisoformat(str(req['from_date'])) if req.get('from_date') else None
+                requested_to = _date.fromisoformat(str(req['to_date'])) if req.get('to_date') else None
+                recommended_from = _date.fromisoformat(str(doctor_range['from'])) if doctor_range.get('from') else None
+                recommended_to = _date.fromisoformat(str(doctor_range['to'])) if doctor_range.get('to') else None
+                refreshed_score, refreshed_issues, refreshed_days = _score_correlation(
+                    employee_name=req.get('employee_name') or '',
+                    reason=req.get('reason') or '',
+                    recommended_from=recommended_from,
+                    recommended_to=recommended_to,
+                    requested_from=requested_from,
+                    requested_to=requested_to,
+                    diagnosis=doc_summary.get('diagnosis'),
+                    days_granted_by_doctor=doctor_range.get('days'),
+                    requested_workdays=int(req.get('requested_working_days') or req.get('workdays') or 0),
+                    leave_type=str(req.get('canonical_leave_type') or req.get('leave_type') or ''),
+                )
+                req['correlation_score'] = refreshed_score
+                req['correlation_issues'] = refreshed_issues
+                vlm_full = dict(vlm_full)
+                vlm_full['correlation_analysis'] = {
+                    'score': refreshed_score,
+                    'issues': refreshed_issues,
+                    'requested_workdays': int(req.get('requested_working_days') or req.get('workdays') or 0),
+                }
+            except Exception:
+                pass
         leave_type_value = req.get('canonical_leave_type') or req.get('leave_type')
         shows_balance = should_deduct_annual_balance(leave_type_value)
         employee_row = conn.execute(
@@ -183,56 +232,62 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         def add_node(*args, include=True, **kwargs):
             if include:
                 checklist.append(_node(*args, **kwargs))
-        # ===== NODE 1. VALIDATION (EMPLOYEE / FACTS) =====
-        emp_ok = bool(req.get('employee_name')) and req.get('from_date') and req.get('to_date')
+        # ===== NODE 1. VALIDATION (Basic schema / Employee active) =====
+        has_basic = bool(req.get('employee_id') and req.get('leave_type') and req.get('from_date') and req.get('to_date'))
+        v_status = "PASS" if has_basic else "FAIL"
         ctx = llm.get('context',{}) if isinstance(llm,dict) else {}
-        val_note = "Nhân sự: {name} ({emp_id}); Bộ phận: {dept}; Loại nghỉ: {ltype}; Từ {fd} đến {td} ({cd} ngày lịch / {wd} ngày làm việc).".format(
-            name = req.get('employee_name') or 'N/A',
-            emp_id = req.get('employee_id') or 'N/A',
-            dept = req.get('department') or 'N/A',
-            ltype = ctx.get('leave_type_vn') or _s(req.get('canonical_leave_type') or req.get('leave_type')),
-            fd = req.get('from_date') or 'N/A',
-            td = req.get('to_date') or 'N/A',
-            cd = int(req.get('requested_calendar_days') or 0),
-            wd = int(req.get('requested_working_days') or req.get('workdays') or 0),
-        )
-        checklist.append(_node(1,"VALIDATION","PASS" if emp_ok else "FAIL", emp_ok, val_note,
-                               title_vi="Kiểm tra thông tin đầu vào & nhân sự",
-                               severity='SUCCESS' if emp_ok else 'CRITICAL'))
-        # ===== NODE 2. BALANCE =====
-        bal = float(req.get('annual_balance_change') or 0)
-        ded = float(req.get('deducted_days') or 0)
-        requested_balance_days = float(req.get('requested_working_days') or req.get('workdays') or 0)
-        balance_exceeded = remaining_leave_days is not None and requested_balance_days > remaining_leave_days
-        bal_ok = not balance_exceeded
-        bal_status = "FAIL" if balance_exceeded else "PASS"
-        bal_note = "Số ngày xin nghỉ: {requested:g}; số dư phép còn lại: {remaining:g} → {result}.".format(
-            requested=requested_balance_days,
-            remaining=remaining_leave_days if remaining_leave_days is not None else 0,
-            result='VƯỢT SỐ DƯ' if balance_exceeded else 'ĐỦ SỐ DƯ',
-        )
-        add_node(2,"BALANCE",bal_status, bal_ok, bal_note,
-                               title_vi="Kiểm tra số dư phép năm & khoản trừ",
-                       severity='SUCCESS' if bal_status=='PASS' else 'WARNING',
-                       include=shows_balance)
-        # ===== NODE 3. PROOF (chứng từ / attachment) =====
+        lt_label = ctx.get('leave_type_vn') or _s(req.get('canonical_leave_type') or req.get('leave_type'))
+        v_note = f"Nhân sự: {req.get('employee_name') or 'N/A'} • Bộ phận: {req.get('department') or 'N/A'} • Loại nghỉ: {lt_label} • Từ {req.get('from_date')} đến {req.get('to_date')}."
+        add_node(1,"VALIDATION",v_status, has_basic, v_note,
+                               title_vi="Xác thực thông tin nhân viên & đơn nghỉ",
+                       severity="SUCCESS" if has_basic else "CRITICAL")
+        # ===== NODE 2. BALANCE (Quota check) =====
+        rem = float(remaining_leave_days) if remaining_leave_days is not None else 0.0
+        req_days = float(req.get('requested_calendar_days') or req.get('workdays') or 0)
+        lt_code = str(req.get('canonical_leave_type') or req.get('leave_type') or '')
+        b_pass = (lt_code != 'ANNUAL') or (remaining_leave_days is None or remaining_leave_days >= req_days)
+        b_status = "PASS" if b_pass else "FAIL"
+        b_note = f"Số ngày phép còn lại: {rem:.1f} ngày • Số ngày xin nghỉ: {req_days:.1f} ngày."
+        add_node(2,"BALANCE",b_status, b_pass, b_note,
+                               title_vi="Kiểm tra số dư phép năm (Quota)",
+                       severity="SUCCESS" if b_pass else "CRITICAL",
+                       include=(lt_code == 'ANNUAL' or shows_proof))
+        # ===== NODE 3. PROOF (Attachment presence + basic fields) =====
         has_proof = bool(req.get('proof_id')) or bool((req.get('attachment_type') or '').strip() and (req.get('attachment_type') or '').casefold() != 'none')
         proof_pt = proof.get('proof_type') if isinstance(proof,dict) else None
         pt_label = proof_pt or req.get('attachment_type') or proof_storage.get('proof_type') or 'NONE'
-        if req.get('proof_id') and proof_file:
-            proof_source = f"tệp đính kèm: {proof_file} ({proof_storage.get('mime_type') or '?'} | {(int(proof_storage.get('size_bytes') or 0) / 1024):.1f} KB)"
-        elif req.get('attachment_type'):
-            proof_source = f"loại attachment: {req.get('attachment_type')} (mock test scenario)"
+        pt_label = {
+            'MEDICAL_LEAVE_CERTIFICATE': 'Giấy chứng nhận nghỉ ốm',
+            'HOSPITAL_DISCHARGE': 'Giấy ra viện',
+            'MEDICAL_RECORD_SUMMARY': 'Tóm tắt hồ sơ bệnh án',
+            'INJURY_CERTIFICATE': 'Giấy chứng nhận chấn thương',
+            'MARRIAGE_CERTIFICATE': 'Giấy chứng nhận kết hôn',
+            'DEATH_CERTIFICATE': 'Giấy chứng tử',
+            'OTHER': 'Chứng từ khác',
+            'NONE': 'Không có chứng từ',
+        }.get(str(pt_label), str(pt_label))
+        proof_segments = []
+        if pt_label and pt_label not in ('NONE', 'Không có chứng từ'):
+            proof_segments.append(f"Loại chứng từ: {pt_label}")
+        for label, value in [
+            ('Tên trên giấy', _s(doc_patient_name)),
+            ('Nơi cấp', _s(doc_issuer)),
+            ('Ngày cấp', _s(doc_issue_date)),
+            ('Chẩn đoán', _s(doc_diagnosis)),
+        ]:
+            if value and value.strip() and value.strip().lower() not in {'none','null','unknown','chưa đọc được','không đọc được','không xác định'}:
+                proof_segments.append(f"{label}: {value}")
+        if proof_segments:
+            proof_note = ' • '.join(proof_segments)
         else:
-            proof_source = "KHÔNG CÓ chứng từ đính kèm (attachment_type = none)"
-        proof_note = "Loại chứng từ: {pt} — Nguồn: {src} — VLM Persona: {persona}.".format(
-            pt = pt_label, src = proof_source,
-            persona = _s(req.get('persona_role_used')) or 'chưa gọi VLM',
-        )
+            proof_note = 'Không có thông tin được trích xuất từ chứng từ.'
         if not has_proof:
             proof_pass = False; proof_status = "FAIL"; proof_severity = "CRITICAL"
+        elif is_unreadable_doc:
+            proof_pass = False; proof_status = "FAIL"; proof_severity = "CRITICAL"
+            proof_note = "Chứng từ không đọc được (bị mờ / mất nét / UNREADABLE). Vui lòng chụp lại rõ nét."
         else:
-            proof_pass = (req.get('decision') or '').casefold() not in ('need_correction',)
+            proof_pass = (req.get('decision') or '').casefold() not in ('need_correction',) and (req.get('error_code') or '').casefold() != 'doc_illegible'
             proof_status = "PASS" if proof_pass else ("FAIL" if (req.get('decision') or '').casefold() == 'need_correction' else "WARN")
             proof_severity = 'SUCCESS' if proof_status=='PASS' else ('CRITICAL' if proof_status=='FAIL' else 'WARNING')
         add_node(3,"PROOF",proof_status, proof_pass, proof_note,
@@ -248,6 +303,9 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         if not has_doc:
             dint_status = "NOT_RUN"; dint_pass = False; dint_severity = "INFO"
             dint_note = "Không có chứng từ nên bỏ qua bước kiểm tra toàn vẹn VLM."
+        elif is_unreadable_doc:
+            dint_status = "FAIL"; dint_pass = False; dint_severity = "CRITICAL"
+            dint_note = "Độ rõ tài liệu: UNREADABLE (Ảnh bị mờ hoặc mất nét, không thể xác minh tính toàn vẹn)."
         else:
             critical_flags = (tamper is True or ai_edit is True)
             missing_flags = none_count >= 3
@@ -260,22 +318,27 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 dint_status = "WARN"; dint_pass = True; dint_severity = "WARNING"
             else:
                 dint_status = "PASS"; dint_pass = True; dint_severity = "SUCCESS"
-            dint_note = "Dấu đỏ: {rs} · Chữ ký bác sĩ: {sig} · Dấu hiệu chỉnh sửa: {tm} · Nghi vấn AI tạo: {ae} · ({n} trường trống).".format(
-                rs = _yn(rs,'Có','Không thấy','Chưa đọc được'),
-                sig = _yn(sig,'Có','Thiếu','Chưa đọc được'),
-                tm = _yn(tamper,'Có nghi vấn','Không','Chưa đọc được'),
-                ae = _yn(ai_edit,'Có nghi vấn','Không','Chưa đọc được'),
-                n = none_count,
-            )
+            dint_segments = []
+            if rs is not None:
+                dint_segments.append(f"Dấu đỏ: {_yn(rs,'Có','Không thấy','Chưa đọc được')}")
+            if sig is not None:
+                dint_segments.append(f"Chữ ký bác sĩ: {_yn(sig,'Có','Thiếu','Chưa đọc được')}")
+            readability = _s(req.get('document_readability')) or _s((vlm_full.get('flags') or {}).get('document_readability'))
+            if readability and readability.strip() and readability.strip().lower() not in {'none','null','unknown'}:
+                dint_segments.append(f"Độ rõ tài liệu: {readability}")
+            dint_note = ' • '.join(dint_segments) if dint_segments else 'Không có thông tin toàn vẹn chứng từ được trích xuất.'
         add_node(4,"VLM_INTEGRITY",dint_status, dint_pass, dint_note,
                                title_vi="VLM - Kiểm tra toàn vẹn chứng từ (dấu đỏ, chữ ký, giả mạo)",
                        severity=dint_severity, include=shows_proof)
         # ===== NODE 5. VLM - Patient / Employee name match =====
-        doc_pat = req.get('doc_patient_name') or ''
+        doc_pat = doc_patient_name or ''
         emp_n = req.get('employee_name') or ''
         if not has_doc:
             p_status = "NOT_RUN"; p_pass = False; p_severity="INFO"
             p_note = "Không có chứng từ nên bỏ qua bước kiểm tra tên bệnh nhân."
+        elif is_unreadable_doc:
+            p_status = "FAIL"; p_pass = False; p_severity="CRITICAL"
+            p_note = "Chứng từ không đọc được (UNREADABLE). Không thể xác minh tên bệnh nhân."
         elif not doc_pat:
             p_status = "WARN"; p_pass = False; p_severity="WARNING"
             p_note = "VLM KHÔNG đọc được tên người khám trên chứng từ (tên bệnh nhân trống). Không thể xác minh đây là giấy của nhân viên này."
@@ -305,6 +368,9 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         if not has_doc:
             dc_status = "NOT_RUN"; dc_pass = False; dc_severity="INFO"
             dc_note = "Không có chứng từ nên bỏ qua bước kiểm tra ngày khớp."
+        elif is_unreadable_doc:
+            dc_status = "FAIL"; dc_pass = False; dc_severity="CRITICAL"
+            dc_note = "Chứng từ không đọc được (UNREADABLE). Không thể xác minh khoảng ngày bác sĩ chỉ định."
         else:
             in_range = False
             if dr_from and dr_to and req_from and req_to:
@@ -340,6 +406,9 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         if not has_doc:
             c_status = "NOT_RUN"; c_pass = False; c_severity="INFO"
             c_note = "Không có chứng từ nên bỏ qua bước correlation."
+        elif is_unreadable_doc:
+            c_status = "FAIL"; c_pass = False; c_severity="CRITICAL"
+            c_note = "Chứng từ không đọc được (UNREADABLE). Không thể đánh giá độ khớp nội dung (0.00 / 1.00)."
         elif cs is None:
             c_status = "WARN"; c_pass = False; c_severity="WARNING"
             c_note = "Chưa tính được correlation_score (VLM chưa đọc đủ các trường để đánh giá độ khớp)."
@@ -367,7 +436,11 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         human_read = _s(req.get('human_readable_explanation')) or (llm.get('human_readable_explanation') if isinstance(llm,dict) else '') or ''
         why = (llm.get('why_escalated') if isinstance(llm,dict) else '') or ''
         if decision_raw == 'need_correction':
-            pv_status = 'FAIL'; pv_pass = False; pv_severity = 'CRITICAL'
+            doc_based_errors = {'doc_illegible', 'doc_field_missing', 'name_mismatch', 'medical_days_mismatch', 'proof_review_required'}
+            if (req.get('error_code') or '').casefold() in doc_based_errors:
+                pv_status = 'ESCALATED'; pv_pass = True; pv_severity = 'WARNING'
+            else:
+                pv_status = 'FAIL'; pv_pass = False; pv_severity = 'CRITICAL'
         elif decision_raw == 'escalate':
             pv_status = 'ESCALATED'; pv_pass = True; pv_severity = 'WARNING'
         elif decision_raw == 'auto_approve' or decision_raw in ('approved_by_human_override','approve'):
@@ -400,8 +473,8 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             a_status="PASS"; a_pass=True; a_severity="SUCCESS"
         else:
             a_status="ESCALATED"; a_pass=True; a_severity="WARNING"
-        a_note = "Số ngày làm việc = {wd} · Loại nghỉ = {lt} → Người có thẩm quyền phê duyệt tiếp theo = {tr} ({label}).".format(
-            wd = wd, lt = ltype_val, tr = tr, label = TR_VI.get(str(tr), str(tr) or 'N/A')
+        a_note = "Số ngày làm việc: {wd}. Loại nghỉ: {lt}. Cấp duyệt tiếp theo: {label}.".format(
+            wd = wd, lt = ltype_val, label = TR_VI.get(str(tr), str(tr) or 'N/A')
         )
         checklist.append(_node(9,"AUTHORITY",a_status, a_pass, a_note,
                                title_vi="Xác định thẩm quyền phê duyệt (Authority matrix theo loại nghỉ & số ngày)",
@@ -424,10 +497,9 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 if 'operational' in ec: ec_label_vn = 'Thời hạn báo trước dưới ngưỡng hoạt động (dưới 3 ngày đối với nghỉ 3-5d)'
                 elif 'violation' in ec: ec_label_vn = 'Thời hạn báo trước không đạt chuẩn theo chính sách (vd báo 1d cho đơn 5d)'
             elif 'out_of_policy' in unc: ec_label_vn = 'Vượt ngoài phạm vi quy định (Manager có thể bỏ qua nếu phù hợp)'
-            n_note = "error_code = {ec} · uncertainty_category = {u} → {vn}. {final}".format(
-                ec = _s(req.get('error_code')), u = _s(req.get('uncertainty_category')),
-                vn = ec_label_vn or _s(req.get('human_readable_explanation')),
-                final = 'Manager có thể ghi chú & bỏ qua vi phạm nếu muốn (không auto-reject).'
+            n_note = "{vn}. {final}".format(
+                vn = ec_label_vn or _s(req.get('human_readable_explanation')) or 'Vi phạm thời hạn báo trước.',
+                final = 'Quản lý có thể ghi chú và xem xét ngoại lệ nếu cần.'
             )
         checklist.append(_node(10,"NOTICE",n_status, n_pass, n_note,
                                title_vi="Kiểm tra thời hạn báo trước & cảnh báo hoạt động",
@@ -460,8 +532,8 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             d = d, vi = DEC_VI.get(d, d), st = _s(req.get('status')),
             tr = tr, tvi = (' (' + target_vi + ')') if (target_vi and str(tr).casefold() != 'none') else ''
         )
-        final_pass = d in ('AUTO_APPROVE','ESCALATE','REQUEST_INFO','NEED_CORRECTION','AUTO_REJECT','NO_LEAVE_REQUIRED')
-        final_sev = 'SUCCESS' if d == 'AUTO_APPROVE' else ('WARNING' if d in ('ESCALATE','REQUEST_INFO') else 'CRITICAL' if d in ('NEED_CORRECTION','AUTO_REJECT') else 'INFO')
+        final_pass = d in ('AUTO_APPROVE','ESCALATE','REQUEST_INFO','AUTO_REJECT','NO_LEAVE_REQUIRED')
+        final_sev = 'SUCCESS' if d == 'AUTO_APPROVE' else ('WARNING' if d in ('ESCALATE','REQUEST_INFO') else 'CRITICAL' if d == 'AUTO_REJECT' else 'INFO')
         checklist.append(_node(12,"FINAL_DECISION",d, final_pass, final_note,
                                title_vi="Quyết định cuối cùng từ bộ máy rule + VLM",
                                severity=final_sev))
@@ -486,8 +558,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         # ---- vlm_fields enriched with Vietnamese labels included inline via top-level extra dict ----
         vlm_fields_ext = {}
         raw_fields = ['doc_patient_name','doc_diagnosis','has_red_stamp','has_doctor_signature',
-                      'is_tampered','ai_edited','correlation_score','correlation_issues',
-                      'persona_role_used','escalation_reasons_json','days_granted_by_doctor']
+                      'correlation_score','correlation_issues','days_granted_by_doctor']
         for k in raw_fields:
             vlm_fields_ext[k] = req.get(k)
         return {'success':True,'request_id':request_id,
@@ -499,11 +570,8 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 'proof':proof,
                 'proof_source':{
                     'proof_id':req.get('proof_id'),
-                    'proof_type':proof_pt,
+                    'proof_type':pt_label,
                     'attachment_type':req.get('attachment_type'),
-                    'original_file_name':proof_file,
-                    'mime_type': proof_storage.get('mime_type'),
-                    'size_kb': round(int(proof_storage.get('size_bytes') or 0) / 1024, 1),
                     'readability': proof.get('document_readability') if isinstance(proof,dict) else 'UNKNOWN',
                 },
                 'vlm_analysis': req.get('vlm_analysis_json') or {},
@@ -513,13 +581,9 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     'doc_diagnosis': 'Chẩn đoán lâm sàng ghi trên chứng từ',
                     'has_red_stamp': 'Có dấu đỏ của cơ sở y tế (1/0)',
                     'has_doctor_signature': 'Có chữ ký bác sĩ điều trị (1/0)',
-                    'is_tampered': 'Có dấu hiệu chỉnh sửa / photoshop giấy tờ',
-                    'ai_edited': 'Nghi vấn chứng từ được tạo bởi AI (giấy giả)',
                     'days_granted_by_doctor': 'Số ngày nghỉ bác sĩ đề nghị (ngày)',
                     'correlation_score': 'Độ khớp giữa lý do & giấy tờ (0-1, ≥0.7 OK)',
                     'correlation_issues': 'Các điểm chưa khớp cụ thể (danh sách)',
-                    'persona_role_used': 'Chuyên viên VLM đã thực hiện phân tích',
-                    'escalation_reasons_json': 'Lý do cụ thể VLM đề nghị escalate',
                 },
                 'llm_summary': llm or {},
                 'engine_result': req.get('result_json'),

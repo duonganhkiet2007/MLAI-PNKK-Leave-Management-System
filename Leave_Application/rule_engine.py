@@ -35,6 +35,8 @@ PAID_ENTITLEMENTS = {'SELF_MARRIAGE': 3, 'CHILD_MARRIAGE': 1,
 UNPAID_ENTITLEMENTS = dict.fromkeys(['GRANDPARENT_DEATH','SIBLING_DEATH','PARENT_MARRIAGE','SIBLING_MARRIAGE'], 1)
 MEDICAL = {'SICK_MEDICAL', 'MEDICAL_EMERGENCY'}
 OPERATIONAL = {'ANNUAL', 'UNPAID_OTHER'}
+NO_PROOF_REQUIRED = {'ANNUAL', 'UNPAID_OTHER', 'STATUTORY_UNPAID'}
+PROOF_REQUIRED = MEDICAL | {'SPECIAL_PAID'}
 MEDICAL_PROOFS = {'MEDICAL_LEAVE_CERTIFICATE','HOSPITAL_DISCHARGE','MEDICAL_RECORD_SUMMARY','INJURY_CERTIFICATE'}
 STATUTORY_PARENT_LOSS = {'PARENT_DEATH', 'SPOUSE_PARENT_DEATH'}
 RULE_STAGES = ['INPUT_DATES','CALENDAR','ENTITLEMENT','INPUT_COMPLETENESS','PROOF',
@@ -121,16 +123,28 @@ class LeaveRuleEngine:
         if q.leave_type == 'UNPAID_OTHER' and not q.reason.strip():
             return correction(E.REASON_REQUIRED,'Vui lòng nêu lý do xin nghỉ không lương.','UNPAID-01')
         trace('INPUT_COMPLETENESS')
-        if q.leave_type in MEDICAL | {'SPECIAL_PAID'}:
+        if q.leave_type in PROOF_REQUIRED:
             p = q.proof
             pt = p.proof_type.value if hasattr(p.proof_type,'value') else str(p.proof_type)
             if pt == 'NONE': return correction(E.PROOF_MISSING,'Vui lòng tải chứng từ phù hợp.','PROOF-01')
-            if p.document_readability == 'ILLEGIBLE':
-                return correction(E.DOC_ILLEGIBLE,'Chứng từ mờ / không đọc được; vui lòng tải lại bản rõ hơn.','PROOF-01')
+            unreadable = p.document_readability in {'ILLEGIBLE', 'UNREADABLE'}
+            if unreadable:
+                return finish(D.ESCALATE, E.DOC_ILLEGIBLE,
+                             'Chứng từ mờ / không đọc được; cần quản lý hoặc HR xác minh lại bản rõ hơn trước khi quyết định.',
+                             C.OUT_OF_POLICY, R.DIRECT_MANAGER, 'PROOF-01', [R.DIRECT_MANAGER])
             if p.proof_verification_status == 'REJECTED':
                 return correction(E.DOC_FIELD_MISSING,'Chứng từ chưa đạt yêu cầu: ' + (p.verification_notes or 'Vui lòng bổ sung.'),'PROOF-01')
             if p.proof_verification_status != 'VERIFIED':
-                return finish(D.ESCALATE,E.PROOF_REVIEW_REQUIRED,'Đã nhận chứng từ; cần HR xác minh facts trước khi ghi nhận chế độ.',C.OUT_OF_POLICY,R.HR,'PROOF-01',[R.HR])
+                short_medical_valid = (
+                    q.leave_type in MEDICAL and
+                    n < 3 and
+                    p.document_readability in {'READABLE', 'UNKNOWN'} and
+                    bool(p.issuer) and bool(p.issue_date) and
+                    bool(p.patient_name) and bool(p.recommended_from_date) and bool(p.recommended_to_date) and
+                    (bool(p.signature_present) or bool(p.digital_signature_present))
+                )
+                if not short_medical_valid:
+                    return finish(D.ESCALATE,E.PROOF_REVIEW_REQUIRED,'Đã nhận chứng từ; cần đối chiếu nhanh trước khi ghi nhận chế độ.',C.OUT_OF_POLICY,R.DIRECT_MANAGER,'PROOF-01',[R.DIRECT_MANAGER])
             allowed = MEDICAL_PROOFS if q.leave_type in MEDICAL else (
                 {'MARRIAGE_CERTIFICATE'} if (hasattr(q.reason_category,'value') and q.reason_category.value == 'SELF_MARRIAGE') else
                 {'MARRIAGE_CERTIFICATE','WEDDING_INVITATION'} if (hasattr(q.reason_category,'value') and q.reason_category.value == 'CHILD_MARRIAGE') else {'DEATH_CERTIFICATE'})
@@ -143,7 +157,12 @@ class LeaveRuleEngine:
                     return correction(E.NAME_MISMATCH,'Tên bệnh nhân không khớp người nghỉ; vui lòng làm rõ.','MED-01')
                 if p.recommended_from_date > p.recommended_to_date or any(not p.recommended_from_date <= d <= p.recommended_to_date for d in dates):
                     return correction(E.MEDICAL_DAYS_MISMATCH,'Ngày nghỉ yêu cầu nằm ngoài khoảng bác sĩ chỉ định.','MED-01')
-                result.warnings.append('HR xử lý hồ sơ trợ cấp BHXH riêng; ghi nhận nghỉ không xác nhận quyền hưởng trợ cấp.')
+                if p.proof_verification_status != 'VERIFIED':
+                    result.warnings.append('Giấy nghỉ hợp lệ và nằm trong giới hạn quy định; tự động duyệt mà không cần xác minh thêm.')
+                else:
+                    result.warnings.append('HR xử lý hồ sơ trợ cấp BHXH riêng; ghi nhận nghỉ không xác nhận quyền hưởng trợ cấp.')
+        elif q.leave_type in NO_PROOF_REQUIRED:
+            trace('PROOF', 'PASS', 'Loại nghỉ này không cần chứng từ làm điều kiện tiên quyết; chỉ xét theo ngày phép / lý do / thời hạn thông báo.')
         trace('PROOF')
         trace('WORKING_DAYS',detail=str(n))
         overlap = set(result.working_dates) & set(q.approved_working_dates)
@@ -200,7 +219,7 @@ class LeaveRuleEngine:
         if q.leave_type == 'ANNUAL': roles = [R.CEO] if n >= 20 else [R.DEPARTMENT_HEAD] if n >= 6 else [R.DIRECT_MANAGER] if n >= 3 else []
         if q.leave_type == 'UNPAID_OTHER': roles = [R.DEPARTMENT_HEAD,R.HRD,R.CEO] if n >= 20 else [R.DEPARTMENT_HEAD,R.HRD] if n >= 6 else [R.DIRECT_MANAGER]
         if q.leave_type in MEDICAL:
-            roles = [R.DIRECT_MANAGER] if n >= 2 else []
+            roles = [R.DIRECT_MANAGER] if n >= 3 else []
         if q.leave_type in {'SPECIAL_PAID', 'STATUTORY_UNPAID'}:
             roles = [R.DIRECT_MANAGER]
         if operational and not roles: roles = [R.DIRECT_MANAGER]

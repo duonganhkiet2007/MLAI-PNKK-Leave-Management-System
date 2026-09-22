@@ -385,9 +385,66 @@ def init_db():
     conn = get_db_connection()
     try:
         migrate(conn)
+        normalize_pending_approval_roles(conn)
     finally:
         conn.close()
     seed_demo_request()
+
+
+def normalize_pending_approval_roles(conn):
+    """Migrate legacy human approval roles to the current Lead Team/CEO model."""
+    rows = conn.execute("""
+        SELECT id, revision, target_role, department, actionable_question,
+               human_readable_explanation, result_json, llm_summary_json
+        FROM leave_requests
+        WHERE status='PENDING_ESCALATION'
+        AND (target_role IN ('HR', 'HRD', 'DEPARTMENT_HEAD')
+            OR llm_summary_json LIKE '%cần HR xác minh%'
+            OR actionable_question LIKE '%cần HR xác minh%')
+    """).fetchall()
+    for row in rows:
+        old_role = row['target_role']
+        new_role = 'DIRECT_MANAGER' if old_role in {'HR', 'DIRECT_MANAGER', None} else 'CEO'
+        def replace_json(raw):
+            if not raw:
+                return raw
+            try:
+                value = json.loads(raw)
+                if isinstance(value, dict):
+                    if value.get('target_role') in {'HR', 'HRD', 'DEPARTMENT_HEAD'}:
+                        value['target_role'] = new_role
+                    if value.get('target_role_human_vn') in {'Nhân sự (HR)', 'Giám đốc Nhân sự'}:
+                        value['target_role_human_vn'] = 'Lead Team' if new_role == 'DIRECT_MANAGER' else 'CEO'
+                    for key in ('human_readable_explanation', 'why_escalated', 'summary_natural_vn'):
+                        if isinstance(value.get(key), str):
+                            value[key] = value[key].replace('HR xác minh', 'Lead Team xác minh').replace('HR xem xét', 'Lead Team xem xét').replace('Nhân sự (HR)', 'Lead Team').replace('HR', 'Lead Team')
+                    value['actionable_question'] = value.get('actionable_question', '').replace('HR vui lòng', 'Lead Team vui lòng').replace('cần HR xác minh', 'cần Lead Team xác minh')
+                return json.dumps(value, ensure_ascii=False)
+            except (TypeError, ValueError):
+                return raw
+        result_json = replace_json(row['result_json'])
+        llm_summary_json = replace_json(row['llm_summary_json'])
+        conn.execute(
+            """UPDATE leave_requests
+               SET target_role=?, actionable_question=?, human_readable_explanation=?,
+                   result_json=?, llm_summary_json=?, updated_at=? WHERE id=?""",
+            (new_role,
+             (row['actionable_question'] or '').replace('HR vui lòng', 'Lead Team vui lòng').replace('cần HR xác minh', 'cần Lead Team xác minh'),
+             (row['human_readable_explanation'] or '').replace('HR xác minh', 'Lead Team xác minh'),
+             result_json, llm_summary_json, datetime.now().isoformat(), row['id']),
+        )
+        conn.execute(
+            "UPDATE approval_steps SET role=? WHERE request_id=? AND revision=? AND role=? AND status='PENDING'",
+            (new_role, row['id'], row['revision'], old_role),
+        )
+        conn.execute(
+            "INSERT INTO audit_logs(request_id,step_name,action,details,created_at) VALUES(?,?,?,?,?)",
+            (row['id'], 'AUTHORITY', 'ROUTING_MIGRATED',
+             f"{old_role} -> {new_role}; department={row['department']}; summaries synchronized",
+             datetime.now().isoformat()),
+        )
+    if rows:
+        conn.commit()
 
 
 # -----------------------------------------------------------------------------

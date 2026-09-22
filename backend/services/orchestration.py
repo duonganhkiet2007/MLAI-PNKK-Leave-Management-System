@@ -30,7 +30,7 @@ class LeaveOrchestratorService:
         self.calendar=calendar or CalendarService()
         self.clock=clock or (lambda: datetime.now(self.calendar.timezone))
 
-    def _evaluate(self, conn, record, facts, granted=None, waived=None, enable_llm_polish=False):
+    def _evaluate(self, conn, record, facts, granted=None, waived=None, enable_llm_polish=False, skip_vlm=False):
         t_eval_0 = time.perf_counter()
         ctx=st.load_context(conn,record['employee_id'],facts,record['submitted_at'],record['id'],granted,waived,self.calendar)
 
@@ -54,7 +54,7 @@ class LeaveOrchestratorService:
                 else:
                     att = proof_row.get('proof_type') or 'generic_attachment'
         vlm_out: VLMInspectionOutput | None = None
-        needs_vlm = bool(att and att.casefold() != 'none') or bool(proof_row)
+        needs_vlm = not skip_vlm and (bool(att and att.casefold() != 'none') or bool(proof_row))
         if needs_vlm:
             f_date, t_date = None, None
             try:
@@ -158,8 +158,9 @@ class LeaveOrchestratorService:
                     d1 = date.fromisoformat(str(ctx.from_date))
                     d2 = date.fromisoformat(str(ctx.to_date))
                     wd = len(self.calendar.working_dates(d1,d2)) if d1 and d2 and d1<=d2 else 0
-                    # Re-score correlation with exact calculated workdays
-                    if wd and vlm_out.proof_extraction:
+                    # Re-score correlation with exact calculated workdays (skip if document is UNREADABLE)
+                    is_unreadable = getattr(vlm_out.proof_extraction, 'document_readability', '') in ('UNREADABLE', 'ILLEGIBLE')
+                    if wd and vlm_out.proof_extraction and not is_unreadable:
                         from vlm_inspector import _score_correlation
                         pe = vlm_out.proof_extraction
                         new_score, new_additional_issues, new_doctor_days = _score_correlation(
@@ -264,7 +265,6 @@ class LeaveOrchestratorService:
         DECISION_VI = {
             'AUTO_APPROVE':'Tự động duyệt',
             'ESCALATE':'Chuyển cấp thẩm quyền xem xét',
-            'NEED_CORRECTION':'Cần nhân viên bổ sung thông tin',
             'AUTO_REJECT':'Tự động từ chối',
             'NO_LEAVE_REQUIRED':'Không cần nghỉ phép',
         }
@@ -340,8 +340,8 @@ class LeaveOrchestratorService:
             bullet_lines.append(f"• Kết quả thẩm định: Hệ thống Tự động duyệt (AUTO_APPROVE) — đạt đầy đủ tiêu chí theo chính sách ({clauses_str}).")
             bullet_lines.append("• Kết luận: Đã tự động duyệt, không cần chuyển cấp quản lý xem xét.")
         elif result.decision == DecisionType.NEED_CORRECTION:
-            bullet_lines.append(f"• Kết quả đối soát: Hồ sơ chưa đủ điều kiện tự duyệt ({err_vi}).")
-            bullet_lines.append("• Kết luận: Cần nhân viên bổ sung hoặc sửa lại thông tin trước khi duyệt.")
+            bullet_lines.append(f"• Kết quả đối soát: Hồ sơ chưa đủ cơ sở tự duyệt và cần đối chiếu lại ({err_vi}).")
+            bullet_lines.append("• Kết luận: Chuyển lên người có thẩm quyền xem xét trước khi quyết định cuối cùng.")
         else:
             bullet_lines.append(f"• Kết quả đối soát: Cần người có thẩm quyền phê duyệt ({err_vi}).")
             bullet_lines.append(f"• Kết luận: Chuyển {role_vi} xem xét và quyết định.")
@@ -466,8 +466,6 @@ class LeaveOrchestratorService:
                 info_suf.append(f"Tên trên chứng từ khớp với nhân viên: {doc_patient}")
             elif doc_patient and emp_n and (emp_n.strip().casefold() != doc_patient.strip().casefold()):
                 info_mis.append(f"Tên trên chứng từ ({doc_patient}) KHÔNG khớp với nhân viên nộp đơn ({emp_n})")
-            if tamper is True: info_mis.append("Chứng từ có dấu hiệu chỉnh sửa giả mạo (tampered)")
-            if ai_ed is True: info_mis.append("Chứng từ nghi vấn được tạo bởi công cụ AI")
 
         if error_code == 'TEAM_QUOTA_EXCEEDED':
             info_mis.append("Tỷ lệ vắng mặt trong bộ phận vượt ngưỡng an toàn 30% tại ngày xin nghỉ")
@@ -506,10 +504,6 @@ class LeaveOrchestratorService:
             staff_next_steps.append('Chờ HR xác minh chứng từ; không cần nộp lại nếu chưa được yêu cầu.')
 
         manager_suspicions = []
-        if tamper is True:
-            manager_suspicions.append('Chứng từ có dấu hiệu chỉnh sửa hoặc giả mạo.')
-        if ai_ed is True:
-            manager_suspicions.append('Chứng từ có dấu hiệu được tạo hoặc chỉnh sửa bằng AI.')
         if doc_patient and emp_n and not names_approximately_match(doc_patient, emp_n):
             manager_suspicions.append(f'Tên trên chứng từ ({doc_patient}) không khớp nhân viên ({emp_n}).')
         if error_code == 'FLAG_ABUSE_PATTERN':
@@ -731,7 +725,7 @@ class LeaveOrchestratorService:
         st.audit(conn,record['id'],'EVALUATED',json.dumps(result.model_dump(mode='json'),ensure_ascii=False))
         return result
 
-    def process_new_request(self,raw_text=None,employee_id=None,structured_data=None,enable_llm_polish=False):
+    def process_new_request(self,raw_text=None,employee_id=None,structured_data=None,enable_llm_polish=False,custom_request_id=None,skip_vlm=False):
         data=dict(structured_data or {})
         emp_id=employee_id or data.pop('employee_id',None)
         data.pop('employee_id',None)
@@ -744,10 +738,13 @@ class LeaveOrchestratorService:
             # A model cannot attach another person's document or invent an attachment.
             facts.proof_id=None; facts.attachment_type='none'
         else: facts=RequestFacts.model_validate(data)
-        record={'id':'REQ-'+uuid.uuid4().hex[:16].upper(),'employee_id':emp_id,
+        req_id = custom_request_id or ('REQ-'+uuid.uuid4().hex[:16].upper())
+        record={'id':req_id,'employee_id':emp_id,
                 'submitted_at':self.clock().isoformat(),'revision':1,'human_resolution':None}
         with st.transaction() as conn:
-            self._evaluate(conn,record,facts,enable_llm_polish=enable_llm_polish)
+            if custom_request_id:
+                conn.execute('DELETE FROM approval_steps WHERE request_id=?', (custom_request_id,))
+            self._evaluate(conn,record,facts,enable_llm_polish=enable_llm_polish,skip_vlm=skip_vlm)
             return st.serialize(conn,st.read_request(conn,record['id']))
 
     def resubmit(self,request_id,actor_id,data):
@@ -792,6 +789,29 @@ class LeaveOrchestratorService:
                 req.update(revision=req['revision']+1,human_resolution=None)
                 self._evaluate(conn,req,RequestFacts.model_validate(facts))
             else:
+                old_target=req['target_role']
+                # Lead Team approval already serves as the human proof review. Reuse
+                # the stored VLM facts instead of running the document model again.
+                if action_type == 'APPROVE' and old_target == 'DIRECT_MANAGER' and req.get('error_code') == ErrorCode.PROOF_REVIEW_REQUIRED:
+                    proof_id = req.get('proof_id')
+                    vlm_data = req.get('vlm_analysis_json') or {}
+                    if isinstance(vlm_data, str):
+                        try: vlm_data = json.loads(vlm_data)
+                        except (TypeError, ValueError): vlm_data = {}
+                    doc = vlm_data.get('document_summary') or {}
+                    flags = vlm_data.get('flags') or {}
+                    doctor_range = doc.get('doctor_recommended_range') or {}
+                    if proof_id:
+                        conn.execute("""UPDATE proof_documents SET proof_verification_status='VERIFIED',
+                            issuer=?, patient_name=?, issue_date=?, recommended_from_date=?,
+                            recommended_to_date=?, signature_present=?, document_readability=?,
+                            verification_notes=?, verified_by=? WHERE id=?""",
+                            (doc.get('issuer'), doc.get('patient_name'), doc.get('issue_date'),
+                             doctor_range.get('from'), doctor_range.get('to'),
+                             1 if flags.get('has_doctor_signature') else 0,
+                             flags.get('document_readability') or 'READABLE',
+                             'Lead Team đã đối chiếu facts từ VLM.', approver_id, proof_id))
+                        st.audit(conn, request_id, 'PROOF_VERIFIED_BY_LEAD', approver_id)
                 if req['target_role']=='HR':
                     raise st.Conflict('HR cần xác minh chứng từ/cấu hình; không được duyệt bỏ qua điều kiện chưa xác minh.')
                 steps=[dict(r) for r in conn.execute('SELECT * FROM approval_steps WHERE request_id=? AND revision=? ORDER BY step_index',(request_id,req['revision']))]
@@ -800,8 +820,7 @@ class LeaveOrchestratorService:
                 waive=[ErrorCode.NOTICE_PERIOD_VIOLATED,ErrorCode.TEAM_QUOTA_EXCEEDED]
                 # Re-evaluate before writing this approval. No balance/proof/overlap bypass.
                 st.audit(conn,request_id,'HUMAN_APPROVAL',f'{approver_id}: {req["target_role"]}; {feedback.feedback_notes}')
-                old_target=req['target_role']
-                result=self._evaluate(conn,req,RequestFacts.model_validate(req['facts_json']),granted,waive)
+                result=self._evaluate(conn,req,RequestFacts.model_validate(req['facts_json']),granted,waive,skip_vlm=True)
                 if result.decision in {DecisionType.AUTO_APPROVE,DecisionType.ESCALATE} and result.error_code not in {ErrorCode.PROOF_REVIEW_REQUIRED,ErrorCode.LEGAL_REVIEW_REQUIRED,ErrorCode.AUTOMATION_SCOPE_UNSUPPORTED}:
                     conn.execute("UPDATE approval_steps SET status='APPROVED',approver_id=?,decided_at=? WHERE request_id=? AND revision=? AND role=? AND status='PENDING'",
                         (approver_id,self.clock().isoformat(),request_id,req['revision'],old_target))

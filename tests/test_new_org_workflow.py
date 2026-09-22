@@ -533,10 +533,10 @@ def test_tc_vlm_03_medical_days_mismatch_detection():
     assert res.error_code == E.MEDICAL_DAYS_MISMATCH
 
 def test_tc_vlm_04_blurry_illegible_proof():
-    """TC-VLM-04: Ảnh mờ mất góc -> Bắt cờ DOC_ILLEGIBLE."""
+    """TC-VLM-04: Ảnh mờ / blur không đọc được -> escalate, không suy đoán và không tự sinh dữ liệu."""
     proof = VerifiedProof(
         proof_type=ProofType.MEDICAL_LEAVE_CERTIFICATE,
-        document_readability="ILLEGIBLE"
+        document_readability="UNREADABLE"
     )
     req = LeaveRequest(
         employee_id="EMP005",
@@ -551,8 +551,9 @@ def test_tc_vlm_04_blurry_illegible_proof():
         total_team_members=6
     )
     res = LeaveRuleEngine.evaluate(req)
-    assert res.decision == D.NEED_CORRECTION
+    assert res.decision == D.ESCALATE
     assert res.error_code == E.DOC_ILLEGIBLE
+    assert proof.document_readability == "UNREADABLE"
 
 def test_tc_vlm_05_digital_signature_valid_without_red_stamp():
     """TC-VLM-05: Chữ ký số hợp lệ theo Thông tư 25/2025/TT-BYT (không bắt buộc mộc đỏ)."""
@@ -585,3 +586,31 @@ def test_tc_vlm_05_digital_signature_valid_without_red_stamp():
     assert res.decision == D.ESCALATE
     assert res.target_role == R.DIRECT_MANAGER
     assert res.error_code == E.DURATION_OVER_AI_LIMIT
+
+def test_tc_vlm_06_blur_gate_early_exit_no_hallucination():
+    """TC-VLM-06: Blur gate phát hiện ảnh mờ trong ~1ms, gắn UNREADABLE và không bịa dữ liệu."""
+    from vlm_inspector import inspect_document_with_vlm, detect_image_blur
+    import os
+
+    blur_img = "tests/assets/proofs/proof_blurry_illegible.png"
+    assert os.path.exists(blur_img), f"File {blur_img} must exist"
+
+    is_blurry, score = detect_image_blur(blur_img, threshold=50.0)
+    assert is_blurry is True
+    assert score < 50.0
+
+    out = inspect_document_with_vlm(
+        leave_type="SICK_MEDICAL",
+        employee_name="Phan Thảo My",
+        reason="Nghỉ ốm điều trị",
+        attachment_path_or_type=blur_img,
+        allow_mock_fallback=False,
+    )
+    assert out.proof_extraction.document_readability == "UNREADABLE"
+    assert out.doc_patient_name is None
+    assert out.doc_diagnosis is None
+    assert out.proof_extraction.issuer is None
+    assert out.proof_extraction.issue_date is None
+    assert out.proof_extraction.fields_detected == []
+    assert "DOC_BLURRED_IMAGE" in out.escalation_reasons_json
+    assert out.vlm_analysis_json.get("inspection_mode") == "CV_BLUR_GATE_EARLY_EXIT"

@@ -102,7 +102,7 @@ QUY TẮC BẮT BUỘC:
   5. document_readability:
        - READABLE    = ảnh đủ sáng, đầy đủ 4 góc, text + dấu + chữ ký đọc rõ
        - PARTIAL     = ảnh hơi mờ / 1 góc bị cắt nhưng đọc được thông tin chính (tên, ngày, chẩn đoán...)
-       - ILLEGAL     = ảnh quá mờ, che khuất phần lớn, hoặc chữ/dấu/chữ ký KHÔNG THỂ xác minh
+       - UNREADABLE  = ảnh quá mờ, che khuất phần lớn, hoặc chữ/dấu/chữ ký KHÔNG THỂ đọc rõ hoặc xác minh
   6. issuer = tên CƠ QUAN / ĐƠN VỊ / BỆNH VIỆN / PHÒNG KHÁM / CÔNG TY / NƠI CẤP ra giấy tờ (đọc nguyên văn trên dấu đỏ / tiêu đề).
   7. issue_date = NGÀY, THÁNG, NĂM giấy tờ được ký / cấp (YYYY-MM-DD).
   8. recommended_from_date / recommended_to_date:
@@ -114,6 +114,13 @@ QUY TẮC BẮT BUỘC:
   9. Không được thêm text giải thích trước hay sau JSON.  Chỉ trả DUY NHẤT 1 { ... } object hợp lệ.
  10. ai_edited = True nếu nghi vấn ảnh được chỉnh sửa bởi photoshop / AI (chữ không đều, chồng lấn pixel, text clone, dấu đỏ bị tái tạo...).
  11. is_tampered = True nếu nghi vấn giấy tờ bị SỬA NỘI DUNG SAU KHI KÝ (xóa chữ, sửa ngày tháng, đổi tên, dán chữ lên ảnh...).
+12. Khi đối chiếu lý do và chẩn đoán, hiểu theo ngữ nghĩa y khoa thay vì bắt buộc trùng từng chữ:
+    "đau ruột thừa", "viêm ruột thừa", "phẫu thuật ruột thừa" và "cắt ruột thừa"
+    là cùng một nhóm bệnh. Không đánh dấu không khớp nếu tên nhân viên, khoảng ngày,
+    nơi cấp, dấu và chữ ký đều rõ/rút ra được; chẩn đoán chỉ là tín hiệu bổ trợ.
+ 13. CẢNH BÁO CHỐNG BỊA ĐẶT (ANTI-HALLUCINATION):
+     - Nếu ảnh bị mờ, nhòe, mất nét, chữ không đọc rõ: BẮT BUỘC đặt document_readability = "UNREADABLE", và TẤT CẢ các trường trích xuất (doc_patient_name, doc_diagnosis, issuer, issue_date, recommended_from_date, recommended_to_date) BẮT BUỘC để null, fields_detected để [].
+     - TUYỆT ĐỐI KHÔNG tự bịa tên (như 'Nguyễn Văn A'), KHÔNG tự bịa bệnh viện/phòng khám (như 'Bệnh viện Đa khoa A'), KHÔNG tự bịa chẩn đoán (như 'Đau ruột thừa'), KHÔNG tự suy đoán ngày tháng.
 """
 
 
@@ -422,6 +429,33 @@ class VLMInspectionOutput:
         return pt.value if hasattr(pt, 'value') else str(pt)
 
 
+# Leave types where clinical diagnosis keywords are NOT applicable
+_NON_MEDICAL_LEAVE_TYPES = frozenset({
+    'SPECIAL_PAID', 'STATUTORY_UNPAID', 'UNPAID_OTHER', 'ANNUAL', 'MATERNITY', 'WORK_ACCIDENT'
+})
+_MEDICAL_KWS = (
+    "cúm", "sốt", "đau", "ho", "khó thở", "viêm", "phổi", "nhiễm", "xuất viện",
+    "ngộ độc", "gãy", "trật", "hô hấp", "cảm", "sổ mũi", "nghẹt mũi", "họng",
+    "đau đầu", "mệt mỏi", "amidan", "đơn thuốc", "nằm viện"
+)
+_MEDICAL_CONCEPT_GROUPS = (
+    {'ruột thừa', 'appendicitis', 'viêm ruột thừa', 'đau ruột thừa', 'phẫu thuật ruột thừa', 'cắt ruột thừa'},
+    {'phổi', 'viêm phổi', 'pneumonia'},
+    {'cúm', 'cúm a', 'influenza'},
+    {'gãy', 'fracture', 'xương'},
+)
+
+
+def _same_medical_concept(reason: str, diagnosis: str) -> bool:
+    reason_text = reason.casefold()
+    diagnosis_text = diagnosis.casefold()
+    return any(
+        any(term in reason_text for term in group)
+        and any(term in diagnosis_text for term in group)
+        for group in _MEDICAL_CONCEPT_GROUPS
+    )
+
+
 def _score_correlation(
     employee_name: str,
     reason: str,
@@ -432,43 +466,55 @@ def _score_correlation(
     diagnosis: Optional[str],
     days_granted_by_doctor: Optional[int],
     requested_workdays: int,
+    leave_type: str = '',
 ) -> tuple[float, list[str], Optional[int]]:
-    """Deterministic correlation scoring between employee claim + VLM findings."""
+    """Deterministic correlation scoring between employee claim + VLM findings.
+
+    For non-medical leave types (SPECIAL_PAID, STATUTORY_UNPAID, MATERNITY, WORK_ACCIDENT),
+    skip the clinical-keyword check — marriage/death certs don't have diagnoses.
+    """
     score = 0.60
     issues: list[str] = []
+    is_medical = leave_type.upper() not in _NON_MEDICAL_LEAVE_TYPES
 
-    # diagnosis matches free text reason?
-    if reason and diagnosis:
-        r, d = reason.casefold(), diagnosis.casefold()
-        overlap = sum(1 for kw in ("cúm", "sốt", "đau", "ho", "khó thở", "viêm", "phổi",
-                                    "nhiễm", "xuất viện", "ngộ độc", "gãy", "trật",
-                                    "hô hấp", "cảm", "sổ mũi", "nghẹt mũi", "họng",
-                                    "đau đầu", "mệt mỏi", "amidan", "đơn thuốc", "nằm viện")
-                      if kw in r and kw in d)
-        if overlap == 0:
-            score -= 0.20
-            issues.append("Chẩn đoán trên giấy (diagnosis) không trùng khớp mô tả lý do nghỉ (reason).")
-        else:
-            score += min(0.12, 0.04 * overlap)
-    elif not diagnosis:
-        score -= 0.10
-        issues.append("VLM không đọc được chẩn đoán lâm sàng trên chứng từ.")
+    # Chỉ check từ khóa y tế khi là loại nghỉ bệnh (SICK_MEDICAL, MEDICAL_EMERGENCY)
+    if is_medical:
+        if reason and diagnosis:
+            r, d = reason.casefold(), diagnosis.casefold()
+            overlap = sum(1 for kw in _MEDICAL_KWS if kw in r and kw in d)
+            if overlap == 0 and not _same_medical_concept(reason, diagnosis):
+                score -= 0.20
+                issues.append("Chẩn đoán trên giấy không trùng khớp mô tả lý do nghỉ.")
+            else:
+                score += min(0.12, 0.04 * max(overlap, 1))
+        elif not diagnosis:
+            score -= 0.10
+            issues.append("VLM không đọc được chẩn đoán lâm sàng trên chứng từ.")
+    else:
+        # Loại nghỉ sự kiện gia đình / không lương: không penalize vì thiếu "chẩn đoán"
+        # Nếu VLM đọc được event_reason / tên người liên quan → điểm thưởng nhỏ
+        if diagnosis:
+            score += 0.05  # bonus: VLM đọc được nội dung sự kiện
 
-    # date coverage: requested range must be subset of VLM-recommended range
+    # date coverage: khoảng ngày xin nghỉ phải nằm trong khoảng ngày chứng từ cho phép
+    date_label = "bác sĩ chỉ định" if is_medical else "ghi trong chứng từ"
     if recommended_from and recommended_to and requested_from and requested_to:
         if not (recommended_from <= requested_from and requested_to <= recommended_to):
             score -= 0.25
             issues.append(
                 f"Khoảng nghỉ yêu cầu ({requested_from} → {requested_to}) nằm ngoài khoảng "
-                f"bác sĩ chỉ định ({recommended_from} → {recommended_to})."
+                f"{date_label} ({recommended_from} → {recommended_to})."
             )
         else:
             score += 0.12
     else:
-        score -= 0.10
-        issues.append("VLM không đọc được khoảng ngày nghỉ được bác sĩ đề nghị.")
+        # Với giấy sự kiện gia đình: nếu không đọc được ngày thì không penalize nặng
+        if is_medical:
+            score -= 0.10
+            issues.append(f"VLM không đọc được khoảng ngày {date_label}.")
+        # Non-medical: skip penalty (giấy cưới thường chỉ có 1 ngày, không range)
 
-    # doctor-granted days coverage vs requested
+    # days coverage vs requested
     if days_granted_by_doctor is None:
         if requested_workdays and recommended_from and recommended_to:
             try:
@@ -477,11 +523,12 @@ def _score_correlation(
             except Exception:
                 days_granted_by_doctor = None
     if days_granted_by_doctor is not None and requested_workdays:
+        days_label = "bác sĩ cho" if is_medical else "chứng từ ghi nhận"
         if requested_workdays > days_granted_by_doctor:
             score -= 0.18
             issues.append(
-                f"Số ngày nghỉ yêu cầu ({requested_workdays} ngày) VƯỢT quá số ngày bác sĩ cho "
-                f"({days_granted_by_doctor} ngày)."
+                f"Số ngày xin nghỉ ({requested_workdays} ngày) VƯỢT quá số ngày "
+                f"{days_label} ({days_granted_by_doctor} ngày)."
             )
         else:
             score += 0.08
@@ -516,11 +563,30 @@ def _build_proof_extraction(
         try: return date.fromisoformat(str(v))
         except Exception: return default
 
+    readability = _gf("document_readability") or "UNKNOWN"
+    is_unreadable = readability in ("UNREADABLE", "ILLEGIBLE") or bool(profile.get("_blur_gate_triggered"))
     is_none = (pt == ProofType.NONE or profile.get("persona_role_used") == "VLM_UNAVAILABLE")
-    rec_fr = _as_date(_gf("recommended_from","recommended_from_date","from_date"), None if is_none else from_date)
-    rec_to = _as_date(_gf("recommended_to","recommended_to_date","to_date"), None if is_none else to_date)
+    is_real = bool(profile.get("_blur_gate_triggered") or "OLLAMA_REAL" in str(profile.get("inspection_mode", "")))
 
-    patient_name = profile.get("doc_patient_name") or (None if is_none else employee_name)
+    if is_unreadable:
+        rec_fr = None
+        rec_to = None
+        patient_name = None
+        issue_d = None
+        doc_readability = "UNREADABLE"
+    elif is_real:
+        rec_fr = _as_date(_gf("recommended_from","recommended_from_date","from_date"), None)
+        rec_to = _as_date(_gf("recommended_to","recommended_to_date","to_date"), None)
+        patient_name = profile.get("doc_patient_name") or _gf("patient_name")
+        issue_d = _as_date(_gf("issue_date"), None)
+        doc_readability = readability
+    else:
+        # Mock persona fallback for deterministic tests
+        rec_fr = _as_date(_gf("recommended_from","recommended_from_date","from_date"), None if is_none else from_date)
+        rec_to = _as_date(_gf("recommended_to","recommended_to_date","to_date"), None if is_none else to_date)
+        patient_name = profile.get("doc_patient_name") or (None if is_none else employee_name)
+        issue_d = _as_date(_gf("issue_date"), None if is_none else issue_day)
+        doc_readability = readability if readability != "UNKNOWN" else ("UNKNOWN" if is_none else "READABLE")
 
     sig = _gf("signature_present")
     if sig is None and profile.get("has_doctor_signature") is not None:
@@ -528,15 +594,15 @@ def _build_proof_extraction(
 
     p = ProofExtraction(
         proof_type=pt,
-        issuer=_gf("issuer"),
+        issuer=_gf("issuer") if not is_unreadable else None,
         patient_name=patient_name,
-        issue_date=_as_date(_gf("issue_date"), None if is_none else issue_day),
+        issue_date=issue_d,
         recommended_from_date=rec_fr,
         recommended_to_date=rec_to,
-        signature_present=sig,
-        digital_signature_present=_gf("digital_signature_present"),
-        document_readability=_gf("document_readability") or ("UNKNOWN" if is_none else "READABLE"),
-        fields_detected=list(_gf("fields_detected") or []),
+        signature_present=sig if not is_unreadable else False,
+        digital_signature_present=_gf("digital_signature_present") if not is_unreadable else None,
+        document_readability=doc_readability,
+        fields_detected=list(_gf("fields_detected") or []) if not is_unreadable else [],
     )
     return p
 
@@ -597,10 +663,13 @@ def inspect_document_with_vlm(
         mode_used = "ENV_FORCE_PERSONA_MOCK"
     # ---- Case 3: Thực thi VLM thật (mặc định tích hợp thật) ----
     else:
-        real_result, error_detail = _try_ollama_extract(attachment_path_or_type)
+        real_result, error_detail = _try_ollama_extract(attachment_path_or_type, leave_type=leave_type)
         if real_result:
             profile_raw = real_result
-            mode_used = "OLLAMA_REAL_QWEN25_VL_3B"
+            if real_result.get("_blur_gate_triggered"):
+                mode_used = "CV_BLUR_GATE_EARLY_EXIT"
+            else:
+                mode_used = "OLLAMA_REAL_QWEN25_VL_3B"
         else:
             vlm_error = error_detail or f"VLM ({VLM_TARGET_MODEL}) không thể xử lý chứng từ này."
             if fallback_allowed:
@@ -652,7 +721,7 @@ def inspect_document_with_vlm(
     dfd = proof_extraction.recommended_from_date
     dtd = proof_extraction.recommended_to_date
 
-    # --- correlation score ---
+    # --- correlation score --- (leave_type-aware: skip medical keywords for family events)
     score, issues_plus, doctor_days_final = _score_correlation(
         employee_name=employee_name or "",
         reason=reason or "",
@@ -663,6 +732,7 @@ def inspect_document_with_vlm(
         diagnosis=profile_raw.get("doc_diagnosis"),
         days_granted_by_doctor=days_explicit,
         requested_workdays=workdays,
+        leave_type=leave_type,
     )
     if days_explicit is None and doctor_days_final is not None:
         profile_raw["days_granted_by_doctor"] = doctor_days_final
@@ -671,6 +741,27 @@ def inspect_document_with_vlm(
     merged_issues = list(dict.fromkeys(merged_issues))
 
     # ---- build vlm_analysis_json (Manager panel sees this full shape) ----
+    is_doc_unreadable = (proof_extraction.document_readability in ('UNREADABLE', 'ILLEGIBLE')) or bool(profile_raw.get("_blur_gate_triggered"))
+
+    if is_doc_unreadable:
+        final_pat_name = None
+        final_diagnosis = None
+        final_days = None
+        final_dfd = None
+        final_dtd = None
+        final_issuer = None
+        final_issue_d = None
+        final_score = 0.0
+    else:
+        final_pat_name = profile_raw.get("doc_patient_name") or proof_extraction.patient_name
+        final_diagnosis = profile_raw.get("doc_diagnosis")
+        final_days = profile_raw.get("days_granted_by_doctor")
+        final_dfd = dfd.isoformat() if dfd else None
+        final_dtd = dtd.isoformat() if dtd else None
+        final_issuer = proof_extraction.issuer
+        final_issue_d = proof_extraction.issue_date.isoformat() if proof_extraction.issue_date else None
+        final_score = score
+
     vlm_json: Dict[str, Any] = {
         "inspector_persona": profile_raw.get("persona_role_used"),
         "target_model": VLM_TARGET_MODEL,
@@ -678,14 +769,14 @@ def inspect_document_with_vlm(
         "inspected_at": datetime.now().isoformat(timespec="seconds"),
         "vlm_error": vlm_error,
         "document_summary": {
-            "patient_name": profile_raw.get("doc_patient_name") or proof_extraction.patient_name,
-            "diagnosis": profile_raw.get("doc_diagnosis"),
-            "issuer": proof_extraction.issuer,
-            "issue_date": proof_extraction.issue_date.isoformat() if proof_extraction.issue_date else None,
+            "patient_name": final_pat_name,
+            "diagnosis": final_diagnosis,
+            "issuer": final_issuer,
+            "issue_date": final_issue_d,
             "doctor_recommended_range": {
-                "from": dfd.isoformat() if dfd else None,
-                "to": dtd.isoformat() if dtd else None,
-                "days": profile_raw.get("days_granted_by_doctor"),
+                "from": final_dfd,
+                "to": final_dtd,
+                "days": final_days,
             },
         },
         "flags": {
@@ -698,7 +789,7 @@ def inspect_document_with_vlm(
             "ai_generated_or_edited": profile_raw.get("ai_edited"),
         },
         "correlation_analysis": {
-            "score": score,
+            "score": final_score,
             "issues": merged_issues,
             "requested_workdays": workdays,
         },
@@ -708,16 +799,16 @@ def inspect_document_with_vlm(
 
     out = VLMInspectionOutput(
         vlm_analysis_json=vlm_json,
-        doc_patient_name=(profile_raw.get("doc_patient_name") or proof_extraction.patient_name),
-        doc_diagnosis=profile_raw.get("doc_diagnosis"),
+        doc_patient_name=final_pat_name,
+        doc_diagnosis=final_diagnosis,
         has_red_stamp=profile_raw.get("has_red_stamp"),
         has_doctor_signature=(profile_raw.get("has_doctor_signature")
                               if profile_raw.get("has_doctor_signature") is not None
                               else proof_extraction.signature_present),
         is_tampered=profile_raw.get("is_tampered"),
         ai_edited=profile_raw.get("ai_edited"),
-        days_granted_by_doctor=profile_raw.get("days_granted_by_doctor"),
-        correlation_score=score,
+        days_granted_by_doctor=final_days,
+        correlation_score=final_score,
         correlation_issues=merged_issues,
         persona_role_used=profile_raw.get("persona_role_used"),
         escalation_reasons_json=list(profile_raw.get("escalation_reasons") or []),
@@ -754,6 +845,31 @@ def _resolve_persona_by_proof_type(proof_type_str: Optional[str]) -> str:
     return _PersonaRegistry.PERSONA_HR_ADJUDICATOR
 
 
+
+def detect_image_blur(path: Optional[str], threshold: float = 50.0) -> tuple[bool, float]:
+    """Kiểm tra độ nét của ảnh chứng từ bằng phương sai toán tử Laplacian qua OpenCV.
+    Trả về: (is_blurry: bool, score: float).
+    Ảnh tài liệu văn bản rõ nét bình thường có điểm > 500 - 3000+.
+    Ảnh mờ, mất nét, rung lắc thường có điểm < 10 - 50.
+    """
+    if not path or not os.path.isfile(path):
+        return False, 999.0
+    try:
+        import cv2
+        img = cv2.imread(path)
+        if img is None:
+            return False, 999.0
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        h, w = gray.shape[:2]
+        if max(h, w) > 600:
+            scale = 600.0 / max(h, w)
+            gray = cv2.resize(gray, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+        score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        return (score < threshold, round(score, 2))
+    except Exception:
+        return False, 999.0
+
+
 def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str = '') -> tuple[Optional[Dict[str, Any]], Optional[str]]:
     """Thực thi VLM thật qua Ollama.
 
@@ -787,6 +903,39 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             f"File chứng từ '{path}' không tồn tại trên đĩa. "
             f"Không thể gọi VLM ({matched_model}) khi không có file thật để OCR."
         )
+
+    # 3.5. CỔNG KIỂM SOÁT ĐỘ MỜ TẤT ĐỊNH (Deterministic Blur Gate - ~1ms)
+    # Chặn sớm ảnh quá mờ để loại trừ hoàn toàn ảo giác của VLM và tiết kiệm 3-4 giây xử lý GPU
+    is_blurry, blur_score = detect_image_blur(path, threshold=50.0)
+    if is_blurry:
+        persona_role = _resolve_persona_by_proof_type(None)
+        return {
+            "doc_patient_name": None,
+            "doc_diagnosis": None,
+            "has_red_stamp": False,
+            "has_doctor_signature": False,
+            "is_tampered": None,
+            "ai_edited": None,
+            "days_granted_by_doctor": None,
+            "correlation_issues": [
+                f"Ảnh chứng từ quá mờ / nhòe nét (độ nét Laplacian: {blur_score} < 50.0), không đạt tiêu chuẩn đọc nội dung."
+            ],
+            "persona_role_used": persona_role,
+            "escalation_reasons": ["DOC_LOW_READABILITY", "DOC_BLURRED_IMAGE"],
+            "proof_extra": {
+                "proof_type": ProofType.MEDICAL_LEAVE_CERTIFICATE.value,
+                "issuer": None,
+                "issue_date": None,
+                "recommended_from_date": None,
+                "recommended_to_date": None,
+                "signature_present": False,
+                "digital_signature_present": None,
+                "document_readability": "UNREADABLE",
+                "fields_detected": [],
+            },
+            "_blur_gate_triggered": True,
+        }, None
+
     # 4. Đọc + encode ảnh (Tối ưu resize ảnh lớn để VLM inference siêu nhanh ~2s)
     import base64
     import io
@@ -853,15 +1002,16 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             "  7. is_tampered                      → bool / null. Nghi vấn giấy bị sửa nội dung sau khi ký?\n"
             "  8. ai_edited                        → bool / null. Nghi vấn ảnh được chỉnh sửa AI?\n"
             "  9. days_granted_by_doctor           → int / null. SỐ NGÀY NGHỊ được ghi trên giấy (bác sĩ đề nghị, nghỉ thai sản, ngày lễ, ngày tang...). Nếu không có số ngày → null.\n"
-            "  10. document_readability            → enum 1 giá trị: READABLE / PARTIAL / ILLEGAL.\n"
-            "  11. issuer                          → string / null. Tên cơ quan cấp giấy (Bệnh viện Đa khoa X, UBND phường Y, BHXH, Phòng khám Z...).\n"
-            "  12. issue_date                      → string / null. Ngày cấp giấy YYYY-MM-DD.\n"
-            "  13. recommended_from_date           → string / null. Ngày bắt đầu nghỉ / ngày sự kiện YYYY-MM-DD.\n"
-            "  14. recommended_to_date             → string / null. Ngày kết thúc nghỉ / ngày sự kiện kết thúc YYYY-MM-DD.\n"
+            "  10. document_readability            → enum 1 giá trị: READABLE / PARTIAL / UNREADABLE (BẮT BUỘC chọn UNREADABLE nếu ảnh mờ / nhòe / không đọc rõ).\n"
+            "  11. issuer                          → string / null. Tên cơ quan cấp giấy (Bệnh viện Đa khoa X, UBND phường Y, BHXH, Phòng khám Z...). Không rõ → null.\n"
+            "  12. issue_date                      → string / null. Ngày cấp giấy YYYY-MM-DD. Không rõ → null.\n"
+            "  13. recommended_from_date           → string / null. Ngày bắt đầu nghỉ / ngày sự kiện YYYY-MM-DD. Không rõ → null.\n"
+            "  14. recommended_to_date             → string / null. Ngày kết thúc nghỉ / ngày sự kiện kết thúc YYYY-MM-DD. Không rõ → null.\n"
             "  15. correlation_issues              → list[string] (mảng có thể rỗng). Các VẤN ĐỀ PHÁT HIỆN trên giấy (vd: tên sai, chữ ký không thấy, dấu đỏ không thấy, ngày tháng cắt xén...). Không có → [].\n"
             "  16. escalation_reasons              → list[string] (mảng có thể rỗng). Các FLAG cần escalate cho người duyệt (vd: DOC_MISSING_RED_STAMP, DOC_SIGNATURE_UNVERIFIABLE, DOC_LOW_READABILITY, TAMPER_SUSPECTED, AI_EDITED, WRONG_PROOF_TYPE). Không có → [].\n"
             "  17. digital_signature_present       → bool / null. Giấy có chữ ký số (PKI, CA, hình ảnh chữ ký số có khóa công khai) không? Nếu không rõ → null.\n"
-            "  18. fields_detected                 → list[string] các trường dữ liệu ĐƯỢC ĐỌC THÀNH CÔNG trên giấy (vd: ['patient_name','diagnosis','issue_date','red_stamp','signature']...).\n"
+            "  18. fields_detected                 → list[string] các trường dữ liệu ĐƯỢC ĐỌC THÀNH CÔNG trên giấy (vd: ['patient_name','diagnosis','issue_date','red_stamp','signature']...). Nếu mờ không đọc được → [].\n"
+            "  LƯU Ý: NẾU ẢNH BỊ MỜ KHÔNG ĐỌC RÕ: document_readability BẮT BUỘC LÀ 'UNREADABLE' VÀ MỌI TRƯỜNG doc_patient_name, doc_diagnosis, issuer, issue_date, recommended_from_date, recommended_to_date PHẢI LÀ null. TUYỆT ĐỐI KHÔNG TỰ BỊA.\n"
         ),
     }
     try:
@@ -886,19 +1036,67 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             f"Model VLM trả về text không parse được thành JSON. "
             f"Lỗi parse: {e}. Phản hồi gốc (trước khi cắt): {(body.get('response') or '')[:300]}"
         )
-    normalized: Dict[str, Any] = {
-        "doc_patient_name": (
+
+    raw_readability = str(
+        parsed.get("document_readability")
+        or parsed.get("readability")
+        or "UNKNOWN"
+    ).strip().upper()
+    if raw_readability in ("ILLEGAL", "ILLEGIBLE", "UNREADABLE", "BLURRY", "BLUR", "MO"):
+        doc_readability = "UNREADABLE"
+    elif raw_readability in ("PARTIAL", "PARTIALLY"):
+        doc_readability = "PARTIAL"
+    elif raw_readability == "READABLE":
+        doc_readability = "READABLE"
+    else:
+        doc_readability = "UNKNOWN"
+
+    # Nếu tài liệu UNREADABLE: triệt tiêu mọi trường văn bản/ngày tháng bị ảo giác
+    if doc_readability == "UNREADABLE":
+        p_name = None
+        diag = None
+        days_granted = None
+        issuer_val = None
+        issue_d = None
+        rec_fr = None
+        rec_to = None
+        fields_detected_val = []
+        esc_reasons = list(dict.fromkeys(list(parsed.get("escalation_reasons") or []) + ["DOC_LOW_READABILITY"]))
+    else:
+        p_name = (
             parsed.get("doc_patient_name")
             or parsed.get("subject_name")
             or parsed.get("patient_name")
             or parsed.get("name")
-        ),
-        "doc_diagnosis": (
+        )
+        # Loại bỏ các tên mẫu giả định phổ biến do VLM ảo giác
+        if p_name and str(p_name).strip().lower() in ("nguyễn văn a", "nguyen van a"):
+            p_name = None
+
+        diag = (
             parsed.get("doc_diagnosis")
             or parsed.get("event_reason")
             or parsed.get("diagnosis")
             or parsed.get("event_description")
-        ),
+        )
+        days_granted = (
+            parsed.get("days_granted_by_doctor")
+            or parsed.get("recommended_leave_days")
+            or parsed.get("days_recommended")
+        )
+        issuer_val = parsed.get("issuer")
+        if issuer_val and str(issuer_val).strip().lower() in ("bệnh viện đa khoa a", "benh vien da khoa a", "bệnh viện a"):
+            issuer_val = None
+
+        issue_d = parsed.get("issue_date")
+        rec_fr = parsed.get("recommended_from_date")
+        rec_to = parsed.get("recommended_to_date")
+        fields_detected_val = list(parsed.get("fields_detected") or [])
+        esc_reasons = list(parsed.get("escalation_reasons") or [])
+
+    normalized: Dict[str, Any] = {
+        "doc_patient_name": p_name,
+        "doc_diagnosis": diag,
         "has_red_stamp": (
             parsed.get("has_red_stamp")
             if isinstance(parsed.get("has_red_stamp"), bool)
@@ -911,26 +1109,22 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
         ),
         "is_tampered": parsed.get("is_tampered"),
         "ai_edited": parsed.get("ai_edited"),
-        "days_granted_by_doctor": (
-            parsed.get("days_granted_by_doctor")
-            or parsed.get("recommended_leave_days")
-            or parsed.get("days_recommended")
-        ),
+        "days_granted_by_doctor": days_granted,
         "correlation_issues": list(parsed.get("correlation_issues") or []),
         "persona_role_used": _resolve_persona_by_proof_type(
             parsed.get("proof_type") or parsed.get("document_type")
         ),
-        "escalation_reasons": list(parsed.get("escalation_reasons") or []),
+        "escalation_reasons": esc_reasons,
         "proof_extra": {
             "proof_type": (
                 parsed.get("proof_type")
                 or parsed.get("document_type")
                 or ProofType.MEDICAL_LEAVE_CERTIFICATE.value
             ),
-            "issuer": parsed.get("issuer"),
-            "issue_date": parsed.get("issue_date"),
-            "recommended_from_date": parsed.get("recommended_from_date"),
-            "recommended_to_date": parsed.get("recommended_to_date"),
+            "issuer": issuer_val,
+            "issue_date": issue_d,
+            "recommended_from_date": rec_fr,
+            "recommended_to_date": rec_to,
             "signature_present": (
                 parsed.get("signature_present")
                 if isinstance(parsed.get("signature_present"), bool)
@@ -945,12 +1139,8 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
                     else None
                 )
             ),
-            "document_readability": (
-                parsed.get("document_readability")
-                or parsed.get("readability")
-                or "UNKNOWN"
-            ),
-            "fields_detected": list(parsed.get("fields_detected") or []),
+            "document_readability": doc_readability,
+            "fields_detected": fields_detected_val,
         },
     }
     return normalized, None

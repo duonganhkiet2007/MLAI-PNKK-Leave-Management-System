@@ -144,7 +144,7 @@ class ProofExtraction(BaseModel):
     recommended_to_date: date | None = None
     signature_present: bool | None = None
     digital_signature_present: bool | None = None
-    document_readability: Literal['READABLE', 'ILLEGIBLE', 'UNKNOWN'] = 'UNKNOWN'
+    document_readability: Literal['READABLE', 'UNREADABLE', 'ILLEGIBLE', 'PARTIAL', 'UNKNOWN'] = 'UNKNOWN'
     fields_detected: list[str] = Field(default_factory=list)
 
 class VerifiedProof(ProofExtraction):

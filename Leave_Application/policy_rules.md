@@ -33,22 +33,22 @@
 
 ## 3. Thẩm quyền phê duyệt
 - Tự động phê duyệt: áp dụng cho đơn đơn giản, đủ điều kiện, đúng thời hạn, đủ hồ sơ và không vượt giới hạn theo quy định.
-- Quản lý trực tiếp: phê duyệt các đơn nghỉ có thời lượng trung bình, cần kiểm tra công việc và đảm bảo vận hành.
-- Giám đốc/HR: phê duyệt các đơn nghỉ dài hạn, phức tạp, hoặc có yếu tố pháp lý, chứng từ, đồng bộ nhịp làm việc cần cân nhắc.
+- Lead Team: phê duyệt các đơn nghỉ cần kiểm tra công việc, chứng từ và đảm bảo vận hành trong phạm vi của team.
+- CEO: phê duyệt các đơn nghỉ dài hạn, phức tạp hoặc vượt thẩm quyền của Lead Team.
 - Trường hợp đơn không đủ điều kiện, không đúng hồ sơ hoặc vi phạm nguyên tắc, phải yêu cầu bổ sung, từ chối hoặc chuyển cấp theo đúng thẩm quyền.
 
 ### 3.1. Nghiên cứu trường hợp theo thời lượng và nguồn chi trả
 | Loại nghỉ | Thời lượng | Ai phê duyệt | Có lương không? | Nguồn chi trả |
 |---|---|---|---|---|
-| Nghỉ phép năm | 1–2 ngày | Hệ thống/AI nếu đủ điều kiện; nếu không thì Quản lý | Có | Doanh nghiệp |
-| Nghỉ phép năm | 3–5 ngày | Quản lý trực tiếp | Có | Doanh nghiệp |
-| Nghỉ phép năm | Trên 5 ngày liên tiếp | Cấp trên/Quản lý cấp cao | Có | Doanh nghiệp |
-| Nghỉ ốm | 1 ngày | Hệ thống/AI nếu có chứng từ hợp lệ; nếu không thì Quản lý | Không | BHXH |
-| Nghỉ ốm | 2–5 ngày | Quản lý trực tiếp | Không | BHXH |
-| Nghỉ ốm | Trên 5 ngày | Cấp cao hơn/HR theo quy định BHXH | Không | BHXH |
-| Nghỉ thai sản | Theo quy định pháp luật | Cấp có thẩm quyền/HR | Không trừ phép năm | BHXH |
-| Nghỉ việc riêng hưởng lương | Bất kỳ thời lượng nào | Quản lý/cấp có thẩm quyền | Có | Doanh nghiệp |
-| Nghỉ không lương | Bất kỳ thời lượng nào | Quản lý/cấp có thẩm quyền | Không | Không có |
+| Nghỉ phép năm | 1–2 ngày | Hệ thống/AI nếu đủ điều kiện; nếu không thì Lead Team | Có | Doanh nghiệp |
+| Nghỉ phép năm | 3–5 ngày | Lead Team | Có | Doanh nghiệp |
+| Nghỉ phép năm | Trên 5 ngày liên tiếp | CEO | Có | Doanh nghiệp |
+| Nghỉ ốm | 1 ngày | Hệ thống/AI nếu có chứng từ hợp lệ; nếu không thì Lead Team | Không | BHXH |
+| Nghỉ ốm | 2–5 ngày | Lead Team | Không | BHXH |
+| Nghỉ ốm | Trên 5 ngày | CEO theo quy định BHXH | Không | BHXH |
+| Nghỉ thai sản | Theo quy định pháp luật | CEO theo thẩm quyền | Không trừ phép năm | BHXH |
+| Nghỉ việc riêng hưởng lương | Bất kỳ thời lượng nào | Lead Team hoặc CEO theo thẩm quyền | Có | Doanh nghiệp |
+| Nghỉ không lương | Bất kỳ thời lượng nào | Lead Team hoặc CEO theo thẩm quyền | Không | Không có |
 
 ### 3.2. Giải thích từng trường hợp
 - Nghỉ phép năm là chế độ nghỉ có lương. Số ngày nghỉ bị trừ trực tiếp khỏi quỹ phép năm hiện có. Nếu đủ quỹ phép, đúng thời hạn và hồ sơ hợp lệ, đơn có thể được phê duyệt theo quy trình thông thường; nếu không đủ hoặc không đúng quy định thì phải xem xét lại hoặc chuyển cấp.
@@ -58,17 +58,17 @@
 - Nghỉ không lương áp dụng khi người lao động nghỉ vì lý do cá nhân hoặc không thuộc các chế độ có lương khác. Không có lương do doanh nghiệp chi trả.
 
 ### 3.3. Bảng 3.1. Đối chiếu Database và Rule hiện tại
-| Trường hợp | AI phê duyệt | Manager Team | CEO | Đối chiếu với Database / Quy tắc hệ thống |
+| Trường hợp | AI phê duyệt | Lead Team | CEO | Đối chiếu với Database / Quy tắc hệ thống |
 |---|---|---|---|---|
 | Nghỉ phép năm 1–2 ngày, đủ phép, đúng hồ sơ | Có | Không bắt buộc nếu AI chấp nhận | Không bắt buộc | `remaining_leave_days` đủ; hệ thống trừ quỹ phép nếu đơn được duyệt |
-| Nghỉ phép năm 3–5 ngày | Không | Có | Không bắt buộc | `rule_engine.py` chuyển `n >= 3` tới `DIRECT_MANAGER` / Manager Team; nếu duyệt thì trừ quỹ phép |
+| Nghỉ phép năm 3–5 ngày | Không | Có | Không bắt buộc | `rule_engine.py` chuyển `n >= 3` tới `DIRECT_MANAGER` / Lead Team; nếu duyệt thì trừ quỹ phép |
 | Nghỉ phép năm từ 20 ngày trở lên | Không | Có thể xem xét đầu vào | Bắt buộc phê duyệt cuối | `rule_engine.py` dùng `CEO` cho `ANNUAL` khi `n >= 20`; cần xác nhận cuối cùng |
 | Nghỉ ốm 1 ngày hợp lệ | Có nếu có chứng từ hợp lệ | Không bắt buộc nếu đủ chứng từ | Không bắt buộc | Không trừ phép năm; phải có chứng từ hợp lệ và phù hợp với đơn |
-| Nghỉ ốm 2–5 ngày | Không | Có | Không bắt buộc | Chuyển tới `DIRECT_MANAGER` / Manager Team; không trừ phép năm |
+| Nghỉ ốm 2–5 ngày | Không | Có | Không bắt buộc | Chuyển tới `DIRECT_MANAGER` / Lead Team; không trừ phép năm |
 | Nghỉ việc riêng hưởng lương | Không | Có | Không bắt buộc ở hầu hết trường hợp | Yêu cầu chứng từ, sự kiện hợp pháp và xác nhận theo thẩm quyền |
 | Nghỉ không lương | Không | Có | Có thể yêu cầu khi dài hạn | Không trừ phép năm; cần lý do rõ ràng và phê duyệt quản lý / cấp cao |
 
-> Lưu ý: Theo logic hiện tại, chỉ có 2 vai trò chính trong luồng phê duyệt cuối cùng của phần “quyền phê duyệt cuối cùng” là Manager Team và CEO. AI chỉ thực hiện đánh giá tự động theo điều kiện, không thay thế quyết định của con người khi đơn vượt ngưỡng, thiếu thông tin hoặc có rủi ro.
+> Lưu ý: Theo logic hiện tại, chỉ có 2 vai trò chính trong luồng phê duyệt cuối cùng của phần “quyền phê duyệt cuối cùng” là Lead Team và CEO. AI chỉ thực hiện đánh giá tự động theo điều kiện, không thay thế quyết định của con người khi đơn vượt ngưỡng, thiếu thông tin hoặc có rủi ro.
 
 ## 4. Thời hạn báo trước và hồ sơ
 - Đơn nghỉ phải được nộp trước khi bắt đầu nghỉ theo mức thời hạn tối thiểu do doanh nghiệp quy định và theo yêu cầu vận hành.

@@ -41,11 +41,7 @@ Hệ thống hướng tới một cơ chế phân xử giúp giảm tải các c
 
 FastAPI, dựng app, đăng ký CORS, router, phục vụ frontend tĩnh, và làm nóng (warm-up) mô hình AI ngay lúc khởi động.
 
-| **Router** | **Trách nhiệm** |
-|---|---|
-| `leave_router` | Nộp đơn, quyết định người duyệt, sửa/xem đơn, upload chứng từ |
-| `meta_router` | Trạng thái mô hình AI, chính sách, lịch làm việc, trạng thái môi trường |
-| `verify_router` | Chạy ca kiểm chứng cố định qua rule engine, không qua luồng đầy đủ |
+![Giao diện](docs/report/Screenshot%202026-09-22%20224316.png)
 
 Bộ điều phối: nạp ngữ cảnh tin cậy từ DB → đọc facts (từ form hoặc gọi LLM nếu là văn bản tự do) → gọi VLM nếu có chứng từ → gọi rule engine → cập nhật trạng thái → lưu decision/giải trình/điều khoản chính sách → ghi audit.
 

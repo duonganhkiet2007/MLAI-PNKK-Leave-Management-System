@@ -22,7 +22,8 @@ import json
 from datetime import date
 
 STATES={'AUTO_APPROVE':'COMPLETED','NO_LEAVE_REQUIRED':'COMPLETED','AUTO_REJECT':'REJECTED',
-        'NEED_CORRECTION':'WAITING_EMPLOYEE','ESCALATE':'PENDING_ESCALATION'}
+        'NEED_CORRECTION':'WAITING_EMPLOYEE','ESCALATE':'PENDING_ESCALATION',
+        'PENDING_HANDOVER':'PENDING_HANDOVER'}
 
 class LeaveOrchestratorService:
     def __init__(self, agent=None, clock=None, calendar=None):
@@ -193,6 +194,7 @@ class LeaveOrchestratorService:
             from_date=facts.from_date,to_date=facts.to_date,workdays=result.requested_working_days or 0,
             leave_type=facts.leave_type or '',canonical_leave_type=facts.leave_type,reason_category=facts.reason_category,
             reason=facts.reason,handover_person_id=facts.handover_person_id,handover_person_name=facts.handover_person_name,
+            handover_status=record.get('handover_status'),handover_decided_at=record.get('handover_decided_at'),handover_decline_reason=record.get('handover_decline_reason'),
             attachment_type=facts.attachment_type,proof_id=facts.proof_id,facts_json=facts.model_dump(mode='json'),
             decision=result.decision.value,status=STATES[result.decision.value],
             requested_calendar_days=result.requested_calendar_days,requested_working_days=result.requested_working_days,
@@ -717,8 +719,21 @@ class LeaveOrchestratorService:
         record['template_ms'] = template_ms
         record['total_eval_ms'] = total_eval_ms
         if result.decision==DecisionType.AUTO_APPROVE:
-            st.commit_approval(conn,record,result)
-            if granted: record['human_resolution']='APPROVE_OVERRIDE'
+            if facts.handover_person_id:
+                record['status'] = 'PENDING_HANDOVER'
+                record['handover_status'] = 'PENDING'
+                record['handover_decline_reason'] = None
+                record['handover_decided_at'] = None
+                if granted: record['human_resolution']='APPROVE_OVERRIDE'
+            else:
+                record['handover_status'] = None
+                record['handover_decline_reason'] = None
+                record['handover_decided_at'] = None
+                st.commit_approval(conn,record,result)
+                if granted: record['human_resolution']='APPROVE_OVERRIDE'
+        elif result.decision==DecisionType.ESCALATE:
+            if facts.handover_person_id:
+                record['handover_status'] = 'PENDING'
         st.save_record(conn,record)
         if result.decision==DecisionType.ESCALATE:
             st.set_steps(conn,record,result.approval_roles)
@@ -836,6 +851,40 @@ class LeaveOrchestratorService:
             st.audit(conn,request_id,feedback.action,approver_id+': '+feedback.feedback_notes)
             return st.serialize(conn,st.read_request(conn,request_id))
 
+    def confirm_handover(self, request_id, actor_id, action, reason=''):
+        with st.transaction() as conn:
+            req = st.read_request(conn, request_id)
+            st.employee(conn, actor_id)
+            if actor_id != req.get('handover_person_id'):
+                raise st.AccessDenied('Chỉ người được bàn giao mới có quyền xác nhận.')
+            if req['status'] != 'PENDING_HANDOVER':
+                raise st.Conflict('Đơn không ở trạng thái chờ xác nhận bàn giao.')
+            now_str = self.clock().isoformat()
+            req['updated_at'] = now_str
+            req['handover_decided_at'] = now_str
+            if action == 'ACCEPT':
+                req['handover_status'] = 'ACCEPTED'
+                req['status'] = 'COMPLETED'
+                result_json = req.get('result_json') or {}
+                if isinstance(result_json, str):
+                    try: result_json = json.loads(result_json)
+                    except Exception: result_json = {}
+                class _Res:
+                    working_dates = result_json.get('working_dates', [])
+                st.commit_approval(conn, req, _Res())
+                st.save_record(conn, req)
+                st.audit(conn, request_id, 'HANDOVER_ACCEPTED', f'{actor_id} đã chấp nhận bàn giao công việc.')
+            elif action == 'DECLINE':
+                req['handover_status'] = 'DECLINED'
+                req['handover_decline_reason'] = reason or 'Người được bàn giao từ chối nhận bàn giao.'
+                req['status'] = 'WAITING_EMPLOYEE'
+                req['human_resolution'] = 'HANDOVER_DECLINED'
+                st.save_record(conn, req)
+                st.audit(conn, request_id, 'HANDOVER_DECLINED', f'{actor_id} từ chối bàn giao: {reason}')
+            else:
+                raise ValueError(f'Hành động không hợp lệ: {action}')
+            return st.serialize(conn, st.read_request(conn, request_id))
+
     def cancel(self,request_id,actor_id,revoke=False,reason=''):
         with st.transaction() as conn:
             req=st.read_request(conn,request_id)
@@ -851,7 +900,7 @@ class LeaveOrchestratorService:
                 req.update(status='REJECTED',human_resolution='REVOKED',deducted_days=0,annual_balance_change=(req.get('annual_balance_change') or 0)+count)
             else:
                 if actor_id!=req['employee_id']: raise st.AccessDenied('Chỉ người nộp được hủy.')
-                if req['status'] not in {'WAITING_EMPLOYEE','PENDING_ESCALATION'}: raise st.Conflict('Chỉ hủy đơn đang chờ xử lý.')
+                if req['status'] not in {'WAITING_EMPLOYEE','PENDING_ESCALATION','PENDING_HANDOVER'}: raise st.Conflict('Chỉ hủy đơn đang chờ xử lý.')
                 req.update(status='CANCELLED',human_resolution='CANCELLED')
             req['updated_at']=self.clock().isoformat()
             st.save_record(conn,req)

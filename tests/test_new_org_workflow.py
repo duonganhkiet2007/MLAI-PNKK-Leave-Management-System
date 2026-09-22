@@ -170,7 +170,8 @@ def test_tc_ai_03_balance_boundary_kiet(employees_data):
 def test_tc_ai_04_probation_restriction_huong(employees_data):
     """TC-AI-04: Lê Thị Hương (EMP007 - Thử việc): Xin Annual -> Chặn; Xin Unpaid Other -> Hợp lệ."""
     emp = employees_data["EMP007"]
-    assert emp["status"] == "PROBATION"
+    assert emp["status"] == "ACTIVE"
+    assert emp["employment_status"] == "PROBATION"
 
     # Xin phép năm hưởng lương -> Bắt lỗi PROBATION_ANNUAL_RESTRICTED
     req_annual = LeaveRequest(

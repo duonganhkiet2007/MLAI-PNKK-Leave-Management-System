@@ -206,15 +206,17 @@ class LeaveRuleEngine:
             else: result.warnings.append(message)
         trace('TEAM_CAPACITY','WARNING' if quota_dates and q.leave_type not in OPERATIONAL else 'FAIL' if quota_dates else 'PASS')
         handover_error = None
-        if n >= 3 or q.handover_person_id or q.handover_person_name:
+        if q.handover_person_id or q.handover_person_name:
             h = q.handover
             if not q.handover_person_id: handover_error = (E.HANDOVER_REQUIRED,'Vui lòng chỉ định người nhận bàn giao.')
             elif not h or h.get('employee_id') == q.employee_id or h.get('department') != q.department or h.get('status') != 'ACTIVE' or set(h.get('absent_dates',[])) & set(result.working_dates):
                 handover_error = (E.HANDOVER_INVALID,'Người bàn giao phải cùng phòng, active, không phải chính bạn và không nghỉ trùng.')
+        elif n >= 3:
+            result.warnings.append('Khuyến nghị chỉ định người nhận bàn giao cho kỳ nghỉ từ 3 ngày trở lên.')
         if handover_error:
             if q.leave_type in OPERATIONAL: return correction(*handover_error,'OPS-02')
             result.warnings.append(handover_error[1])
-        trace('HANDOVER','WARNING' if handover_error else 'PASS')
+        trace('HANDOVER','WARNING' if (handover_error or (n >= 3 and not q.handover_person_id)) else 'PASS')
         roles = []
         if q.leave_type == 'ANNUAL': roles = [R.CEO] if n >= 20 else [R.DEPARTMENT_HEAD] if n >= 6 else [R.DIRECT_MANAGER] if n >= 3 else []
         if q.leave_type == 'UNPAID_OTHER': roles = [R.DEPARTMENT_HEAD,R.HRD,R.CEO] if n >= 20 else [R.DEPARTMENT_HEAD,R.HRD] if n >= 6 else [R.DIRECT_MANAGER]

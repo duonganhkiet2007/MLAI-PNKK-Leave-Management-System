@@ -1841,15 +1841,31 @@ select option:checked {
 .ai-engine-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 26px;
-  padding: 4px 10px;
-  border: 1px solid #c4b5fd;
+  gap: 4px;
+  min-height: 22px;
+  padding: 2px 9px;
+  border: 1px solid #bfdbfe;
   border-radius: 999px;
-  background: #ede9fe;
-  color: #5b21b6;
+  background: #eff6ff;
+  color: #1d4ed8;
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+}
+
+.ai-ocean-panel {
+  border: 1px solid #e2e8f0 !important;
+  border-top: 3px solid #2563eb !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05) !important;
+}
+
+.ai-ocean-header {
+  background: #f8fafc !important;
+  padding: 13px 20px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
 }
 
 #modal-audit .modal-dialog {
@@ -3087,6 +3103,268 @@ select option:checked {
   flex-shrink: 0 !important;
   border-top: 1px solid #e2e8f0 !important;
   background-color: #f8fafc !important;
+}
+
+/* ── Modal Benchmark Case Detail (Verify Harness Compact Modal) ── */
+#modal-benchmark-detail {
+  overflow-y: auto !important;
+  align-items: flex-start !important;
+  padding: 24px 12px !important;
+}
+
+#modal-benchmark-detail .modal-dialog {
+  margin: 0 auto !important;
+  max-width: 880px !important;
+  max-height: calc(100vh - 48px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#modal-benchmark-detail .modal-content {
+  max-height: calc(100vh - 48px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.22) !important;
+}
+
+#modal-benchmark-detail .modal-header {
+  flex-shrink: 0 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+}
+
+#modal-benchmark-detail .modal-body {
+  overflow-y: auto !important;
+  flex: 1 1 auto !important;
+  padding: 1.25rem 1.5rem !important;
+}
+
+#modal-benchmark-detail .modal-footer {
+  flex-shrink: 0 !important;
+  border-top: 1px solid #e2e8f0 !important;
+  background: #f8fafc !important;
+}
+
+/* Compact Info Grid */
+.harness-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+@media (max-width: 768px) {
+  .harness-info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.harness-info-item {
+  min-width: 0;
+}
+
+.harness-info-label {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 2px;
+}
+
+.harness-info-val {
+  font-size: 0.86rem;
+  color: #0f172a;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Compact Attachment Box */
+.harness-attach-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+/* Compact VLM Box */
+.harness-vlm-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+  margin-top: 10px;
+}
+
+.harness-vlm-header {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 9px 14px;
+  font-weight: 700;
+  font-size: 0.83rem;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.harness-vlm-body {
+  padding: 11px 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+}
+
+.harness-vlm-flags {
+  padding: 6px 14px 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 2-Column Evaluation Grid */
+.harness-eval-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+@media (max-width: 768px) {
+  .harness-eval-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left Column Styling */
+.harness-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.harness-section-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #ffffff;
+}
+
+.harness-section-card-title {
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.harness-summary-content {
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: #334155;
+}
+
+/* Passed Criteria Box */
+.harness-criteria-pass {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.harness-criteria-pass .harness-section-card-title {
+  color: #166534;
+}
+
+.harness-criteria-item-pass {
+  font-size: 0.82rem;
+  color: #166534;
+  margin-bottom: 6px;
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.harness-criteria-item-pass:last-child {
+  margin-bottom: 0;
+}
+
+.harness-criteria-item-pass strong {
+  color: #14532d;
+}
+
+/* Review / Failed Criteria Box */
+.harness-criteria-review {
+  border-color: #fed7aa;
+  background: #fffbeb;
+}
+
+.harness-criteria-review .harness-section-card-title {
+  color: #9a3412;
+}
+
+.harness-criteria-item-review {
+  font-size: 0.82rem;
+  color: #9a3412;
+  margin-bottom: 6px;
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.harness-criteria-item-review:last-child {
+  margin-bottom: 0;
+}
+
+.harness-criteria-item-review strong {
+  color: #7c2d12;
+}
+
+/* Right Column Styling */
+.harness-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.harness-right-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.harness-right-item-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.harness-right-item-val {
+  font-size: 0.85rem;
+  color: #0f172a;
+  line-height: 1.5;
 }
 
 /* ========================================================================= */

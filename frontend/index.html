@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/static/vendor/tabler/tabler.min.css">
   
   <!-- Custom Styling & Refinements -->
-  <link rel="stylesheet" href="styles.css?v=20260922_v11">
+  <link rel="stylesheet" href="styles.css?v=20260922_v15">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e40af'/><text x='16' y='22' font-family='sans-serif' font-size='16' font-weight='bold' fill='white' text-anchor='middle'>HR</text></svg>">
 </head>
 <body>
@@ -129,6 +129,17 @@
             <span id="staff-requests-count" class="saas-nav-badge">0</span>
           </button>
 
+          <button class="saas-nav-item tab-btn" data-tab="tab-staff-handover" id="btn-tab-staff-handover">
+            <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span class="saas-nav-text">Bàn giao</span>
+            <span id="staff-handover-count" class="saas-nav-badge" style="display:none; background:#f59e0b; color:#fff;">0</span>
+          </button>
+
 
           <button class="saas-nav-item tab-btn" data-tab="tab-staff-policy" id="btn-tab-staff-policy">
             <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -231,7 +242,7 @@
               <div class="test-portal-header d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div class="d-flex align-items-center">
                   <h3 class="benchmark-title" style="font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 0;">
-                    5 Kịch Bản Kiểm Thử
+                    Kịch Bản Kiểm Thử
                   </h3>
                 </div>
 
@@ -243,7 +254,7 @@
               </div>
 
               <div class="saas-panel-body p-4">
-                <!-- 5 Test Cases Overview Table (Format Bảng chuẩn) -->
+                <!-- Test Cases Overview Table (Format Bảng chuẩn) -->
                 <div class="table-responsive rounded border mb-3" style="border-color: #e2e8f0 !important; background: #ffffff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);" id="sprint1-cases-overview">
                   <table class="table table-vcenter card-table table-hover table-striped m-0" id="table-sprint1-overview">
                     <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
@@ -264,7 +275,9 @@
                         <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-05 &rarr; 2026-10-05</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">1 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <span class="text-muted small">Chưa chạy</span>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-AI-01')" title="Xem chi tiết đơn">
+                            Chi tiết
+                          </button>
                         </td>
                         <td style="padding: 12px 16px;">
                           <span class="benchmark-tag benchmark-tag-approve" id="sprint1-status-TC-AI-01">1. Thường quy · Duyệt</span>
@@ -278,7 +291,9 @@
                         <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-08 &rarr; 2026-10-09</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">2 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <span class="text-muted small">Chưa chạy</span>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-EMP008-03')" title="Xem chi tiết đơn">
+                            Chi tiết
+                          </button>
                         </td>
                         <td style="padding: 12px 16px;">
                           <span class="benchmark-tag benchmark-tag-approve" id="sprint1-status-TC-EMP008-03">2. Thường quy · Duyệt</span>
@@ -292,7 +307,9 @@
                         <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-05 &rarr; 2026-10-06</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">2 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <span class="text-muted small">Chưa chạy</span>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-AI-03B')" title="Xem chi tiết đơn">
+                            Chi tiết
+                          </button>
                         </td>
                         <td style="padding: 12px 16px;">
                           <span class="benchmark-tag benchmark-tag-reject" id="sprint1-status-TC-AI-03B">3. Thường quy · Từ chối</span>
@@ -306,7 +323,9 @@
                         <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-12 &rarr; 2026-10-14</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">3 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <span class="text-muted small">Chưa chạy</span>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-VLM-03')" title="Xem chi tiết đơn">
+                            Chi tiết
+                          </button>
                         </td>
                         <td style="padding: 12px 16px;">
                           <span class="benchmark-tag benchmark-tag-correct" id="sprint1-status-TC-VLM-03">4. Chuyển tiếp · Lệch ảnh</span>
@@ -320,7 +339,9 @@
                         <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-05 &rarr; 2026-10-07</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">3 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <span class="text-muted small">Chưa chạy</span>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-MGR-03')" title="Xem chi tiết đơn">
+                            Chi tiết
+                          </button>
                         </td>
                         <td style="padding: 12px 16px;">
                           <span class="benchmark-tag benchmark-tag-escalate" id="sprint1-status-TC-MGR-03">5. Chuyển tiếp · Vượt quyền</span>
@@ -401,7 +422,6 @@
                   <h3 class="benchmark-title">Kho kịch bản</h3>
                   <div class="benchmark-subtitle">38 kịch bản toàn công ty · 4 nhóm chính</div>
                 </div>
-                <div class="d-flex align-items-center gap-2">
                 <div class="d-flex align-items-center gap-2">
                   <span class="badge" id="badge-testcase-count" style="background: #2563eb; color: #fff; font-weight: 600; padding: 6px 14px; border-radius: 8px;">38 kịch bản</span>
                 </div>
@@ -571,9 +591,9 @@
                     </div>
 
                     <div class="col-6">
-                      <label for="staff-handover-select" class="form-label required">Người nhận bàn giao</label>
-                      <select id="staff-handover-select" class="form-select" required>
-                        <option value="">-- Chọn đồng nghiệp nhận bàn giao --</option>
+                      <label for="staff-handover-select" class="form-label">Người nhận bàn giao <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(tùy chọn)</span></label>
+                      <select id="staff-handover-select" class="form-select">
+                        <option value="">-- Không bàn giao --</option>
                       </select>
                     </div>
 
@@ -665,6 +685,7 @@
                     <select id="staff-requests-filter" class="staff-status-select" aria-label="Lọc theo trạng thái đơn">
                       <option value="ALL">Tất cả trạng thái</option>
                       <option value="AUTO_APPROVE">Tự động duyệt</option>
+                      <option value="PENDING_HANDOVER">Chờ xác nhận bàn giao</option>
                       <option value="PENDING_ESCALATION">Đang chờ Quản lý</option>
                       <option value="APPROVED_BY_HUMAN_OVERRIDE">Quản lý đã duyệt</option>
                       <option value="REJECTED">Đã từ chối</option>
@@ -697,7 +718,38 @@
             </div>
           </section>
 
-
+          <!-- TAB S4: BÀN GIAO CHỜ XÁC NHẬN -->
+          <section id="tab-staff-handover" class="tab-pane">
+            <div class="saas-panel">
+              <div class="saas-panel-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                  <h3 class="saas-panel-title m-0">DANH SÁCH BÀN GIAO CHỜ XÁC NHẬN</h3>
+                </div>
+                <div class="d-flex align-items-center">
+                  <span id="staff-handover-subtitle" class="text-muted" style="font-size: 0.85rem;">Các đơn nghỉ cần sự đồng ý nhận bàn giao công việc của bạn</span>
+                </div>
+              </div>
+              <div class="saas-panel-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-vcenter card-table table-hover table-striped" id="table-staff-handover">
+                    <thead>
+                      <tr>
+                        <th>Người bàn giao</th>
+                        <th>Loại nghỉ</th>
+                        <th>Thời gian</th>
+                        <th>Số ngày</th>
+                        <th>Lý do nghỉ</th>
+                        <th style="min-width: 170px;">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody id="staff-handover-tbody">
+                      <tr><td colspan="6" class="text-center text-secondary py-4">Đang tải danh sách bàn giao...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
 
           <!-- TAB S5: QUY CHẾ NỘI BỘ (STAFF - TEXT ONLY) -->
           <section id="tab-staff-policy" class="tab-pane">
@@ -1043,6 +1095,32 @@
       </div>
     </div>
 
+    <!-- MODAL: CHI TIẾT TEST CASE KIỂM ĐỊNH (COMPACT 2 CỘT CHO VERIFY HARNESS) -->
+    <div class="modal modal-blur" id="modal-benchmark-detail" tabindex="-1" style="display: none; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 1060;">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" role="document" style="max-width: 860px;">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 14px; overflow: hidden; background: #ffffff;">
+          <div class="modal-header py-3 px-4" style="background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0;">
+            <div>
+              <h5 class="modal-title fw-bold text-dark mb-0" id="modal-benchmark-detail-title">CHI TIẾT KIỂM ĐỊNH</h5>
+              <div class="text-secondary small" id="modal-benchmark-detail-sub" style="font-size: 0.78rem;"></div>
+            </div>
+            <button type="button" class="btn-close" id="btn-close-benchmark-detail" aria-label="Close" onclick="closeBenchmarkDetailModal()"></button>
+          </div>
+          <div class="modal-body p-4 bg-white" id="modal-benchmark-detail-body">
+            <!-- Rendered dynamically via openBenchmarkCaseDetail -->
+          </div>
+          <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-between align-items-center">
+            <button type="button" class="btn btn-primary btn-sm px-3" id="btn-benchmark-fill-form" style="font-size: 0.82rem; font-weight: 600;">
+              Nạp vào form
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm px-4" id="btn-close-benchmark-footer" onclick="closeBenchmarkDetailModal()" style="font-size: 0.82rem; font-weight: 500;">
+              Đóng
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- MODAL: PHÓNG TO CHI TIẾT ĐƠN, VLM JSON & CHECKLIST CÂY QUYẾT ĐỊNH -->
     <div class="modal modal-blur" id="modal-attachment" tabindex="-1" style="display: none; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
       <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
@@ -1174,6 +1252,6 @@
   <script src="/static/vendor/tabler/tabler.min.js" defer></script>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20260922_v11"></script>
+  <script src="app.js?v=20260922_v16"></script>
 </body>
 </html>

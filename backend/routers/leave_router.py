@@ -623,3 +623,26 @@ class RevokeDecisionInput(BaseModel):
 @router.post('/{request_id}/revoke')
 def revoke(request_id,payload: RevokeDecisionInput,actor_id=Depends(actor)):
     return {'success':True,'data':service.cancel(request_id,actor_id,True,payload.reason)}
+
+class HandoverResponseInput(BaseModel):
+    action: Literal['ACCEPT', 'DECLINE']
+    reason: str = ''
+
+@router.post('/{request_id}/handover-response')
+def respond_handover(request_id: str, payload: HandoverResponseInput, actor_id=Depends(actor)):
+    t0 = time.perf_counter()
+    res = service.confirm_handover(request_id, actor_id, payload.action, payload.reason)
+    total_api_ms = round((time.perf_counter() - t0) * 1000, 2)
+    return {'success': True, 'data': res, 'total_api_ms': total_api_ms}
+
+@router.get('/pending-handover-for/{employee_id}')
+def get_pending_handover(employee_id: str, actor_id=Depends(actor)):
+    with st.readonly_connection() as conn:
+        st.employee(conn, actor_id)
+        rows = conn.execute(
+            "SELECT * FROM leave_requests WHERE handover_person_id = ? AND status = 'PENDING_HANDOVER' ORDER BY submitted_at DESC",
+            (employee_id,)
+        ).fetchall()
+        result = [st.serialize(conn, db._parse_leave_row(dict(r))) for r in rows]
+        return {'success': True, 'total': len(result), 'data': result}
+

@@ -87,7 +87,10 @@ def _init_legacy_schema():
             correlation_score REAL,
             correlation_issues TEXT,
             persona_role_used TEXT,
-            escalation_reasons_json TEXT
+            escalation_reasons_json TEXT,
+            handover_status TEXT DEFAULT NULL,
+            handover_decided_at TEXT,
+            handover_decline_reason TEXT
         )
     """)
 
@@ -162,6 +165,9 @@ def _init_legacy_schema():
         ("legacy_reconciliation_required", "INTEGER DEFAULT 1"),
         ("revision",                 "INTEGER DEFAULT 1"),
         ("human_resolution",         "TEXT"),
+        ("handover_status",          "TEXT DEFAULT NULL"),
+        ("handover_decided_at",      "TEXT"),
+        ("handover_decline_reason",  "TEXT"),
     ]
     existing_cols = {r[1].lower() for r in conn.execute("PRAGMA table_info(leave_requests)").fetchall()}
     for (col_name, col_type) in AUTO_MIGRATE_LEAVE_COLUMNS:
@@ -526,7 +532,8 @@ def save_leave_request(data: Dict[str, Any]):
             vlm_analysis_json, llm_summary_json, doc_patient_name, doc_diagnosis,
             has_red_stamp, has_doctor_signature, is_tampered, ai_edited,
             days_granted_by_doctor, correlation_score, correlation_issues,
-            persona_role_used, escalation_reasons_json
+            persona_role_used, escalation_reasons_json,
+            handover_status, handover_decided_at, handover_decline_reason
         ) VALUES (
             :id, :employee_id, :employee_name, :department, :from_date, :to_date,
             :workdays, :leave_type, :reason, :handover_person_id, :handover_person_name,
@@ -537,7 +544,8 @@ def save_leave_request(data: Dict[str, Any]):
             :vlm_analysis_json, :llm_summary_json, :doc_patient_name, :doc_diagnosis,
             :has_red_stamp, :has_doctor_signature, :is_tampered, :ai_edited,
             :days_granted_by_doctor, :correlation_score, :correlation_issues,
-            :persona_role_used, :escalation_reasons_json
+            :persona_role_used, :escalation_reasons_json,
+            :handover_status, :handover_decided_at, :handover_decline_reason
         )
     """, {
         "id": data.get("id"),
@@ -576,7 +584,10 @@ def save_leave_request(data: Dict[str, Any]):
         "correlation_score": data.get("correlation_score"),
         "correlation_issues": data.get("correlation_issues"),
         "persona_role_used": data.get("persona_role_used"),
-        "escalation_reasons_json": data.get("escalation_reasons_json")
+        "escalation_reasons_json": data.get("escalation_reasons_json"),
+        "handover_status": data.get("handover_status"),
+        "handover_decided_at": data.get("handover_decided_at"),
+        "handover_decline_reason": data.get("handover_decline_reason")
     })
     conn.commit()
     conn.close()

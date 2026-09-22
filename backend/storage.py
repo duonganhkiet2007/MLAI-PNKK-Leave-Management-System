@@ -55,6 +55,9 @@ def can_view(conn, actor_id, req):
     # Đồng nghiệp cùng phòng ban được xem các đơn đã duyệt hoàn tất để phục vụ hiển thị lịch vắng mặt
     if req.get('status')=='COMPLETED' and emp.get('department') and emp['department']==req.get('department'):
         return True
+    # Người được bàn giao được xem đơn để thực hiện xác nhận
+    if req.get('handover_person_id') and actor_id == req.get('handover_person_id'):
+        return True
     roles=roles_for(conn,actor_id)
     required={s['role'] for s in conn.execute('SELECT role FROM approval_steps WHERE request_id=? AND revision=?',
                 (req['id'],req.get('revision',0)))}

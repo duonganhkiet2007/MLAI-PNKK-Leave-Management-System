@@ -33,7 +33,8 @@ def migrate(conn):
             'requested_working_days':'INTEGER','deducted_days':'REAL NOT NULL DEFAULT 0','annual_balance_change':'REAL NOT NULL DEFAULT 0',
             'facts_json':'TEXT','proof_id':'TEXT','decision_trace':'TEXT','result_json':'TEXT',
             'revision':'INTEGER NOT NULL DEFAULT 0','human_resolution':'TEXT',
-            'legacy_reconciliation_required':'INTEGER NOT NULL DEFAULT 1','policy_version':'TEXT'}
+            'legacy_reconciliation_required':'INTEGER NOT NULL DEFAULT 1','policy_version':'TEXT',
+            'handover_status':'TEXT DEFAULT NULL','handover_decided_at':'TEXT','handover_decline_reason':'TEXT'}
         }
         for table, fields in additions.items():
             current={r[1] for r in conn.execute(f'PRAGMA table_info({table})')}

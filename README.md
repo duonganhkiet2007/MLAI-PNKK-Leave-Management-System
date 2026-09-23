@@ -139,6 +139,10 @@ Kỹ thuật phân vai của VLM là: gán một **persona chuyên biệt** phù
 2. **Tuân thủ chính sách** — thiếu chứng từ → cần sửa/chuyển tiếp; vượt số dư → từ chối; chồng lấn ngày → từ chối; chứng từ mờ → chuyển tiếp; vi phạm báo trước → chuyển tiếp; vượt quota → chuyển tiếp/cảnh báo.
 3. **Định tuyến theo thẩm quyền** — đủ điều kiện và nhỏ → tự động duyệt; lớn/phức tạp/vượt ngưỡng → chuyển tiếp đến Department Head hoặc CEO.
 
+
+![Giao diện](docs/report/1790147054592_4749324530369031024_4749324530369031024_918bcfe1194de52ccc8764016ece0b5d.jpg)
+
+
 Ví dụ output khi cần chuyển tiếp:
 
 ```json

@@ -85,8 +85,10 @@ class LeaveRuleEngine:
             start, end = date.fromisoformat(q.from_date), date.fromisoformat(q.to_date)
         except ValueError:
             return correction(E.DATE_RANGE_INVALID,'Ngày phải đúng định dạng YYYY-MM-DD.')
-        if start > end or (end-start).days > 3660:
-            return correction(E.DATE_RANGE_INVALID,'Khoảng ngày không hợp lệ (tối đa 10 năm).')
+        if start > end:
+            return correction(E.DATE_RANGE_INVALID,'Ngày kết thúc phải từ ngày bắt đầu trở đi.')
+        if (end-start).days > 3660:
+            return correction(E.DATE_RANGE_INVALID,'Khoảng nghỉ không được vượt quá 10 năm.')
         trace('INPUT_DATES')
         result.requested_calendar_days = (end-start).days + 1
         try:

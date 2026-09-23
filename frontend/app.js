@@ -5116,9 +5116,23 @@ function getBenchmarkHarnessCriteria(caseId, rec) {
     }
   });
 
-  if (passed.length === 0) {
-    passed.push({ title: "Ngày nghỉ hợp lệ", desc: "Thông tin ngày xin nghỉ phù hợp với lịch làm việc" });
-    passed.push({ title: "Không trùng lịch", desc: "Tỷ lệ vắng mặt phòng ban đảm bảo theo quy định" });
+  // A failed check owns its topic; do not show that topic as passed as well.
+  const criterionTopic = item => {
+    const text = `${item.title} ${item.desc}`.toLowerCase();
+    if (/ngày|date|khoảng|duration|thời gian/.test(text)) return 'date';
+    if (/chứng từ|proof|giấy|document/.test(text)) return 'proof';
+    if (/tên|name|bệnh nhân/.test(text)) return 'name';
+    if (/quỹ phép|số dư|balance|quota/.test(text)) return 'balance';
+    if (/bàn giao|handover/.test(text)) return 'handover';
+    if (/trùng lịch|team|vắng mặt/.test(text)) return 'capacity';
+    return text.trim();
+  };
+  const reviewedTopics = new Set(review.map(criterionTopic));
+  const exclusivePassed = passed.filter(item => !reviewedTopics.has(criterionTopic(item)));
+
+  if (exclusivePassed.length === 0 && review.length === 0) {
+    exclusivePassed.push({ title: "Ngày nghỉ hợp lệ", desc: "Thông tin ngày xin nghỉ phù hợp với lịch làm việc" });
+    exclusivePassed.push({ title: "Không trùng lịch", desc: "Tỷ lệ vắng mặt phòng ban đảm bảo theo quy định" });
   }
 
   let targetRole = "Hệ thống tự động";
@@ -5126,7 +5140,7 @@ function getBenchmarkHarnessCriteria(caseId, rec) {
   else if (decision === 'NEED_CORRECTION') targetRole = "Nhân viên gửi đơn (Employee)";
 
   return {
-    passed,
+    passed: exclusivePassed,
     review,
     targetRole,
     mainReason: rec.human_readable_explanation || rec.plain_reason || "Đang xử lý theo quy chuẩn.",

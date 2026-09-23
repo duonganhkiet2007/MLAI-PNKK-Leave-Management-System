@@ -494,7 +494,10 @@ def get_decision_tree():
 
 @router.get('/calendar')
 def calendar(from_date: date,to_date: date):
-    if from_date>to_date or (to_date-from_date).days>3660: raise ValueError('Khoảng ngày không hợp lệ.')
+  if from_date > to_date:
+    raise ValueError('Ngày kết thúc phải từ ngày bắt đầu trở đi.')
+  if (to_date-from_date).days > 3660:
+    raise ValueError('Khoảng nghỉ không được vượt quá 10 năm.')
     try:
         days=CalendarService().days(from_date,to_date)
         return {'success':True,'requested_calendar_days':len(days),

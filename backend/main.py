@@ -51,8 +51,8 @@ from ai_stack import (
     ollama_tags,
 )
 
-LLM_WARMUP_ON_STARTUP = str(os.getenv("LLM_WARMUP_ON_STARTUP", "1")).strip() not in {"0", "false", "no"}
-VLM_WARMUP_ON_STARTUP = str(os.getenv("VLM_WARMUP_ON_STARTUP", "1")).strip() not in {"0", "false", "no"}
+LLM_WARMUP_ON_STARTUP = str(os.getenv("LLM_WARMUP_ON_STARTUP", "0")).strip().lower() in {"1", "true", "yes"}
+VLM_WARMUP_ON_STARTUP = str(os.getenv("VLM_WARMUP_ON_STARTUP", "1")).strip().lower() not in {"0", "false", "no"}
 
 
 def _vram_of(target: str) -> int:

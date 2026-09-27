@@ -3951,6 +3951,24 @@ function initLeaveAllocationDrawer() {
 /* ========================================================================= */
 /* 5. LEAVE REQUEST FORM & CALCULATION (BƯỚC 1)                              */
 /* ========================================================================= */
+function clampDateToMaxMonthDay(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return dateStr;
+  const match = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return dateStr;
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  let day = parseInt(match[3], 10);
+  if (isNaN(year) || isNaN(month) || isNaN(day) || month < 1 || month > 12) return dateStr;
+  const maxDays = new Date(year, month, 0).getDate();
+  if (day > maxDays) {
+    day = maxDays;
+  }
+  const yStr = String(year).padStart(4, '0');
+  const mStr = String(month).padStart(2, '0');
+  const dStr = String(day).padStart(2, '0');
+  return `${yStr}-${mStr}-${dStr}`;
+}
+
 function initStaffForm() {
   const fromInput = document.getElementById("staff-from-date");
   const toInput = document.getElementById("staff-to-date");
@@ -3962,13 +3980,53 @@ function initStaffForm() {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const defaultDateStr = tomorrow.toISOString().split("T")[0];
-  if (fromInput) fromInput.value = defaultDateStr;
-  if (toInput) toInput.value = defaultDateStr;
+  if (fromInput && !fromInput.value) fromInput.value = defaultDateStr;
+  if (toInput && !toInput.value) toInput.value = defaultDateStr;
+
+  const handleFromDateChange = () => {
+    if (!fromInput) return;
+    if (!fromInput.value) {
+      fromInput.value = defaultDateStr;
+    } else {
+      const clampedFrom = clampDateToMaxMonthDay(fromInput.value);
+      if (clampedFrom && clampedFrom !== fromInput.value) {
+        fromInput.value = clampedFrom;
+      }
+    }
+    // 1. Khi nhập start -> end tự động chỉnh sửa lên = start (nếu nhỏ hơn start hoặc trống)
+    if (toInput) {
+      if (!toInput.value || toInput.value < fromInput.value) {
+        toInput.value = fromInput.value;
+      }
+      toInput.min = fromInput.value;
+    }
+    updateDuration();
+  };
+
+  const handleToDateChange = () => {
+    if (!toInput) return;
+    if (!toInput.value) {
+      toInput.value = fromInput && fromInput.value ? fromInput.value : defaultDateStr;
+    } else {
+      const clampedTo = clampDateToMaxMonthDay(toInput.value);
+      if (clampedTo && clampedTo !== toInput.value) {
+        toInput.value = clampedTo;
+      }
+    }
+    // 1. Khi nhập end -> cho phép nhận bằng hoặc xa hơn start. Nếu nhỏ hơn start -> kéo về = start
+    if (fromInput && fromInput.value && toInput.value) {
+      if (toInput.value < fromInput.value) {
+        toInput.value = fromInput.value;
+      }
+    }
+    updateDuration();
+  };
 
   const updateDuration = async () => {
     const textEl = document.getElementById('staff-calc-days-text');
     const warnEl = document.getElementById('staff-calc-balance-warning');
     if (!fromInput || !toInput) return;
+
     if (!fromInput.value || !toInput.value) {
       if (textEl) textEl.textContent = 'Chưa đủ ngày';
       if (warnEl) warnEl.innerHTML = '';
@@ -3977,15 +4035,26 @@ function initStaffForm() {
     try {
       const res = await apiFetch(`${API_BASE}/api/meta/calendar?from_date=${fromInput.value}&to_date=${toInput.value}`);
       const data = await res.json();
+      const calDays = data.success ? (data.requested_calendar_days ?? 1) : 1;
       const workDays = data.success ? (data.requested_working_days ?? 1) : 1;
-      if (textEl) textEl.textContent = `${workDays} ngày`;
+      
+      let dayHtml = `${workDays} ngày làm việc`;
+      if (calDays > workDays) {
+        const offDays = calDays - workDays;
+        dayHtml += ` <span style="font-size: 0.8rem; font-weight: 500; color: #64748b;">(Đã trừ ${offDays} ngày T7/CN/Lễ)</span>`;
+      } else if (workDays === 0) {
+        dayHtml = `<span style="color: #dc2626; font-weight: 600;">0 ngày làm việc</span> <span style="font-size: 0.8rem; color: #ef4444;">(Rơi vào T7/CN/Lễ)</span>`;
+      }
+      if (textEl) textEl.innerHTML = dayHtml;
 
       if (warnEl) {
         const emp = getCurrentEmployee();
         const leaveType = document.getElementById('staff-leave-type')?.value || 'ANNUAL';
         const remaining = emp ? (emp.remaining_leave_days ?? 9) : 9;
         if (leaveType === 'ANNUAL') {
-          if (workDays <= remaining) {
+          if (workDays === 0) {
+            warnEl.innerHTML = `<span class="badge" style="background: #fee2e2; color: #991b1b; font-weight: 600; font-size: 0.85rem; padding: 5px 12px; border-radius: 6px;">Không có ngày làm việc</span>`;
+          } else if (workDays <= remaining) {
             warnEl.innerHTML = `<span class="badge" style="background: #dcfce7; color: #166534; font-weight: 600; font-size: 0.85rem; padding: 5px 12px; border-radius: 6px;">Trong hạn mức (còn ${remaining} ngày)</span>`;
           } else {
             warnEl.innerHTML = `<span class="badge" style="background: #fee2e2; color: #991b1b; font-weight: 600; font-size: 0.85rem; padding: 5px 12px; border-radius: 6px;">Vượt hạn mức (còn ${remaining} ngày)</span>`;
@@ -3995,7 +4064,7 @@ function initStaffForm() {
         }
       }
     } catch(e) {
-      if (textEl) textEl.textContent = '1 ngày';
+      if (textEl) textEl.textContent = '1 ngày làm việc';
       if (warnEl) {
         const emp = getCurrentEmployee();
         const remaining = emp ? (emp.remaining_leave_days ?? 9) : 9;
@@ -4004,7 +4073,7 @@ function initStaffForm() {
     }
   };
 
-  const MANDATORY_PROOF_TYPES = ['SICK_MEDICAL', 'MEDICAL_EMERGENCY', 'SPECIAL_PAID', 'WORK_ACCIDENT', 'MATERNITY'];
+  const MANDATORY_PROOF_TYPES = ['SICK_MEDICAL', 'MEDICAL_EMERGENCY', 'WORK_ACCIDENT', 'MATERNITY'];
 
   const updateAttachmentRequirement = () => {
     const leaveType = document.getElementById('staff-leave-type')?.value || 'ANNUAL';
@@ -4051,8 +4120,14 @@ function initStaffForm() {
     }
   };
 
-  if (fromInput) fromInput.addEventListener("change", updateDuration);
-  if (toInput) toInput.addEventListener("change", updateDuration);
+  if (fromInput) {
+    fromInput.addEventListener("change", handleFromDateChange);
+    fromInput.addEventListener("blur", handleFromDateChange);
+  }
+  if (toInput) {
+    toInput.addEventListener("change", handleToDateChange);
+    toInput.addEventListener("blur", handleToDateChange);
+  }
   document.getElementById("staff-leave-type")?.addEventListener("change", () => {
     updateDuration();
     updateAttachmentRequirement();

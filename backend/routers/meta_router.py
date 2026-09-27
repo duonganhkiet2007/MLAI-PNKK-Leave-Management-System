@@ -493,19 +493,28 @@ def get_decision_tree():
     return {'success': True, 'tree': tree}
 
 @router.get('/calendar')
-def calendar(from_date: date,to_date: date):
-  if from_date > to_date:
-    raise ValueError('Ngày kết thúc phải từ ngày bắt đầu trở đi.')
-  if (to_date-from_date).days > 3660:
-    raise ValueError('Khoảng nghỉ không được vượt quá 10 năm.')
+def calendar(from_date: date, to_date: date):
+    if from_date > to_date:
+        raise ValueError('Ngày kết thúc phải từ ngày bắt đầu trở đi.')
+    if (to_date - from_date).days > 3660:
+        raise ValueError('Khoảng nghỉ không được vượt quá 10 năm.')
     try:
-        days=CalendarService().days(from_date,to_date)
-        return {'success':True,'requested_calendar_days':len(days),
-            'requested_working_days':sum(k.value=='WORKING_DAY' for _,k in days),
-            'days':[{'date':d.isoformat(),'day_type':k.value} for d,k in days]}
+        days = CalendarService().days(from_date, to_date)
+        return {
+            'success': True,
+            'requested_calendar_days': len(days),
+            'requested_working_days': sum(k.value == 'WORKING_DAY' for _, k in days),
+            'days': [{'date': d.isoformat(), 'day_type': k.value} for d, k in days]
+        }
     except CalendarUnavailable as exc:
-        return {'success':False,'decision':'ESCALATE','error_code':'LEGAL_REVIEW_REQUIRED',
-            'uncertainty_category':'OUT_OF_POLICY','target_role':'HR','detail':str(exc)}
+        return {
+            'success': False,
+            'decision': 'ESCALATE',
+            'error_code': 'LEGAL_REVIEW_REQUIRED',
+            'uncertainty_category': 'OUT_OF_POLICY',
+            'target_role': 'HR',
+            'detail': str(exc)
+        }
 
 @router.get('/llm-status')
 def get_llm_status():

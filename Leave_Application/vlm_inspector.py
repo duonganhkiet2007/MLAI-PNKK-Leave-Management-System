@@ -22,9 +22,10 @@ from typing import Any, Dict, Optional
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
-_kiet = Path(__file__).resolve().parents[1] / "LLM-KIET"
-if str(_kiet) not in sys.path:
-    sys.path.insert(0, str(_kiet))
+for _sub in ("AI", "LLM-KIET"):
+    _p = Path(__file__).resolve().parents[1] / _sub
+    if str(_p) not in sys.path and _p.exists():
+        sys.path.insert(0, str(_p))
 
 from domain import ProofExtraction, ProofType
 from ai_stack import (
@@ -679,6 +680,8 @@ def inspect_document_with_vlm(
             profile_raw = real_result
             if real_result.get("_blur_gate_triggered"):
                 mode_used = "CV_BLUR_GATE_EARLY_EXIT"
+            elif real_result.get("_from_cache"):
+                mode_used = "VLM_CACHE_HIT"
             else:
                 mode_used = "OLLAMA_REAL_QWEN25_VL_3B"
         else:
@@ -882,6 +885,64 @@ def detect_image_blur(path: Optional[str], threshold: float = 50.0) -> tuple[boo
         return False, 999.0
 
 
+_VLM_CACHE_MEM: Dict[str, Dict[str, Any]] = {}
+
+
+def _compute_file_sha256(path: str) -> Optional[str]:
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        import hashlib
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            while chunk := f.read(65536):
+                h.update(chunk)
+        return h.hexdigest()
+    except Exception:
+        return None
+
+
+def _get_vlm_cache_dir() -> Path:
+    base = Path(os.getenv("LEAVE_UPLOAD_DIR", str(Path(__file__).resolve().parents[1] / "backend" / "uploads")))
+    cache_dir = base / "vlm_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir
+
+
+def _read_vlm_cache(file_hash: str, leave_type: str = "") -> Optional[Dict[str, Any]]:
+    if not file_hash:
+        return None
+    key = f"{file_hash}:{leave_type or ''}"
+    if key in _VLM_CACHE_MEM:
+        import copy
+        return copy.deepcopy(_VLM_CACHE_MEM[key])
+    try:
+        cache_file = _get_vlm_cache_dir() / f"{file_hash}.json"
+        if cache_file.is_file():
+            import copy
+            with open(cache_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            _VLM_CACHE_MEM[key] = data
+            return copy.deepcopy(data)
+    except Exception:
+        pass
+    return None
+
+
+def _write_vlm_cache(file_hash: str, leave_type: str, data: Dict[str, Any]) -> None:
+    if not file_hash or not data:
+        return
+    key = f"{file_hash}:{leave_type or ''}"
+    import copy
+    _VLM_CACHE_MEM[key] = copy.deepcopy(data)
+    try:
+        cache_file = _get_vlm_cache_dir() / f"{file_hash}.json"
+        with open(cache_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+
 def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str = '') -> tuple[Optional[Dict[str, Any]], Optional[str]]:
     """Thực thi VLM thật qua Ollama.
 
@@ -915,6 +976,14 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             f"File chứng từ '{path}' không tồn tại trên đĩa. "
             f"Không thể gọi VLM ({matched_model}) khi không có file thật để OCR."
         )
+
+    # 3.2. SHA-256 Inference Cache Check (<1ms return on repeat proof evaluations)
+    file_hash = _compute_file_sha256(path)
+    if file_hash:
+        cached_result = _read_vlm_cache(file_hash, leave_type)
+        if cached_result is not None:
+            cached_result["_from_cache"] = True
+            return cached_result, None
 
     # 3.5. CỔNG KIỂM SOÁT ĐỘ MỜ TẤT ĐỊNH (Deterministic Blur Gate - ~1ms)
     # Chặn sớm ảnh quá mờ để loại trừ hoàn toàn ảo giác của VLM và tiết kiệm 3-4 giây xử lý GPU
@@ -1002,7 +1071,7 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
         "keep_alive": OLLAMA_KEEP_ALIVE,
         "options": {
             "num_ctx": 4096,
-            "num_predict": 1024,
+            "num_predict": 512,
             "temperature": 0.0,
         },
         "prompt": (
@@ -1159,4 +1228,6 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             "fields_detected": fields_detected_val,
         },
     }
+    if file_hash:
+        _write_vlm_cache(file_hash, leave_type, normalized)
     return normalized, None

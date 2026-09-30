@@ -3951,22 +3951,48 @@ function initLeaveAllocationDrawer() {
 /* ========================================================================= */
 /* 5. LEAVE REQUEST FORM & CALCULATION (BƯỚC 1)                              */
 /* ========================================================================= */
-function clampDateToMaxMonthDay(dateStr) {
-  if (!dateStr || typeof dateStr !== 'string') return dateStr;
-  const match = dateStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (!match) return dateStr;
+// Kiểm tra xem chuỗi ngày có hợp lệ không (bao gồm kiểm tra ngày tháng thực tế, vd: 30/2 = không hợp lệ)
+function isValidDateStr(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return false;
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
   const year = parseInt(match[1], 10);
   const month = parseInt(match[2], 10);
-  let day = parseInt(match[3], 10);
-  if (isNaN(year) || isNaN(month) || isNaN(day) || month < 1 || month > 12) return dateStr;
+  const day = parseInt(match[3], 10);
+  if (month < 1 || month > 12) return false;
   const maxDays = new Date(year, month, 0).getDate();
-  if (day > maxDays) {
-    day = maxDays;
+  return day >= 1 && day <= maxDays;
+}
+
+// Hiện / ẩn lỗi đỏ cho ô ngày
+function setDateError(inputEl, message) {
+  if (!inputEl) return;
+  const wrapper = inputEl.closest('.col-6') || inputEl.parentElement;
+  let errEl = wrapper.querySelector('.date-error-msg');
+  if (message) {
+    inputEl.style.borderColor = '#dc2626';
+    inputEl.style.boxShadow = '0 0 0 2px rgba(220,38,38,0.18)';
+    if (!errEl) {
+      errEl = document.createElement('div');
+      errEl.className = 'date-error-msg';
+      errEl.style.cssText = 'color:#dc2626;font-size:0.78rem;font-weight:600;margin-top:4px;';
+      wrapper.appendChild(errEl);
+    }
+    errEl.textContent = message;
+  } else {
+    inputEl.style.borderColor = '';
+    inputEl.style.boxShadow = '';
+    if (errEl) errEl.remove();
   }
-  const yStr = String(year).padStart(4, '0');
-  const mStr = String(month).padStart(2, '0');
-  const dStr = String(day).padStart(2, '0');
-  return `${yStr}-${mStr}-${dStr}`;
+}
+
+// Trả về true nếu form có lỗi ngày (dùng để block submit)
+function hasDateErrors() {
+  const fromInput = document.getElementById('staff-from-date');
+  const toInput = document.getElementById('staff-to-date');
+  if (!fromInput || !toInput) return false;
+  return !isValidDateStr(fromInput.value) || !isValidDateStr(toInput.value) ||
+    (fromInput.value && toInput.value && toInput.value < fromInput.value);
 }
 
 function initStaffForm() {
@@ -3985,39 +4011,36 @@ function initStaffForm() {
 
   const handleFromDateChange = () => {
     if (!fromInput) return;
+    // Validate ngày bắt đầu
     if (!fromInput.value) {
-      fromInput.value = defaultDateStr;
+      setDateError(fromInput, 'Vui lòng nhập ngày bắt đầu.');
+    } else if (!isValidDateStr(fromInput.value)) {
+      setDateError(fromInput, 'Ngày không tồn tại (vd: 30/2 không hợp lệ).');
     } else {
-      const clampedFrom = clampDateToMaxMonthDay(fromInput.value);
-      if (clampedFrom && clampedFrom !== fromInput.value) {
-        fromInput.value = clampedFrom;
+      setDateError(fromInput, null);
+      // Sau khi from hợp lệ, kiểm tra lại to nếu đang có giá trị
+      if (toInput && toInput.value && isValidDateStr(toInput.value)) {
+        if (toInput.value < fromInput.value) {
+          setDateError(toInput, 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.');
+        } else {
+          setDateError(toInput, null);
+        }
       }
-    }
-    // 1. Khi nhập start -> end tự động chỉnh sửa lên = start (nếu nhỏ hơn start hoặc trống)
-    if (toInput) {
-      if (!toInput.value || toInput.value < fromInput.value) {
-        toInput.value = fromInput.value;
-      }
-      toInput.min = fromInput.value;
     }
     updateDuration();
   };
 
   const handleToDateChange = () => {
     if (!toInput) return;
+    // Validate ngày kết thúc
     if (!toInput.value) {
-      toInput.value = fromInput && fromInput.value ? fromInput.value : defaultDateStr;
+      setDateError(toInput, 'Vui lòng nhập ngày kết thúc.');
+    } else if (!isValidDateStr(toInput.value)) {
+      setDateError(toInput, 'Ngày không tồn tại (vd: 30/2 không hợp lệ).');
+    } else if (fromInput && fromInput.value && isValidDateStr(fromInput.value) && toInput.value < fromInput.value) {
+      setDateError(toInput, 'Ngày kết thúc không được nhỏ hơn ngày bắt đầu.');
     } else {
-      const clampedTo = clampDateToMaxMonthDay(toInput.value);
-      if (clampedTo && clampedTo !== toInput.value) {
-        toInput.value = clampedTo;
-      }
-    }
-    // 1. Khi nhập end -> cho phép nhận bằng hoặc xa hơn start. Nếu nhỏ hơn start -> kéo về = start
-    if (fromInput && fromInput.value && toInput.value) {
-      if (toInput.value < fromInput.value) {
-        toInput.value = fromInput.value;
-      }
+      setDateError(toInput, null);
     }
     updateDuration();
   };
@@ -4027,8 +4050,19 @@ function initStaffForm() {
     const warnEl = document.getElementById('staff-calc-balance-warning');
     if (!fromInput || !toInput) return;
 
+    // Nếu ngày chưa đủ hoặc đang có lỗi → không gọi API
     if (!fromInput.value || !toInput.value) {
       if (textEl) textEl.textContent = 'Chưa đủ ngày';
+      if (warnEl) warnEl.innerHTML = '';
+      return;
+    }
+    if (!isValidDateStr(fromInput.value) || !isValidDateStr(toInput.value)) {
+      if (textEl) textEl.innerHTML = `<span style="color:#dc2626;font-weight:600;">Ngày không hợp lệ</span>`;
+      if (warnEl) warnEl.innerHTML = '';
+      return;
+    }
+    if (toInput.value < fromInput.value) {
+      if (textEl) textEl.innerHTML = `<span style="color:#dc2626;font-weight:600;">Khoảng ngày âm</span>`;
       if (warnEl) warnEl.innerHTML = '';
       return;
     }
@@ -4463,6 +4497,28 @@ async function handleStandardFormSubmit() {
   const file = document.getElementById('staff-file-input')?.files[0] || selectedProofFile;
   const leaveType = document.getElementById('staff-leave-type')?.value || 'ANNUAL';
   const mandatoryProofTypes = ['SICK_MEDICAL', 'MEDICAL_EMERGENCY', 'SPECIAL_PAID', 'WORK_ACCIDENT', 'MATERNITY'];
+
+  // --- Validate ngày trước khi submit ---
+  const fromInput = document.getElementById('staff-from-date');
+  const toInput = document.getElementById('staff-to-date');
+  let dateOk = true;
+  if (!fromInput?.value || !isValidDateStr(fromInput.value)) {
+    setDateError(fromInput, !fromInput?.value ? 'Vui lòng nhập ngày bắt đầu.' : 'Ngày bắt đầu không tồn tại (vd: 30/2 không hợp lệ).');
+    dateOk = false;
+  }
+  if (!toInput?.value || !isValidDateStr(toInput.value)) {
+    setDateError(toInput, !toInput?.value ? 'Vui lòng nhập ngày kết thúc.' : 'Ngày kết thúc không tồn tại (vd: 30/2 không hợp lệ).');
+    dateOk = false;
+  }
+  if (dateOk && fromInput?.value && toInput?.value && toInput.value < fromInput.value) {
+    setDateError(toInput, 'Ngày kết thúc không được nhỏ hơn ngày bắt đầu.');
+    dateOk = false;
+  }
+  if (!dateOk) {
+    showToast('Vui lòng kiểm tra lại ngày nghỉ trước khi gửi đơn.', 'error');
+    fromInput?.closest('.col-6')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
   // Cảnh báo nếu loại nghỉ yêu cầu chứng từ nhưng nhân viên chưa đính kèm
   if (mandatoryProofTypes.includes(leaveType) && !file && !currentProofId) {

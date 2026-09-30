@@ -83,6 +83,7 @@ def _warmup_vlm() -> None:
             "format": "json",
             "images": [png_1x1],
             "prompt": 'Trả JSON: {"ok": true, "proof_type": "NONE"}',
+            "keep_alive": OLLAMA_KEEP_ALIVE,
             "options": {"num_predict": 16, "temperature": 0.0},
         },
         timeout=VLM_TIMEOUT_SEC,

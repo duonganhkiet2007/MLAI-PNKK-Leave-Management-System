@@ -615,3 +615,67 @@ def test_tc_vlm_06_blur_gate_early_exit_no_hallucination():
     assert out.proof_extraction.fields_detected == []
     assert "DOC_BLURRED_IMAGE" in out.escalation_reasons_json
     assert out.vlm_analysis_json.get("inspection_mode") == "CV_BLUR_GATE_EARLY_EXIT"
+
+
+def test_tc_vlm_07_sha256_inference_cache():
+    """TC-VLM-07: SHA-256 caching returns instantaneous VLM extraction without GPU recalculation."""
+    from vlm_inspector import (
+        _compute_file_sha256,
+        _write_vlm_cache,
+        _read_vlm_cache,
+        inspect_document_with_vlm,
+    )
+    import time
+
+    img_path = "tests/assets/proofs/proof_sick_valid_3days.png"
+    h = _compute_file_sha256(img_path)
+    assert h is not None
+    assert len(h) == 64
+
+    # Seed mock cached extraction for this image hash
+    cached_payload = {
+        "doc_patient_name": "Nguyễn Văn An",
+        "doc_diagnosis": "Viêm họng cấp",
+        "has_red_stamp": True,
+        "has_doctor_signature": True,
+        "is_tampered": False,
+        "ai_edited": False,
+        "days_granted_by_doctor": 3,
+        "correlation_issues": [],
+        "persona_role_used": "Bác sĩ Chuyên viên Khoa Nội tổng quát (VLM)",
+        "escalation_reasons": [],
+        "proof_extra": {
+            "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+            "issuer": "Bệnh viện Đa khoa Quốc tế Hà Nội",
+            "issue_date": "2026-09-22",
+            "recommended_from_date": "2026-09-22",
+            "recommended_to_date": "2026-09-24",
+            "signature_present": True,
+            "digital_signature_present": False,
+            "document_readability": "READABLE",
+            "fields_detected": ["patient_name", "diagnosis", "issuer", "issue_date", "signature"],
+        },
+    }
+    _write_vlm_cache(h, "SICK_MEDICAL", cached_payload)
+    read_back = _read_vlm_cache(h, "SICK_MEDICAL")
+    assert read_back is not None
+    assert read_back["doc_patient_name"] == "Nguyễn Văn An"
+
+    # Now inspect with VLM: should hit cache immediately (< 50ms)
+    t0 = time.perf_counter()
+    out = inspect_document_with_vlm(
+        leave_type="SICK_MEDICAL",
+        employee_name="Nguyễn Văn An",
+        reason="Nghỉ ốm điều trị",
+        attachment_path_or_type=img_path,
+        allow_mock_fallback=False,
+    )
+    elapsed = time.perf_counter() - t0
+
+    assert elapsed < 0.1, f"Cache retrieval took too long: {elapsed:.4f}s"
+    assert out.vlm_analysis_json.get("inspection_mode") == "VLM_CACHE_HIT"
+    assert out.doc_patient_name == "Nguyễn Văn An"
+    assert out.doc_diagnosis == "Viêm họng cấp"
+    assert out.has_red_stamp is True
+    assert out.has_doctor_signature is True
+    assert out.days_granted_by_doctor == 3

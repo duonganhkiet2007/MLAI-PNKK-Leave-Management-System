@@ -204,32 +204,61 @@ MLAI/
 
 ## 5. Cài đặt và khởi chạy
 
-Hệ thống được kiến trúc theo mô hình monolith hiện đại: Backend xử lý logic bằng **FastAPI**, đồng thời đảm nhận việc mount và phục vụ trực tiếp Frontend (Vanilla JS/HTML/CSS) để tối ưu hóa quá trình triển khai.
+Hệ thống được kiến trúc theo mô hình monolith hiện đại: Backend xử lý logic bằng **FastAPI**, đồng thời đảm nhận việc mount và phục vụ trực tiếp Frontend (Vanilla JS/HTML/CSS) để tối ưu hóa quá trình triển khai. Hệ thống **tự động phân giải đường dẫn module**, không yêu cầu gán thủ công biến môi trường `PYTHONPATH`.
+
+### Cách 1: Khởi chạy trực tiếp bằng Python (Local)
 
 **Bước 1: Sao chép mã nguồn**
-
-Đưa dự án về máy tính cục bộ của bạn bằng Git:
-
 ```bash
 git clone https://github.com/duonganhkiet2007/MLAI-PNKK-Leave-Management-System.git
 cd MLAI
 ```
 
 **Bước 2: Cài đặt thư viện phụ thuộc**
-
-Cài đặt toàn bộ các thư viện cần thiết đã được định nghĩa sẵn trong hệ thống:
-
 ```bash
 pip install -r requirements.txt
 ```
 
-**Bước 3: Khởi chạy Server**
+**Bước 3: Chuẩn bị mô hình Ollama (LLM & VLM)**
+Hệ thống sử dụng Ollama cho tác tử ngôn ngữ và thị giác máy tính:
+```bash
+ollama pull qwen2.5:3b-instruct
+ollama pull qwen2.5vl:7b
+```
+*(Hệ thống đã tích hợp sẵn cơ chế tự động resize ảnh chứng từ tối đa 1600px trước khi gửi VLM, giúp tối ưu tốc độ suy luận ~2-3s và tiết kiệm VRAM).*
 
-Di chuyển vào thư mục lõi của hệ thống (backend) và khởi động API Server.
-
+**Bước 4: Khởi chạy Server**
 ```bash
 cd backend
-python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+bash run_server.sh
+# Hoặc khởi chạy trực tiếp uvicorn:
+# python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+---
+
+### Cách 2: Khởi chạy bằng Docker & Docker Compose
+
+Không cần cài đặt Python thủ công, chỉ cần có Docker:
+
+- **Chạy backend (kết nối Ollama có sẵn trên máy host):**
+```bash
+docker compose up --build -d
+```
+
+- **Chạy toàn bộ cả backend lẫn Ollama trong container:**
+```bash
+docker compose --profile ollama up --build -d
+```
+
+- **Xem log hệ thống:**
+```bash
+docker compose logs -f backend
+```
+
+- **Dừng hệ thống:**
+```bash
+docker compose down
 ```
 
 ---
@@ -345,12 +374,17 @@ MLAI/
 
 Backend FastAPI đã được cấu hình phục vụ trực tiếp giao diện Frontend tĩnh trên cùng cổng:
 
+**Cách A: Chạy trực tiếp (Local)**
 ```bash
 cd backend
 bash run_server.sh
 ```
-
 *(Hoặc khởi chạy trực tiếp qua Uvicorn: `python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload`)*
+
+**Cách B: Chạy qua Docker Compose**
+```bash
+docker compose up --build -d
+```
 
 Địa chỉ truy cập:
 - **Giao diện Web:** [http://localhost:8000](http://localhost:8000)

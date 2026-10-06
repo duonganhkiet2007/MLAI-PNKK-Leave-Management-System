@@ -13,6 +13,7 @@ VLM_TARGET_MODEL = os.getenv("VLM_TARGET_MODEL", "qwen2.5vl:7b")
 
 LLM_TIMEOUT_SEC = float(os.getenv("LLM_TIMEOUT_SEC", "60.0"))
 VLM_TIMEOUT_SEC = float(os.getenv("VLM_TIMEOUT_SEC", "180.0"))
+VLM_MAX_IMAGE_DIM = int(os.getenv("VLM_MAX_IMAGE_DIM", "1600"))
 
 
 def keep_alive_value():

@@ -31,6 +31,7 @@ from ai.ai_stack import (
     OLLAMA_BASE as VLM_OLLAMA_BASE,
     VLM_TARGET_MODEL,
     VLM_TIMEOUT_SEC,
+    VLM_MAX_IMAGE_DIM,
     OLLAMA_KEEP_ALIVE,
     has_model,
     ollama_generate,
@@ -884,6 +885,37 @@ def detect_image_blur(path: Optional[str], threshold: float = 50.0) -> tuple[boo
         return False, 999.0
 
 
+def prepare_image_for_vlm(path: str, max_dim: int = VLM_MAX_IMAGE_DIM) -> str:
+    """Tự động resize ảnh (tối đa max_dim px, mặc định 1600px) trước khi gửi VLM.
+    - Căn chỉnh kích thước là bội số của 28 (chuẩn patch token của Qwen-VL).
+    - Giới hạn chiều dài nhất không vượt quá 1600px để giữ nguyên độ nét OCR chứng từ mà không gây OOM.
+    - Tự động chuyển hệ màu sang RGB nếu là RGBA hoặc P.
+    - Nén JPEG chất lượng cao (quality=85) và mã hóa base64.
+    """
+    import base64
+    import io
+    try:
+        from PIL import Image
+        with Image.open(path) as pil_img:
+            w, h = pil_img.size
+            nw = max(28, round(w / 28) * 28)
+            nh = max(28, round(h / 28) * 28)
+            if nw > max_dim or nh > max_dim:
+                scale = max_dim / max(nw, nh)
+                nw = max(28, int(round((nw * scale) / 28) * 28))
+                nh = max(28, int(round((nh * scale) / 28) * 28))
+            if (nw, nh) != (w, h):
+                pil_img = pil_img.resize((nw, nh), Image.Resampling.LANCZOS)
+            if pil_img.mode in ("RGBA", "P"):
+                pil_img = pil_img.convert("RGB")
+            buf = io.BytesIO()
+            pil_img.save(buf, format="JPEG", quality=85)
+            return base64.b64encode(buf.getvalue()).decode("ascii")
+    except Exception:
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode("ascii")
+
+
 _VLM_CACHE_MEM: Dict[str, Dict[str, Any]] = {}
 
 
@@ -1016,33 +1048,11 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             "_blur_gate_triggered": True,
         }, None
 
-    # 4. Đọc + encode ảnh (Tối ưu resize ảnh lớn để VLM inference siêu nhanh ~2s)
-    import base64
-    import io
-    img = ""
+    # 4. Đọc + tự động resize ảnh (tối đa 1600px) trước khi gửi VLM
     try:
-        from PIL import Image
-        with Image.open(path) as pil_img:
-            max_dim = 784
-            w, h = pil_img.size
-            nw = max(28, round(w / 28) * 28)
-            nh = max(28, round(h / 28) * 28)
-            if nw > max_dim or nh > max_dim:
-                scale = max_dim / max(nw, nh)
-                nw = max(28, int(round((nw * scale) / 28) * 28))
-                nh = max(28, int(round((nh * scale) / 28) * 28))
-            pil_img = pil_img.resize((nw, nh), Image.Resampling.LANCZOS)
-            if pil_img.mode in ("RGBA", "P"):
-                pil_img = pil_img.convert("RGB")
-            buf = io.BytesIO()
-            pil_img.save(buf, format="JPEG", quality=85)
-            img = base64.b64encode(buf.getvalue()).decode("ascii")
-    except Exception:
-        try:
-            with open(path, "rb") as f:
-                img = base64.b64encode(f.read()).decode("ascii")
-        except OSError as e:
-            return None, f"Lỗi đọc file '{path}': {type(e).__name__}: {e}"
+        img = prepare_image_for_vlm(path, max_dim=VLM_MAX_IMAGE_DIM)
+    except OSError as e:
+        return None, f"Lỗi đọc file '{path}': {type(e).__name__}: {e}"
 
     # 5. Gọi Ollama /api/generate
     _PROOF_TYPE_TAXONOMY = (

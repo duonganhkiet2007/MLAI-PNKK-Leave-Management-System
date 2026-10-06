@@ -26,18 +26,18 @@ from fastapi.middleware.cors import CORSMiddleware
 # Thêm đường dẫn module
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.dirname(current_dir)
-for p in [current_dir, os.path.join(root_dir, "LLM-KIET"), os.path.join(root_dir, "Leave_Application")]:
+for p in [current_dir, os.path.join(root_dir, "Leave_Application")]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
 
 from database import init_db
 from storage import AccessDenied, Conflict
-from agent_orchestrator import ModelUnavailable
+from ai.agent_orchestrator import ModelUnavailable
 from routers.leave_router import router as leave_router
 from routers.verify_router import router as verify_router
 from routers.meta_router import router as meta_router
-from ai_stack import (
+from ai.ai_stack import (
     LLM_TARGET_MODEL,
     LLM_TIMEOUT_SEC,
     OLLAMA_BASE,
@@ -122,7 +122,7 @@ def _warmup_llm() -> None:
     if not has_model(names, LLM_TARGET_MODEL):
         print(f"⚠️ [LLM WARM-UP] Chưa pull {LLM_TARGET_MODEL}. Chạy: ollama pull {LLM_TARGET_MODEL}")
         return
-    from llm_client import get_qwen_engine
+    from ai.llm_client import get_qwen_engine
     engine = get_qwen_engine()
     with engine._lock:
         engine.is_loading = True

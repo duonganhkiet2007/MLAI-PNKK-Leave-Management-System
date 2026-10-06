@@ -6,11 +6,11 @@ LLM module được dùng để parse văn bản tự nhiên của nhân viên v
 
 ## 2. File chính
 
-- [LLM-KIET/ai_stack.py](../../LLM-KIET/ai_stack.py)
-- [LLM-KIET/llm_client.py](../../LLM-KIET/llm_client.py)
-- [LLM-KIET/agent_orchestrator.py](../../LLM-KIET/agent_orchestrator.py)
-- [LLM-KIET/prompts.py](../../LLM-KIET/prompts.py)
-- [LLM-KIET/schemas.py](../../LLM-KIET/schemas.py)
+- [backend/ai/ai_stack.py](../../backend/ai/ai_stack.py)
+- [backend/ai/llm_client.py](../../backend/ai/llm_client.py)
+- [backend/ai/agent_orchestrator.py](../../backend/ai/agent_orchestrator.py)
+- [backend/ai/prompts.py](../../backend/ai/prompts.py)
+- [backend/ai/schemas.py](../../backend/ai/schemas.py)
 
 ## 3. Model dùng
 

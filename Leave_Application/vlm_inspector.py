@@ -22,13 +22,12 @@ from typing import Any, Dict, Optional
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
-for _sub in ("AI", "LLM-KIET"):
-    _p = Path(__file__).resolve().parents[1] / _sub
-    if str(_p) not in sys.path and _p.exists():
-        sys.path.insert(0, str(_p))
+_BACKEND_DIR = Path(__file__).resolve().parents[1] / "backend"
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
 
 from domain import ProofExtraction, ProofType
-from ai_stack import (
+from ai.ai_stack import (
     OLLAMA_BASE as VLM_OLLAMA_BASE,
     VLM_TARGET_MODEL,
     VLM_TIMEOUT_SEC,

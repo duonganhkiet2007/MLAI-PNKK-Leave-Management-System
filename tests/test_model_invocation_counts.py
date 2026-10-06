@@ -12,7 +12,7 @@ Tests asserting the exact number of LLM and VLM invocations for every workflow:
 """
 from unittest.mock import Mock, patch
 import pytest
-from agent_orchestrator import LeaveApprovalAgent
+from ai.agent_orchestrator import LeaveApprovalAgent
 from services.orchestration import LeaveOrchestratorService
 
 

@@ -8,7 +8,7 @@ Static inspection finds 53 pytest test functions across four modules. Accounting
 |---|---:|---:|---|
 | `Leave_Application/test_decision_tree.py` | 23 | 65 | 30 canonical policy cases, calendar, entitlement, proof invariants, authority, anti-abuse, name matching, VLM prompt profiles |
 | `backend/test_api_e2e.py` | 18 | 49 | Same 30 cases through persistence plus API/auth, transactions, concurrency, proof verification, multi-step approval, migration, harness |
-| `LLM-KIET/test_llm_kiet.py` | 5 | 12 | LLM extraction contract, malicious extra fields, human action whitelist, conditional recheck |
+| `backend/ai/test_llm_kiet.py` | 5 | 12 | LLM extraction contract, malicious extra fields, human action whitelist, conditional recheck |
 | `tests/test_model_invocation_counts.py` | 7 | 7 | Exact LLM/VLM call contracts and deterministic summary timing/schema |
 | **Total** | **53** | **133** | Static expected count, not a fresh runtime result |
 

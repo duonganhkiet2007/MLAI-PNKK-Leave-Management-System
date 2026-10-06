@@ -408,7 +408,7 @@ def verify_custom_case(payload: CustomVerifyInput):
         data['proof'] = VerifiedProof()
     calls = 0
     if payload.raw_text:
-        from agent_orchestrator import LeaveApprovalAgent
+        from ai.agent_orchestrator import LeaveApprovalAgent
         extracted = LeaveApprovalAgent().parse_natural_language(payload.raw_text, current_date=payload.submitted_at.date())
         for k, v in extracted.model_dump().items(): data[k] = v
         calls = 1

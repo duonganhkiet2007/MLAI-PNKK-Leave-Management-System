@@ -518,8 +518,8 @@ def calendar(from_date: date, to_date: date):
 
 @router.get('/llm-status')
 def get_llm_status():
-    from llm_client import get_qwen_engine
-    from ai_stack import LLM_TARGET_MODEL
+    from ai.llm_client import get_qwen_engine
+    from ai.ai_stack import LLM_TARGET_MODEL
     status = get_qwen_engine().get_status()
     pulled = status.get('model_pulled')
     reachable = status.get('ollama_reachable')
@@ -544,7 +544,7 @@ def get_llm_status():
 
 @router.get('/vlm-status')
 def get_vlm_status():
-    from ai_stack import OLLAMA_BASE, VLM_TARGET_MODEL, has_model, ollama_ps, ollama_tags
+    from ai.ai_stack import OLLAMA_BASE, VLM_TARGET_MODEL, has_model, ollama_ps, ollama_tags
     reachable, names, last_err = ollama_tags()
     pulled = has_model(names, VLM_TARGET_MODEL)
     resident = False

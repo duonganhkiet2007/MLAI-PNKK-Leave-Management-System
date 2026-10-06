@@ -7,16 +7,16 @@ from pathlib import Path
 from datetime import datetime
 from typing import Any, Dict, Optional
 root=Path(__file__).resolve().parents[2]
-for name in ('Leave_Application','LLM-KIET','backend'):
+for name in ('Leave_Application','backend'):
     if str(root/name) not in sys.path: sys.path.insert(0,str(root/name))
 from domain import (RequestFacts, HumanFeedbackResolution, EditableFields,
                     names_approximately_match, should_deduct_annual_balance, VerifiedProof)
 from rule_engine import LeaveRuleEngine
 from taxonomy import ErrorCode, DecisionType
-from agent_orchestrator import LeaveApprovalAgent
+from ai.agent_orchestrator import LeaveApprovalAgent
 from calendar_service import CalendarService
 from vlm_inspector import inspect_document_with_vlm, VLMInspectionOutput
-from ai_stack import VLM_TARGET_MODEL
+from ai.ai_stack import VLM_TARGET_MODEL
 import storage as st
 import json
 from datetime import date
@@ -550,9 +550,9 @@ class LeaveOrchestratorService:
             # Opt-in polish only when explicitly enabled (never on production synchronous requests)
             t_llm_0 = time.perf_counter()
             try:
-                from llm_client import LLMClient
-                from prompts import SUMMARY_MANAGER_SYSTEM_PROMPT
-                from schemas import ManagerSummaryLLMResponse
+                from ai.llm_client import LLMClient
+                from ai.prompts import SUMMARY_MANAGER_SYSTEM_PROMPT
+                from ai.schemas import ManagerSummaryLLMResponse
                 _llm = LLMClient()
                 raw_context = {
                     "context_employee": {

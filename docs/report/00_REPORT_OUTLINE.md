@@ -6,7 +6,7 @@
 - Hành vi đã triển khai chỉ được khẳng định khi có đường chạy trong code hiện tại; `raw_policy.json` chỉ là nguồn lịch sử.
 - Trạng thái dùng trong bộ tài liệu: `DONE`, `PARTIAL`, `DEMO-ONLY`, `TODO`.
 - Số liệu hiệu năng chưa có phép đo runtime mới được ghi `NOT MEASURED`.
-- `LLM-KIET/README.md`, `LUONG_THUC_THI_HE_THONG.md` và `DANH_SACH_TRUONG_HOP_ESCALATION.md` có nội dung legacy/deprecated. Các claim về Qwen 7B in-process, LLM quyết routing, hoặc lý do “chán đi làm” bị chặn không phản ánh code hiện tại.
+- `backend/ai/README.md`, `LUONG_THUC_THI_HE_THONG.md` và `DANH_SACH_TRUONG_HOP_ESCALATION.md` có nội dung legacy/deprecated. Các claim về Qwen 7B in-process, LLM quyết routing, hoặc lý do “chán đi làm” bị chặn không phản ánh code hiện tại.
 - `LUONG_HOAT_DONG.md` cũng stale ở các nhánh thiếu proof/hết balance, phép trừ cho non-annual và khả năng gửi free text kèm file. `HUONG_DAN_CHAY_LOCALHOST.md` còn hữu ích cho port/script, nhưng dependency/model/test command đã lệch code hiện tại. Chỉ dùng sau khi đối chiếu `requirements*.txt`, `ai_stack.py` và pytest.
 - `KHAO_SAT_DAC_TRUNG_DATABASE_SAMPLE.md` là khảo sát/đề xuất, không phải schema runtime. Schema thực tế nằm trong `backend/database.py` và `backend/migrations.py`.
 
@@ -14,7 +14,7 @@
 
 **Mục tiêu section:** Tóm tắt bài toán điều phối đơn nghỉ, kiến trúc hybrid deterministic + AI extraction, kết quả triển khai và giới hạn demo.
 
-**Nguồn:** `policy_rules.md`; `domain.py`; `rule_engine.py`; `backend/services/orchestration.py`; `backend/main.py`; `LLM-KIET/ai_stack.py`.
+**Nguồn:** `policy_rules.md`; `domain.py`; `rule_engine.py`; `backend/services/orchestration.py`; `backend/main.py`; `backend/ai/ai_stack.py`.
 
 **Hình/bảng nên có:** Một sơ đồ một trang “Input → extraction → trusted context → rule engine → human”; bảng trạng thái `DONE/PARTIAL/DEMO-ONLY/TODO`.
 
@@ -54,7 +54,7 @@
 
 **Mục tiêu section:** Trình bày frontend, FastAPI routers, orchestrator, LLM/VLM qua Ollama, rule/calendar engine, SQLite và human review.
 
-**Nguồn:** `backend/main.py`; `backend/routers/*.py`; `backend/services/orchestration.py`; `LLM-KIET/*.py`; `Leave_Application/vlm_inspector.py`; `backend/database.py`; `backend/storage.py`.
+**Nguồn:** `backend/main.py`; `backend/routers/*.py`; `backend/services/orchestration.py`; `backend/ai/*.py`; `Leave_Application/vlm_inspector.py`; `backend/database.py`; `backend/storage.py`.
 
 **Hình/bảng nên có:** Component diagram và trust-boundary diagram.
 

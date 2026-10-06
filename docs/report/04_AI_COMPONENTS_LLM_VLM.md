@@ -2,14 +2,14 @@
 
 ## Canonical model configuration
 
-`LLM-KIET/ai_stack.py` là nguồn cấu hình hiện tại:
+`backend/ai/ai_stack.py` là nguồn cấu hình hiện tại:
 
 - LLM: environment `LLM_MODEL`, mặc định `qwen2.5:3b-instruct`.
 - VLM: environment `VLM_TARGET_MODEL`, mặc định `qwen2.5vl:7b`.
 - Cả hai gọi Ollama, mặc định `http://localhost:11434`.
 - Timeout mặc định: LLM 60 giây, VLM 180 giây; `keep_alive` mặc định là numeric `-1`.
 
-`LLM-KIET/README.md` và docs legacy mô tả Qwen 2.5 7B in-process trong FastAPI. Claim đó stale: code hiện tại gọi Ollama và LLM mặc định là 3B. FastAPI phục vụ port 8000, nhưng Ollama là service endpoint riêng.
+`backend/ai/README.md` và docs legacy mô tả Qwen 2.5 7B in-process trong FastAPI. Claim đó stale: code hiện tại gọi Ollama và LLM mặc định là 3B. FastAPI phục vụ port 8000, nhưng Ollama là service endpoint riêng.
 
 ## LLM
 
@@ -42,7 +42,7 @@ Human feedback parser chỉ xuất một trong `APPROVE_OVERRIDE`, `REJECT`, `MO
 | Custom Verify with `raw_text` | 1 | Parser only; response reports `llm_calls=1`. |
 | Optional manager-summary polish | +1 if explicitly enabled | `_evaluate` supports it, but `leave_router` does not expose/enable this flag. |
 
-These counts are asserted with mocks in `tests/test_model_invocation_counts.py` and `LLM-KIET/test_llm_kiet.py`. They are code/test contracts, not measured production telemetry.
+These counts are asserted with mocks in `tests/test_model_invocation_counts.py` and `backend/ai/test_llm_kiet.py`. They are code/test contracts, not measured production telemetry.
 
 ### Failure behavior
 

@@ -195,7 +195,7 @@ MLAI/
 │   ├── policy_rules.md           # Bản quy chế nội bộ (Single Source of Truth)
 │   ├── rule_engine.py            # Bộ quy tắc 7 bước thẩm định
 │   └── vlm_inspector.py          # Module tích hợp Vision-Language Model
-├── LLM-KIET/                      # Tác tử LLM (Agent Orchestrator)
+├── backend/ai/                      # Tác tử LLM (Agent Orchestrator)
 │   ├── agent_orchestrator.py     # Suy luận ngữ cảnh tự nhiên, sinh câu hỏi tham vấn
 │   └── prompts.py                # Prompts tối ưu hóa cho Qwen 2.5
 └── tests/                         # Kịch bản kiểm thử tự động e2e & benchmark
@@ -327,7 +327,7 @@ MLAI/
 │   ├── policy_rules.md                  # Bản quy chế nội bộ (Single Source of Truth)
 │   ├── rule_engine.py                   # 7 bước kiểm tra điều kiện nghiệp vụ
 │   └── vlm_inspector.py                 # Tích hợp Vision-Language Model quét chứng từ
-├── LLM-KIET/                            # Tác tử LLM Agent (Orchestration & Reasoning)
+├── backend/ai/                            # Tác tử LLM Agent (Orchestration & Reasoning)
 │   ├── agent_orchestrator.py            # Phân tích ngữ cảnh tự nhiên, sinh câu hỏi tham vấn
 │   └── prompts.py                       # Prompts tối ưu hóa cho Qwen 2.5
 └── tests/                               # Bộ kịch bản kiểm thử tự động e2e & benchmark

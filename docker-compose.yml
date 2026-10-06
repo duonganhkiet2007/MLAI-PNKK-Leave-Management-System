@@ -1,0 +1,31 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Ollama chạy trên host; đổi thành http://ollama:11434 nếu dùng service bên dưới
+      OLLAMA_BASE: ${OLLAMA_BASE:-http://host.docker.internal:11434}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b-instruct}
+      VLM_TARGET_MODEL: ${VLM_TARGET_MODEL:-qwen2.5vl:7b}
+      LEAVE_DB_PATH: /data/leave_app.db
+      LEAVE_UPLOAD_DIR: /data/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - app_data:/data
+    restart: unless-stopped
+
+  # Tuỳ chọn: chạy Ollama trong container (cần `docker compose --profile ollama up`)
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  app_data:
+  ollama_models:

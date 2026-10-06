@@ -16,7 +16,7 @@ Mục tiêu: trích xuất thông tin có thể so khớp với leave request, n
 ## 2. File chính
 
 - [Leave_Application/vlm_inspector.py](../../Leave_Application/vlm_inspector.py)
-- [LLM-KIET/ai_stack.py](../../LLM-KIET/ai_stack.py)
+- [backend/ai/ai_stack.py](../../backend/ai/ai_stack.py)
 - [backend/services/orchestration.py](../../backend/services/orchestration.py)
 
 ## 3. Model dùng

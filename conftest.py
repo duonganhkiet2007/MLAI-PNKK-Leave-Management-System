@@ -7,7 +7,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 import pytest
 ROOT=Path(__file__).parent
-for name in ('Leave_Application','LLM-KIET','AI','backend','tests'): sys.path.insert(0,str(ROOT/name))
+for name in ('Leave_Application','backend','tests'): sys.path.insert(0,str(ROOT/name))
 _collection_tmp=tempfile.TemporaryDirectory(prefix='mlai-collection-')
 os.environ['LEAVE_DB_PATH']=str(Path(_collection_tmp.name)/'collection.db')
 os.environ['LEAVE_UPLOAD_DIR']=str(Path(_collection_tmp.name)/'uploads')
@@ -16,7 +16,7 @@ os.environ['APP_ENV']='test'
 
 @pytest.fixture(autouse=True)
 def prohibit_live_models(monkeypatch):
-    import llm_client
+    import ai.llm_client as llm_client
     def forbidden(*args,**kwargs): raise AssertionError('Live model access is forbidden in tests')
     monkeypatch.setattr(llm_client.LocalQwenEngine,'load_model',forbidden)
     monkeypatch.setattr(llm_client.LocalQwenEngine,'generate_json',forbidden)

@@ -10,7 +10,10 @@ from domain import RequestFacts,VerifiedProof
 from storage import Conflict,AccessDenied
 
 def payload(**changes):
-    return {**{k:v for k,v in BASE.items() if k in RequestFacts.model_fields},**changes}
+    # Mặc định không có người bàn giao: các test không liên quan bàn giao không dừng ở PENDING_HANDOVER.
+    base={k:v for k,v in BASE.items() if k in RequestFacts.model_fields}
+    base.update(handover_person_id=None,handover_person_name=None,no_handover_needed=True)
+    return {**base,**changes}
 
 def proof_fixture(db,data,owner='E'):
     p=VerifiedProof(**data)
@@ -39,8 +42,18 @@ def test_30_scenarios_persist_real_balance(case,isolated_db,service):
     service.clock=lambda:datetime.fromisoformat(raw['submitted_at'])
     before=db.get_employee('E')['remaining_leave_days']
     r=service.process_new_request(employee_id='E',structured_data=data)
+    if r['status']=='PENDING_HANDOVER':  # người nhận bàn giao chấp nhận thì mới ghi nhận/trừ phép
+        r=service.confirm_handover(r['id'],data['handover_person_id'],'ACCEPT')
     assert {k:r[k] for k in FIELDS}==case['expected']
     assert db.get_employee('E')['remaining_leave_days']-before==case['expected']['annual_balance_change']
+
+def test_handover_required_from_3_days_with_bypass(service,isolated_db):
+    three=dict(to_date='2026-10-07')
+    r=service.process_new_request(employee_id='E',structured_data=payload(**three,no_handover_needed=False))
+    assert (r['decision'],r['error_code'])==('NEED_CORRECTION','HANDOVER_REQUIRED')
+    ok=service.process_new_request(employee_id='E',structured_data=payload(**three,no_handover_needed=True))
+    assert ok['decision']=='ESCALATE' or ok['status']=='COMPLETED'
+    assert any('bàn giao' in w for w in (ok.get('warnings') or ok.get('result_json',{}).get('warnings',[])))
 
 def test_form_no_model_and_protected_context(client,isolated_db):
     r=client.post('/api/leave/request',headers={'X-Actor-ID':'E'},json=payload())

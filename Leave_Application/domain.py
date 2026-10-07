@@ -215,6 +215,7 @@ class RequestFacts(BaseModel):
     reason: str = ''
     handover_person_id: str | None = None
     handover_person_name: str | None = None
+    no_handover_needed: bool = False  # Bypass: nhân viên xác nhận không có việc cần bàn giao.
     proof_id: str | None = None
     attachment_type: str = 'none'  # Legacy claim only; never proof verification.
     date_ambiguous: bool = False
@@ -246,6 +247,7 @@ class EditableFields(BaseModel):
     to_date: date | None = None
     handover_person_id: str | None = None
     handover_person_name: str | None = None
+    no_handover_needed: bool | None = None
 
 class HumanFeedbackResolution(BaseModel):
     model_config = ConfigDict(extra='forbid')

@@ -26,9 +26,44 @@ const DEFAULT_EMPLOYEES = [];
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+let authTokenCache = {};
+
+async function getActorToken(actorId) {
+  if (!actorId) return null;
+  const cached = authTokenCache[actorId];
+  if (cached && cached.expiresAt > Date.now() + 60000) {
+    return cached.token;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/demo-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actor_id: actorId })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      authTokenCache[actorId] = {
+        token: data.token,
+        expiresAt: Date.now() + (data.expires_in || 28800) * 1000
+      };
+      return data.token;
+    }
+  } catch (e) {
+    console.warn('Lỗi lấy demo-token:', e);
+  }
+  return null;
+}
+
 async function apiFetch(url, options = {}) {
   const headers = new Headers(options.headers || {});
-  headers.set('X-Actor-ID', currentMode === 'manager' ? currentManagerRoleId : currentEmployeeId);
+  const currentActor = currentMode === 'manager' ? currentManagerRoleId : currentEmployeeId;
+  if (currentActor) {
+    headers.set('X-Actor-ID', currentActor);
+    const token = await getActorToken(currentActor);
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+  }
   return fetch(url, {...options, headers});
 }
 const DECISION_LABELS = {
@@ -2604,11 +2639,30 @@ function initSprint1Benchmark() {
   });
 }
 
-/* Lightbox overlay for proof images in Sprint 1 benchmark */
-function openImageLightbox(url, caption) {
-  // Remove existing lightbox if any
+/* Lightbox overlay for proof images with authenticated fetch support */
+async function openImageLightbox(url, caption) {
   const existing = document.getElementById('sprint1-lightbox');
   if (existing) existing.remove();
+
+  let resolvedSrc = url;
+  // Chuyển đổi đường dẫn tĩnh cũ sang endpoint có xác thực
+  if (url && url.startsWith('assets/proofs/')) {
+    const filename = url.replace('assets/proofs/', '');
+    resolvedSrc = `${API_BASE}/api/demo/proofs/${encodeURIComponent(filename)}`;
+  }
+
+  // Tải ảnh qua apiFetch để đính kèm header Bearer token
+  let objectUrl = null;
+  try {
+    const res = await apiFetch(resolvedSrc);
+    if (res.ok) {
+      const blob = await res.blob();
+      objectUrl = URL.createObjectURL(blob);
+    }
+  } catch (err) {
+    console.warn('Không tải được ảnh qua apiFetch, fallback URL gốc:', err);
+  }
+  const displaySrc = objectUrl || resolvedSrc;
 
   const overlay = document.createElement('div');
   overlay.id = 'sprint1-lightbox';
@@ -2618,25 +2672,34 @@ function openImageLightbox(url, caption) {
     'align-items:center', 'justify-content:center', 'padding:20px',
     'animation:fadeIn 0.2s ease'
   ].join(';');
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.onclick = (e) => {
+    if (e.target === overlay) {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      overlay.remove();
+    }
+  };
 
   overlay.innerHTML = `
     <div style="position:relative; max-width:90vw; max-height:88vh; display:flex; flex-direction:column; align-items:center; gap:10px;">
       <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
         <span style="color:#e2e8f0; font-size:0.82rem; font-weight:600;">${escapeHtml(caption || url)}</span>
-        <button onclick="document.getElementById('sprint1-lightbox').remove()"
+        <button id="sprint1-lightbox-close-btn"
           style="background:rgba(255,255,255,0.12); border:none; border-radius:6px; color:#fff; padding:4px 10px; cursor:pointer; font-size:0.85rem; font-weight:700; letter-spacing:0.05em;">
           Đóng
         </button>
       </div>
-      <img src="${url}" alt="${escapeHtml(caption || 'Proof image')}"
+      <img src="${displaySrc}" alt="${escapeHtml(caption || 'Proof image')}"
         style="max-width:100%; max-height:78vh; object-fit:contain; border-radius:10px; box-shadow:0 8px 40px rgba(0,0,0,0.6); background:#fff;"
-        onerror="this.alt='Không tải được ảnh'; this.style.padding='30px'; this.style.color='#ef4444';"
+        onerror="this.alt='Không tải được ảnh hoặc chưa có quyền truy cập'; this.style.padding='30px'; this.style.color='#ef4444';"
       />
-      <div style="color:#94a3b8; font-size:0.72rem;">Bấm bên ngoài ảnh hoặc nút ✕ để đóng</div>
+      <div style="color:#94a3b8; font-size:0.72rem;">Bảo mật hồ sơ y tế: Đã xác thực quyền xem • Bấm ngoài ảnh để đóng</div>
     </div>
   `;
   document.body.appendChild(overlay);
+  document.getElementById('sprint1-lightbox-close-btn')?.addEventListener('click', () => {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    overlay.remove();
+  });
 }
 window.openImageLightbox = openImageLightbox;
 
@@ -2705,10 +2768,20 @@ const TESTCASE_PROOF_MAP = {
 
 async function attachProofFileFromUrl(url, fileName, proofType) {
   try {
-    const res = await fetch(url);
+    let resolvedUrl = url;
+    if (url && url.startsWith('assets/proofs/')) {
+      const fn = url.replace('assets/proofs/', '');
+      resolvedUrl = `${API_BASE}/api/demo/proofs/${encodeURIComponent(fn)}`;
+    }
+    const res = await apiFetch(resolvedUrl);
     if (!res.ok) throw new Error(`Không tải được tệp đính kèm mẫu (${res.status})`);
     const blob = await res.blob();
-    const file = new File([blob], fileName, { type: "image/png" });
+    const ext = (fileName && fileName.lastIndexOf('.') !== -1) ? fileName.substring(fileName.lastIndexOf('.')) : '.png';
+    const uuidStr = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID().replace(/-/g, '')
+      : ('uuid_' + Date.now() + '_' + Math.random().toString(36).substring(2));
+    const uuidFileName = uuidStr + ext;
+    const file = new File([blob], uuidFileName, { type: "image/png" });
     selectedProofFile = file;
 
     const fileInput = document.getElementById("staff-file-input");
@@ -4537,7 +4610,17 @@ async function handleStandardFormSubmit() {
 
   if (file) {
     try {
-      const form = new FormData(); form.append('file',file);
+      const ext = (file.name && file.name.lastIndexOf('.') !== -1)
+        ? file.name.substring(file.name.lastIndexOf('.'))
+        : '.png';
+      // Đặt tên file bằng UUID để tránh lỗi đường dẫn tiếng Việt khi mở ảnh đưa vào VLM model
+      const uuidStr = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID().replace(/-/g, '')
+        : ('uuid_' + Date.now() + '_' + Math.random().toString(36).substring(2));
+      const uuidFileName = uuidStr + ext;
+      const fileToUpload = new File([file], uuidFileName, { type: file.type || 'image/png' });
+      const form = new FormData();
+      form.append('file', fileToUpload, uuidFileName);
       form.append('proof_type',document.getElementById('staff-proof-type')?.value || 'MEDICAL_LEAVE_CERTIFICATE');
       const response = await apiFetch(`${API_BASE}/api/leave/proofs`,{method:'POST',body:form});
       const result=await response.json();
@@ -4558,6 +4641,7 @@ async function handleStandardFormSubmit() {
     to_date:document.getElementById('staff-to-date')?.value || null,
     reason:document.getElementById('staff-reason')?.value || '',
     handover_person_id:document.getElementById('staff-handover-select')?.value || null,
+    no_handover_needed:!!document.getElementById('staff-no-handover')?.checked,
     proof_id:currentProofId
   };
   await submitLeaveToBackend(payload, !!file);
@@ -4601,6 +4685,8 @@ function correctRequest(id) {
   for(const [key,element] of Object.entries({leave_type:'staff-leave-type',reason_category:'staff-reason-category',from_date:'staff-from-date',to_date:'staff-to-date',reason:'staff-reason',handover_person_id:'staff-handover-select'})) {
     document.getElementById(element).value=f[key] || '';
   }
+  const noHandoverEl=document.getElementById('staff-no-handover');
+  if(noHandoverEl){ noHandoverEl.checked=!!f.no_handover_needed; document.getElementById('staff-handover-select').disabled=noHandoverEl.checked; }
   document.getElementById('correction-banner').textContent='Đang bổ sung đơn '+id;
   switchStaffTab('tab-staff-submit');
 }
@@ -6818,7 +6904,9 @@ async function openAttachmentModal(id) {
   if(!res.ok){content.textContent=JSON.stringify(data.detail);return;}
   const actorId=currentMode==='staff'?currentEmployeeId:currentManagerRoleId;
   const isHR=currentMode==='manager' && employeesCache.find(e=>e.employee_id===actorId)?.actor_roles?.some(r=>r.role==='HR');
-  const proofUrl=req.proof_id?`${API_BASE}/api/leave/proofs/${req.proof_id}?actor_id=${encodeURIComponent(actorId)}`:'';
+  const token=await getActorToken(actorId);
+  const authQuery = token ? `token=${encodeURIComponent(token)}` : `actor_id=${encodeURIComponent(actorId)}`;
+  const proofUrl=req.proof_id?`${API_BASE}/api/leave/proofs/${req.proof_id}?${authQuery}`:'';
   const mime=(data.proof_source&&data.proof_source.mime_type)||'';
   const fileName=escapeHtml((data.proof_source&&data.proof_source.original_file_name)||'Chứng từ gốc');
   const isPdf=mime==='application/pdf'||/\.pdf$/i.test(fileName);

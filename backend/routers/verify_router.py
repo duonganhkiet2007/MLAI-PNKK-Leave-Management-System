@@ -1,6 +1,7 @@
 """Isolated, non-persisting Verify harness. No production DB or LLM dependencies."""
 import json
 import time
+import uuid
 from pathlib import Path
 from datetime import datetime
 from fastapi import APIRouter
@@ -218,10 +219,14 @@ def _ensure_proof_doc(case: dict):
         return None, 'none'
     uploads_dir = Path(__file__).resolve().parents[1] / 'uploads'
     uploads_dir.mkdir(parents=True, exist_ok=True)
-    dest_path = uploads_dir / proof_file
+    ext = Path(proof_file).suffix or '.png'
+    # Gán tên file bằng UUID nếu tên file có tiếng Việt/non-ASCII
+    uuid_storage_name = f"{uuid.uuid4().hex}{ext}" if any(ord(c) > 127 for c in proof_file) else proof_file
+    dest_path = uploads_dir / uuid_storage_name
     if not dest_path.exists():
         root = Path(__file__).resolve().parents[2]
         for candidate in (
+            uploads_dir / proof_file,
             root / 'tests' / 'assets' / 'proofs' / proof_file,
             root / 'frontend' / 'assets' / 'proofs' / proof_file,
         ):
@@ -237,9 +242,9 @@ def _ensure_proof_doc(case: dict):
             id, employee_id, storage_name, original_name, mime_type, size_bytes,
             proof_type, facts_json, storage_path, file_real_path, original_filename, file_size_bytes, uploaded_by, created_at
         ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (
-            pid, case['employee_id'], proof_file, proof_file, 'image/png', file_size,
+            pid, case['employee_id'], uuid_storage_name, uuid_storage_name, 'image/png', file_size,
             ptype, json.dumps(case.get('proof') or {}), str(dest_path), str(dest_path),
-            proof_file, file_size, case['employee_id'], datetime.now().isoformat()
+            uuid_storage_name, file_size, case['employee_id'], datetime.now().isoformat()
         ))
     return pid, 'image_attachment'
 

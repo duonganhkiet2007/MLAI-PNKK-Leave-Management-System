@@ -1,6 +1,7 @@
 """Authoritative workflow. Financial mutation and state transitions are atomic."""
 import time
 import sys
+import os
 import uuid
 import json
 from pathlib import Path
@@ -79,13 +80,27 @@ class LeaveOrchestratorService:
                 }
                 # If real file exists, pass the absolute real path so Ollama wrapper reads the PNG directly
                 from pathlib import Path as _P
-                import os
                 uploads_dir = _P(os.getenv('LEAVE_UPLOAD_DIR', str(_P(__file__).resolve().parents[1] / 'uploads')))
                 candidate = uploads_dir / proof_row['storage_name']
                 if candidate.exists():
                     attachment_for_vlm = str(candidate)
                 elif att:
                     attachment_for_vlm = att
+
+            # Đảm bảo nếu attachment_for_vlm là file có tên tiếng Việt / non-ASCII,
+            # đổi tên bằng UUID để các hàm mở ảnh VLM (OpenCV, PIL, Ollama) không gặp lỗi đường dẫn
+            if attachment_for_vlm and os.path.isfile(attachment_for_vlm):
+                att_p = _P(attachment_for_vlm)
+                if any(ord(c) > 127 for c in att_p.name):
+                    import uuid as _uuid, shutil as _shutil
+                    uploads_dir = _P(os.getenv('LEAVE_UPLOAD_DIR', str(_P(__file__).resolve().parents[1] / 'uploads')))
+                    uploads_dir.mkdir(parents=True, exist_ok=True)
+                    uuid_cand = uploads_dir / f"{_uuid.uuid4().hex}{att_p.suffix or '.png'}"
+                    try:
+                        _shutil.copy2(attachment_for_vlm, uuid_cand)
+                        attachment_for_vlm = str(uuid_cand)
+                    except Exception:
+                        pass
             vlm_out: VLMInspectionOutput | None = None
             try:
                 vlm_out = inspect_document_with_vlm(
@@ -814,28 +829,7 @@ class LeaveOrchestratorService:
                 self._evaluate(conn,req,RequestFacts.model_validate(facts))
             else:
                 old_target=req['target_role']
-                # Lead Team approval already serves as the human proof review. Reuse
-                # the stored VLM facts instead of running the document model again.
-                if action_type == 'APPROVE' and old_target == 'DIRECT_MANAGER' and req.get('error_code') == ErrorCode.PROOF_REVIEW_REQUIRED:
-                    proof_id = req.get('proof_id')
-                    vlm_data = req.get('vlm_analysis_json') or {}
-                    if isinstance(vlm_data, str):
-                        try: vlm_data = json.loads(vlm_data)
-                        except (TypeError, ValueError): vlm_data = {}
-                    doc = vlm_data.get('document_summary') or {}
-                    flags = vlm_data.get('flags') or {}
-                    doctor_range = doc.get('doctor_recommended_range') or {}
-                    if proof_id:
-                        conn.execute("""UPDATE proof_documents SET proof_verification_status='VERIFIED',
-                            issuer=?, patient_name=?, issue_date=?, recommended_from_date=?,
-                            recommended_to_date=?, signature_present=?, document_readability=?,
-                            verification_notes=?, verified_by=? WHERE id=?""",
-                            (doc.get('issuer'), doc.get('patient_name'), doc.get('issue_date'),
-                             doctor_range.get('from'), doctor_range.get('to'),
-                             1 if flags.get('has_doctor_signature') else 0,
-                             flags.get('document_readability') or 'READABLE',
-                             'Lead Team đã đối chiếu facts từ VLM.', approver_id, proof_id))
-                        st.audit(conn, request_id, 'PROOF_VERIFIED_BY_LEAD', approver_id)
+                # Chứng từ chưa xác minh chỉ HR được xử lý (xem nhánh HR bên dưới).
                 if req['target_role']=='HR':
                     raise st.Conflict('HR cần xác minh chứng từ/cấu hình; không được duyệt bỏ qua điều kiện chưa xác minh.')
                 steps=[dict(r) for r in conn.execute('SELECT * FROM approval_steps WHERE request_id=? AND revision=? ORDER BY step_index',(request_id,req['revision']))]

@@ -591,10 +591,15 @@
                     </div>
 
                     <div class="col-6">
-                      <label for="staff-handover-select" class="form-label">Người nhận bàn giao <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(tùy chọn)</span></label>
+                      <label for="staff-handover-select" class="form-label">Người nhận bàn giao <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(bắt buộc nếu nghỉ từ 3 ngày làm việc)</span></label>
                       <select id="staff-handover-select" class="form-select">
-                        <option value="">-- Không bàn giao --</option>
+                        <option value="">-- Chọn người bàn giao --</option>
                       </select>
+                      <label class="form-check mt-2 mb-0" for="staff-no-handover">
+                        <input type="checkbox" id="staff-no-handover" class="form-check-input"
+                          onchange="document.getElementById('staff-handover-select').disabled=this.checked; if(this.checked) document.getElementById('staff-handover-select').value='';">
+                        <span class="form-check-label small">Không có công việc phát sinh cần bàn giao <span class="text-muted">(quản lý sẽ thấy cảnh báo khi duyệt)</span></span>
+                      </label>
                     </div>
 
                     <div class="col-6">

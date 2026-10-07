@@ -12,7 +12,10 @@
 ### 2.1. Nghỉ phép năm
 - Người lao động được nghỉ phép năm theo mức tối thiểu theo luật và theo quy định nội bộ của doanh nghiệp.
 - Số ngày xin nghỉ phải không vượt quá số dư phép năm hiện có.
-- Đơn nghỉ phép năm không được làm sai lệch thời hạn báo trước và phải đảm bảo công tác bàn giao nếu cần thiết.
+- Đơn nghỉ phép năm không được làm sai lệch thời hạn báo trước.
+- **Bàn giao công việc:** kỳ nghỉ từ 3 ngày làm việc trở lên (phép năm, nghỉ không lương) bắt buộc chỉ định người bàn giao (cùng phòng, đang làm việc, không nghỉ trùng). Người được chọn phải xác nhận (`PENDING_HANDOVER`); nếu từ chối, đơn quay về nhân viên.
+- **Lối thoát:** nhân viên có thể chọn "Không có công việc phát sinh cần bàn giao" (`no_handover_needed`). Hệ thống hiển thị cảnh báo cho quản lý khi duyệt để quản lý tự kiểm chứng và chịu trách nhiệm.
+- Thiếu cả người bàn giao lẫn lựa chọn ngoại lệ → yêu cầu chỉnh sửa (`HANDOVER_REQUIRED`).
 
 ### 2.2. Nghỉ ốm đau
 - Nghỉ ốm phải có chứng từ y tế hợp lệ theo quy định.
@@ -68,7 +71,24 @@
 | Nghỉ việc riêng hưởng lương | Không | Có | Không bắt buộc ở hầu hết trường hợp | Yêu cầu chứng từ, sự kiện hợp pháp và xác nhận theo thẩm quyền |
 | Nghỉ không lương | Không | Có | Có thể yêu cầu khi dài hạn | Không trừ phép năm; cần lý do rõ ràng và phê duyệt quản lý / cấp cao |
 
-> Lưu ý: Theo logic hiện tại, chỉ có 2 vai trò chính trong luồng phê duyệt cuối cùng của phần “quyền phê duyệt cuối cùng” là Lead Team và CEO. AI chỉ thực hiện đánh giá tự động theo điều kiện, không thay thế quyết định của con người khi đơn vượt ngưỡng, thiếu thông tin hoặc có rủi ro.
+### 3.4. Định nghĩa 3 Kiểu Dừng Quyết Định Chuẩn (Three Spec Stops)
+Hệ thống tuân thủ nghiêm ngặt 3 kiểu dừng xử lý độc lập để đảm bảo ranh giới con người (Human-in-the-loop) và ngăn chặn việc đoán mò:
+
+1. **Kiểu dừng 1 - `AUTO_APPROVE` (Tự Động Duyệt):**
+   - Đơn thỏa mãn 100% các tiêu chuẩn chính sách: đủ ngày phép, không trùng lặp, báo trước đúng hạn, tỷ lệ vắng mặt < 30%, chứng từ y tế đã xác minh hợp lệ và thời lượng nằm trong ngưỡng cho phép tự động của AI (≤ 2 ngày phép năm, 1 ngày nghỉ ốm).
+   - Hệ thống tự động phê duyệt và trừ số dư quỹ phép ngay lập tức (nếu là phép năm).
+
+2. **Kiểu dừng 2 - `NEED_CORRECTION` / `AUTO_REJECT` (Yêu Cầu Nhân Viên Bổ Sung / Từ Chối):**
+   - Trường hợp đơn vi phạm các điều kiện hình thức hoặc dữ liệu tiên quyết mà nhân viên có thể tự khắc phục: thiếu ngày, ngày kết thúc trước ngày bắt đầu, thiếu chứng từ, thiếu người bàn giao khi nghỉ ≥ 3 ngày, hoặc vượt quá quỹ phép năm hiện có.
+   - Trạng thái trả về: `WAITING_EMPLOYEE` hoặc `REJECTED`, yêu cầu nhân viên tự điều chỉnh lại dữ liệu, không làm phiền cấp quản lý khi đơn chưa hoàn thiện.
+
+3. **Kiểu dừng 3 - `ESCALATE` (Dừng Chuyển Người Có Thẩm Quyền / Human-in-the-Loop):**
+   - Hệ thống dừng tự động hóa và tạo câu hỏi nghiệp vụ cụ thể (`actionable_question`) gửi đúng cấp thẩm quyền:
+     - **Quản lý trực tiếp (`DIRECT_MANAGER`):** Đơn nghỉ phép năm 3–5 ngày, đơn nghỉ ốm 2–5 ngày, đơn vi phạm thời hạn báo trước, đơn vượt quota phòng ban, hoặc chứng từ mờ (`DOC_ILLEGIBLE`).
+     - **Nhân sự (`HR`):** Đơn nghỉ ốm có chứng từ y tế mới cần đối chiếu tính xác thực pháp lý (`PROOF_REVIEW_REQUIRED`), chế độ thai sản/tai nạn lao động, hoặc lịch làm việc chưa rõ.
+     - **Cấp cao (`DEPARTMENT_HEAD`, `CEO`):** Các đợt nghỉ dài ngày (> 5 ngày hoặc ≥ 20 ngày).
+
+> Lưu ý: Theo logic hiện tại, hệ thống phân bổ quyền phê duyệt đúng vai trò theo ma trận phân cấp. AI chỉ thực hiện đánh giá tự động theo điều kiện, không thay thế quyết định của con người khi đơn vượt ngưỡng, thiếu thông tin hoặc có rủi ro.
 
 ## 4. Thời hạn báo trước và hồ sơ
 - Đơn nghỉ phải được nộp trước khi bắt đầu nghỉ theo mức thời hạn tối thiểu do doanh nghiệp quy định và theo yêu cầu vận hành.
@@ -76,7 +96,8 @@
 - Người lao động có trách nhiệm cung cấp thông tin đầy đủ, chính xác và kịp thời.
 
 ## 5. Xử lý hồ sơ không hợp lệ
-- Nếu thiếu chứng từ, chứng từ mờ, không rõ ngày hoặc không đúng dạng, đơn phải được yêu cầu chỉnh sửa.
+- Nếu thiếu chứng từ, không rõ ngày hoặc không đúng dạng, đơn phải được yêu cầu chỉnh sửa.
+- Nếu chứng từ mờ, hệ thống không tự đoán: đơn được chuyển lên quản lý trực tiếp (`DOC_ILLEGIBLE`), vì quản lý có thể đọc được bản gốc hoặc yêu cầu nộp lại bản rõ hơn.
 - Nếu vượt quá quỹ phép năm, không có căn cứ pháp lý hợp lệ, hoặc đơn không phù hợp với loại nghỉ được phép, đơn có thể bị từ chối.
 - Nếu có dấu hiệu lạm dụng hoặc nhiều đợt nghỉ rời rạc trong cùng thời gian, quản lý có quyền xem xét và xử lý theo nguyên tắc công bằng, hợp lý và đúng quy định.
 

@@ -1,4 +1,4 @@
-"""Leave API. X-Actor-ID selects a demo actor; roles always come from the DB."""
+"""Leave API. Danh tính lấy từ token ký (Authorization: Bearer); X-Actor-ID chỉ dùng khi bật LEAVE_ALLOW_ACTOR_HEADER. Roles luôn lấy từ DB."""
 import json
 import os
 import time
@@ -12,15 +12,26 @@ from services.orchestration import LeaveOrchestratorService
 from domain import RequestFacts, ProofType, ProofExtraction, VerifiedProof, EditableFields, should_deduct_annual_balance
 import database as db
 import storage as st
+from auth import verify_token, legacy_actor_header_allowed
 
 router=APIRouter(prefix='/api/leave',tags=['Leave Application'])
 service=LeaveOrchestratorService()
 
-def actor(x_actor_id: Optional[str]=Header(None),actor_id: Optional[str]=Query(None)):
+def actor(authorization: Optional[str]=Header(None),token: Optional[str]=Query(None),
+          x_actor_id: Optional[str]=Header(None),actor_id: Optional[str]=Query(None)):
+    bearer=authorization[7:].strip() if authorization and authorization.lower().startswith('bearer ') else None
+    signed=bearer or token
+    if signed:
+        who=verify_token(signed)
+        if not who: raise HTTPException(401,'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.')
+        claimed=x_actor_id or actor_id
+        if claimed and claimed!=who: raise HTTPException(403,'Danh tính không khớp.')
+        return who
     value=x_actor_id or actor_id
-    if not value: raise HTTPException(401,'Chọn nhân sự demo (X-Actor-ID).')
-    if x_actor_id and actor_id and x_actor_id!=actor_id: raise HTTPException(403,'Danh tính không khớp.')
-    return value
+    if value and legacy_actor_header_allowed():
+        if x_actor_id and actor_id and x_actor_id!=actor_id: raise HTTPException(403,'Danh tính không khớp.')
+        return value
+    raise HTTPException(401,'Cần đăng nhập (Authorization: Bearer <token>).')
 
 class NewLeaveRequestInput(RequestFacts):
     employee_id: str | None = None
@@ -70,14 +81,18 @@ async def upload_proof(file: UploadFile=File(...),proof_type: ProofType=Form(Pro
     directory=Path(os.getenv('LEAVE_UPLOAD_DIR',str(Path(db.DB_PATH).parent/'uploads')))
     directory.mkdir(parents=True,exist_ok=True)
     pid=uuid.uuid4().hex
-    name=pid+{'application/pdf':'.pdf','image/png':'.png','image/jpeg':'.jpg'}[actual]
+    ext={'application/pdf':'.pdf','image/png':'.png','image/jpeg':'.jpg'}[actual]
+    name=f"{pid}{ext}"
     path=directory/name
     proof=VerifiedProof(proof_type=proof_type)
+    incoming_raw_name = Path(file.filename or 'document').name
+    # Nếu tên file tải lên chứa tiếng Việt hoặc ký tự non-ASCII, gán tên bằng UUID để tránh lỗi mở file trong VLM model
+    safe_original_name = name if any(ord(c) > 127 for c in incoming_raw_name) else incoming_raw_name
     try:
         with path.open('xb') as output: output.write(content)
         with st.transaction() as conn:
             conn.execute('''INSERT INTO proof_documents(id,employee_id,storage_name,original_name,mime_type,size_bytes,proof_type,facts_json,created_at)
-                VALUES(?,?,?,?,?,?,?,?,?)''',(pid,actor_id,name,Path(file.filename or 'document').name,actual,len(content),proof_type.value,proof.model_dump_json(),st.now_iso()))
+                VALUES(?,?,?,?,?,?,?,?,?)''',(pid,actor_id,name,safe_original_name,actual,len(content),proof_type.value,proof.model_dump_json(),st.now_iso()))
             st.audit(conn,'PROOF-'+pid,'UPLOAD',actor_id)
     except Exception:
         path.unlink(missing_ok=True); raise
@@ -572,6 +587,9 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     'proof_id':req.get('proof_id'),
                     'proof_type':pt_label,
                     'attachment_type':req.get('attachment_type'),
+                    'original_file_name':proof_file,
+                    'mime_type': proof_storage.get('mime_type'),
+                    'size_kb': round(int(proof_storage.get('size_bytes') or 0) / 1024, 1),
                     'readability': proof.get('document_readability') if isinstance(proof,dict) else 'UNKNOWN',
                 },
                 'vlm_analysis': req.get('vlm_analysis_json') or {},

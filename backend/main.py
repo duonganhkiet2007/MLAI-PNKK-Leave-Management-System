@@ -37,6 +37,7 @@ from ai.agent_orchestrator import ModelUnavailable
 from routers.leave_router import router as leave_router
 from routers.verify_router import router as verify_router
 from routers.meta_router import router as meta_router
+from routers.auth_router import router as auth_router
 from ai.ai_stack import (
     LLM_TARGET_MODEL,
     LLM_TIMEOUT_SEC,
@@ -215,7 +216,7 @@ async def input_error(request: Request, exc):
 # Cấu hình CORS để Frontend (Vite/React/Next.js hoặc HTML thuần) gọi API không bị chặn
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -225,6 +226,7 @@ app.add_middleware(
 app.include_router(leave_router)
 app.include_router(verify_router)
 app.include_router(meta_router)
+app.include_router(auth_router)
 
 
 from fastapi.staticfiles import StaticFiles
@@ -234,10 +236,11 @@ from fastapi.responses import FileResponse
 frontend_dir = os.path.join(os.path.dirname(current_dir), "frontend")
 
 if os.path.exists(frontend_dir):
-    app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
-    assets_dir = os.path.join(frontend_dir, "assets")
-    if os.path.exists(assets_dir):
-        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+    # Chỉ phục vụ thư viện giao diện (vendor). Ảnh chứng từ y tế KHÔNG được public:
+    # chúng chỉ được lấy qua API có xác thực (/api/leave/proofs/{id}, /api/demo/proofs/{file}).
+    vendor_dir = os.path.join(frontend_dir, "vendor")
+    if os.path.exists(vendor_dir):
+        app.mount("/static/vendor", StaticFiles(directory=vendor_dir), name="static-vendor")
 
     @app.get("/", summary="Giao diện Web SPA")
     async def serve_spa_index():

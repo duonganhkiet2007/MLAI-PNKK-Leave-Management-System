@@ -133,7 +133,7 @@ class LeaveRuleEngine:
             if unreadable:
                 return finish(D.ESCALATE, E.DOC_ILLEGIBLE,
                              'Chứng từ mờ / không đọc được; cần quản lý hoặc HR xác minh lại bản rõ hơn trước khi quyết định.',
-                             C.OUT_OF_POLICY, R.DIRECT_MANAGER, 'PROOF-01', [R.DIRECT_MANAGER])
+                             C.AUTHORITY_ESCALATION, R.DIRECT_MANAGER, 'PROOF-01', [R.DIRECT_MANAGER])
             if p.proof_verification_status == 'REJECTED':
                 return correction(E.DOC_FIELD_MISSING,'Chứng từ chưa đạt yêu cầu: ' + (p.verification_notes or 'Vui lòng bổ sung.'),'PROOF-01')
             if p.proof_verification_status != 'VERIFIED':
@@ -146,7 +146,7 @@ class LeaveRuleEngine:
                     (bool(p.signature_present) or bool(p.digital_signature_present))
                 )
                 if not short_medical_valid:
-                    return finish(D.ESCALATE,E.PROOF_REVIEW_REQUIRED,'Đã nhận chứng từ; cần đối chiếu nhanh trước khi ghi nhận chế độ.',C.OUT_OF_POLICY,R.DIRECT_MANAGER,'PROOF-01',[R.DIRECT_MANAGER])
+                    return finish(D.ESCALATE,E.PROOF_REVIEW_REQUIRED,'Đã nhận chứng từ; HR cần đối chiếu và xác minh trước khi ghi nhận chế độ.',C.OUT_OF_POLICY,R.HR,'PROOF-01',[R.HR])
             allowed = MEDICAL_PROOFS if q.leave_type in MEDICAL else (
                 {'MARRIAGE_CERTIFICATE'} if (hasattr(q.reason_category,'value') and q.reason_category.value == 'SELF_MARRIAGE') else
                 {'MARRIAGE_CERTIFICATE','WEDDING_INVITATION'} if (hasattr(q.reason_category,'value') and q.reason_category.value == 'CHILD_MARRIAGE') else {'DEATH_CERTIFICATE'})
@@ -208,17 +208,24 @@ class LeaveRuleEngine:
             else: result.warnings.append(message)
         trace('TEAM_CAPACITY','WARNING' if quota_dates and q.leave_type not in OPERATIONAL else 'FAIL' if quota_dates else 'PASS')
         handover_error = None
+        handover_bypassed = False
         if q.handover_person_id or q.handover_person_name:
             h = q.handover
             if not q.handover_person_id: handover_error = (E.HANDOVER_REQUIRED,'Vui lòng chỉ định người nhận bàn giao.')
             elif not h or h.get('employee_id') == q.employee_id or h.get('department') != q.department or h.get('status') != 'ACTIVE' or set(h.get('absent_dates',[])) & set(result.working_dates):
                 handover_error = (E.HANDOVER_INVALID,'Người bàn giao phải cùng phòng, active, không phải chính bạn và không nghỉ trùng.')
         elif n >= 3:
-            result.warnings.append('Khuyến nghị chỉ định người nhận bàn giao cho kỳ nghỉ từ 3 ngày trở lên.')
+            if q.no_handover_needed:
+                result.warnings.append('Nhân viên xác nhận "Không có công việc phát sinh cần bàn giao"; Quản lý cần tự kiểm chứng và chịu trách nhiệm khi duyệt.')
+                handover_bypassed = True
+            elif q.leave_type in OPERATIONAL:
+                handover_error = (E.HANDOVER_REQUIRED,'Kỳ nghỉ từ 3 ngày làm việc cần chỉ định người bàn giao, hoặc xác nhận "Không có công việc cần bàn giao".')
+            else:
+                result.warnings.append('Khuyến nghị chỉ định người nhận bàn giao cho kỳ nghỉ từ 3 ngày trở lên.')
         if handover_error:
             if q.leave_type in OPERATIONAL: return correction(*handover_error,'OPS-02')
             result.warnings.append(handover_error[1])
-        trace('HANDOVER','WARNING' if (handover_error or (n >= 3 and not q.handover_person_id)) else 'PASS')
+        trace('HANDOVER','WARNING' if (handover_error or handover_bypassed or (n >= 3 and not q.handover_person_id)) else 'PASS')
         roles = []
         if q.leave_type == 'ANNUAL': roles = [R.CEO] if n >= 20 else [R.DEPARTMENT_HEAD] if n >= 6 else [R.DIRECT_MANAGER] if n >= 3 else []
         if q.leave_type == 'UNPAID_OTHER': roles = [R.DEPARTMENT_HEAD,R.HRD,R.CEO] if n >= 20 else [R.DEPARTMENT_HEAD,R.HRD] if n >= 6 else [R.DIRECT_MANAGER]

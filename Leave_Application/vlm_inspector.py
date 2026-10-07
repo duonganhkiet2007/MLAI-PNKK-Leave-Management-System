@@ -871,7 +871,15 @@ def detect_image_blur(path: Optional[str], threshold: float = 50.0) -> tuple[boo
         return False, 999.0
     try:
         import cv2
-        img = cv2.imread(path)
+        import numpy as np
+        img = None
+        try:
+            data = np.fromfile(path, dtype=np.uint8)
+            img = cv2.imdecode(data, cv2.IMREAD_COLOR)
+        except Exception:
+            pass
+        if img is None:
+            img = cv2.imread(path)
         if img is None:
             return False, 999.0
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -896,7 +904,14 @@ def prepare_image_for_vlm(path: str, max_dim: int = VLM_MAX_IMAGE_DIM) -> str:
     import io
     try:
         from PIL import Image
-        with Image.open(path) as pil_img:
+        pil_img = None
+        try:
+            pil_img = Image.open(path)
+        except Exception:
+            with open(path, "rb") as f_in:
+                raw_bytes = f_in.read()
+            pil_img = Image.open(io.BytesIO(raw_bytes))
+        with pil_img:
             w, h = pil_img.size
             nw = max(28, round(w / 28) * 28)
             nh = max(28, round(h / 28) * 28)
@@ -1007,6 +1022,19 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             f"File chứng từ '{path}' không tồn tại trên đĩa. "
             f"Không thể gọi VLM ({matched_model}) khi không có file thật để OCR."
         )
+
+    # 3.1. Nếu tên file chứa tiếng Việt / non-ASCII, gán tên mới bằng UUID để hàm mở ảnh không gặp lỗi đường dẫn
+    p_obj = Path(path)
+    if any(ord(c) > 127 for c in p_obj.name):
+        import uuid as _uuid, shutil as _shutil
+        target_dir = _get_vlm_cache_dir().parent
+        target_dir.mkdir(parents=True, exist_ok=True)
+        uuid_path = str(target_dir / f"{_uuid.uuid4().hex}{p_obj.suffix or '.png'}")
+        try:
+            _shutil.copy2(path, uuid_path)
+            path = uuid_path
+        except Exception:
+            pass
 
     # 3.2. SHA-256 Inference Cache Check (<1ms return on repeat proof evaluations)
     file_hash = _compute_file_sha256(path)

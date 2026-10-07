@@ -13,6 +13,7 @@ os.environ['LEAVE_DB_PATH']=str(Path(_collection_tmp.name)/'collection.db')
 os.environ['LEAVE_UPLOAD_DIR']=str(Path(_collection_tmp.name)/'uploads')
 os.environ['SEED_DEMO_DATA']='false'
 os.environ['APP_ENV']='test'
+os.environ['LEAVE_ALLOW_ACTOR_HEADER']='true'
 
 @pytest.fixture(autouse=True)
 def prohibit_live_models(monkeypatch):

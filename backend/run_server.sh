@@ -6,7 +6,15 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+if [ -z "$PYTHON_BIN" ]; then
+    if [ -f "$SCRIPT_DIR/../.venv/bin/python" ]; then
+        PYTHON_BIN="$SCRIPT_DIR/../.venv/bin/python"
+    elif [ -f "$SCRIPT_DIR/.venv/bin/python" ]; then
+        PYTHON_BIN="$SCRIPT_DIR/.venv/bin/python"
+    else
+        PYTHON_BIN="python3"
+    fi
+fi
 PORT="${PORT:-8000}"
 
 echo "=========================================================="

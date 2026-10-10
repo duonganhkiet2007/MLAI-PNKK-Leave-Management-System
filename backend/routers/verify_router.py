@@ -1,18 +1,29 @@
 """Isolated, non-persisting Verify harness. No production DB or LLM dependencies."""
 import json
+import os
 import time
 import uuid
 from pathlib import Path
 from datetime import datetime
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 from rule_engine import LeaveRequest, LeaveRuleEngine
 from domain import RequestFacts, VerifiedProof
 from calendar_service import CalendarService
 from services.orchestration import LeaveOrchestratorService
 import storage as st
+from routers.leave_router import actor
+import database as db
 
 router=APIRouter(prefix='/api/verify',tags=['Verify Harness'])
+_ROOT = Path(__file__).resolve().parents[2]
+_PHOTO_DIRS = (
+    _ROOT / "backend" / "uploads",
+    _ROOT / "tests" / "assets" / "proofs",
+    _ROOT / "frontend" / "assets" / "proofs",
+)
+_ALLOWED_PHOTO_SUFFIX = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".pdf": "application/pdf"}
 BENCHMARK_SESSION_CACHE = {}
 BENCHMARK_CASE_PREFIX = 'REQ-TC-'
 
@@ -20,6 +31,10 @@ BENCHMARK_CASE_PREFIX = 'REQ-TC-'
 def _cleanup_benchmark_request(req_id: str):
     try:
         with st.transaction() as conn:
+            req = conn.execute('SELECT employee_id, deducted_days, leave_type FROM leave_requests WHERE id=?', (req_id,)).fetchone()
+            if req and req['deducted_days'] and req['deducted_days'] > 0 and (req['leave_type'] or '') == 'ANNUAL':
+                conn.execute('UPDATE employees SET remaining_leave_days=remaining_leave_days+? WHERE employee_id=?',
+                             (req['deducted_days'], req['employee_id']))
             conn.execute('DELETE FROM approval_steps WHERE request_id=?', (req_id,))
             conn.execute('DELETE FROM leave_bookings WHERE request_id=?', (req_id,))
             conn.execute('DELETE FROM leave_transactions WHERE request_id=?', (req_id,))
@@ -68,13 +83,13 @@ SPRINT1_BENCHMARK_CASES = [
         "employee_name": "Nguyễn Văn An",
         "department": "Engineering",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-05",
+        "from_date": "2026-10-16",
+        "to_date": "2026-10-16",
         "reason": "Việc riêng gia đình",
         "remaining_leave_days": 10,
         "total_team_members": 6,
         "team_absent_count": 0,
-        "submitted_at": "2026-10-01T08:00:00+07:00",
+        "submitted_at": "2026-10-12T08:00:00+07:00",
         "expected": {
             "decision": "AUTO_APPROVE",
             "target_role": None,
@@ -93,15 +108,15 @@ SPRINT1_BENCHMARK_CASES = [
         "employee_name": "Nguyễn Thị Kim Ngân",
         "department": "Marketing & Operations",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-08",
-        "to_date": "2026-10-09",
+        "from_date": "2026-10-22",
+        "to_date": "2026-10-23",
         "reason": "Nghỉ phép thường niên",
         "remaining_leave_days": 12,
         "handover_person_id": "EMP010",
         "handover": {"employee_id": "EMP010", "department": "Marketing & Operations", "status": "ACTIVE", "absent_dates": []},
         "total_team_members": 6,
         "team_absent_count": 0,
-        "submitted_at": "2026-10-01T08:00:00+07:00",
+        "submitted_at": "2026-10-15T08:00:00+07:00",
         "expected": {
             "decision": "AUTO_APPROVE",
             "target_role": None,
@@ -120,13 +135,13 @@ SPRINT1_BENCHMARK_CASES = [
         "employee_name": "Bùi Tuấn Kiệt",
         "department": "Engineering",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-06",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-20",
         "reason": "Nghỉ việc gia đình 2 ngày",
         "remaining_leave_days": 1,
         "total_team_members": 6,
         "team_absent_count": 0,
-        "submitted_at": "2026-10-01T08:00:00+07:00",
+        "submitted_at": "2026-10-14T08:00:00+07:00",
         "expected": {
             "decision": "AUTO_REJECT",
             "target_role": "EMPLOYEE",
@@ -183,8 +198,8 @@ SPRINT1_BENCHMARK_CASES = [
         "department": "Marketing & Operations",
         "leave_type": "SPECIAL_PAID",
         "reason_category": "SELF_MARRIAGE",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-07",
+        "from_date": "2026-10-21",
+        "to_date": "2026-10-23",
         "reason": "Nghỉ đám cưới bản thân (Lễ thành hôn)",
         "proof_file": "proof_emp009_wedding_valid.png",
         "proof": {
@@ -192,16 +207,16 @@ SPRINT1_BENCHMARK_CASES = [
             "proof_verification_status": "VERIFIED",
             "issuer": "UBND Phường Dịch Vọng Hậu",
             "patient_name": "Võ Minh Khang",
-            "issue_date": "2026-09-20",
-            "recommended_from_date": "2026-10-05",
-            "recommended_to_date": "2026-10-07",
+            "issue_date": "2026-10-20",
+            "recommended_from_date": "2026-10-21",
+            "recommended_to_date": "2026-10-23",
             "signature_present": True,
             "document_readability": "READABLE"
         },
         "remaining_leave_days": 10,
         "total_team_members": 6,
         "team_absent_count": 0,
-        "submitted_at": "2026-09-25T08:00:00+07:00",
+        "submitted_at": "2026-10-15T08:00:00+07:00",
         "expected": {
             "decision": "ESCALATE",
             "target_role": "DIRECT_MANAGER",
@@ -240,17 +255,29 @@ def _ensure_proof_doc(case: dict):
     with st.transaction() as conn:
         conn.execute('''INSERT OR REPLACE INTO proof_documents(
             id, employee_id, storage_name, original_name, mime_type, size_bytes,
-            proof_type, facts_json, storage_path, file_real_path, original_filename, file_size_bytes, uploaded_by, created_at
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (
+            proof_type, facts_json, storage_path, file_real_path, original_filename, file_size_bytes, uploaded_by, created_at,
+            inspection_status
+        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (
             pid, case['employee_id'], uuid_storage_name, uuid_storage_name, 'image/png', file_size,
             ptype, json.dumps(case.get('proof') or {}), str(dest_path), str(dest_path),
-            uuid_storage_name, file_size, case['employee_id'], datetime.now().isoformat()
+            uuid_storage_name, file_size, case['employee_id'], datetime.now().isoformat(),
+            'READY'
         ))
     return pid, 'image_attachment'
 
-def _run_single_case(c: dict, orch: LeaveOrchestratorService):
+def _run_single_case(c: dict, orch: LeaveOrchestratorService = None):
     begin = time.perf_counter()
     proof_id, att_type = _ensure_proof_doc(c)
+    sub_at = c.get('submitted_at')
+    if sub_at:
+        try:
+            dt = datetime.fromisoformat(sub_at)
+            orch = LeaveOrchestratorService(clock=lambda: dt)
+        except Exception:
+            orch = orch or LeaveOrchestratorService()
+    elif orch is None:
+        orch = LeaveOrchestratorService()
+
     facts_data = {
         'leave_type': c['leave_type'],
         'from_date': c['from_date'],
@@ -268,7 +295,7 @@ def _run_single_case(c: dict, orch: LeaveOrchestratorService):
         raw_text=None,
         employee_id=c['employee_id'],
         structured_data=facts_data,
-        enable_llm_polish=True,
+        enable_llm_polish=False,
         custom_request_id=req_id,
         skip_vlm=False
     )
@@ -335,8 +362,7 @@ def run_single_sprint1_benchmark_case(case_id: str):
     matched = next((c for c in SPRINT1_BENCHMARK_CASES if c['id'] == case_id), None)
     if not matched:
         return {'success': False, 'message': f'Không tìm thấy test case {case_id}'}
-    orch = LeaveOrchestratorService()
-    detail = _run_single_case(matched, orch)
+    detail = _run_single_case(matched)
     return {'success': True, 'data': detail}
 
 @router.get('/case-detail/{case_id}')
@@ -367,10 +393,9 @@ def get_benchmark_case_detail(case_id: str):
 @router.post('/sprint1-benchmark')
 def run_sprint1_benchmark():
     begin = time.perf_counter()
-    orch = LeaveOrchestratorService()
     details = []
     for c in SPRINT1_BENCHMARK_CASES:
-        details.append(_run_single_case(c, orch))
+        details.append(_run_single_case(c))
 
     elapsed = time.perf_counter() - begin
     auto_count = sum(d['actual_decision'] in ('AUTO_APPROVE', 'AUTO_REJECT', 'NO_LEAVE_REQUIRED') for d in details)
@@ -429,3 +454,96 @@ def verify_custom_case(payload: CustomVerifyInput):
         'llm_calls': calls,
         'simulation_only': True
     }
+
+
+# ==============================================================================
+# SECURED VERIFYING ENDPOINTS: Employee Directory & Personal Photos
+# ==============================================================================
+
+@router.get('/employees', summary="Danh sách nhân viên (Verifying Endpoint)")
+def list_verified_employees(actor_id=Depends(actor)):
+    """Lấy danh bạ và số dư phép của nhân viên tại verifying endpoint (yêu cầu xác thực token/actor bảo mật)."""
+    with st.transaction() as conn:
+        st.employee(conn, actor_id)  # Xác minh người gọi tồn tại & đang active
+        rows = [dict(r) for r in conn.execute('SELECT * FROM employees')]
+        for row in rows:
+            row['actor_roles'] = [dict(r) for r in conn.execute('SELECT role,department_scope FROM actor_roles WHERE employee_id=?', (row['employee_id'],))]
+            row['photo_url'] = f"/api/verify/employees/{row['employee_id']}/photo"
+        return {'success': True, 'total': len(rows), 'data': rows, 'identity_mode': 'VERIFIED', 'verified_by': actor_id}
+
+
+@router.get('/employees/{employee_id}', summary="Chi tiết nhân viên (Verifying Endpoint)")
+def get_verified_employee(employee_id: str, actor_id=Depends(actor)):
+    """Lấy thông tin chi tiết một nhân sự sau khi xác thực quyền truy cập."""
+    with st.readonly_connection() as conn:
+        st.employee(conn, actor_id)
+        row = conn.execute('SELECT * FROM employees WHERE employee_id=?', (employee_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, f'Không tìm thấy nhân sự {employee_id}.')
+        emp = dict(row)
+        emp['actor_roles'] = [dict(r) for r in conn.execute('SELECT role,department_scope FROM actor_roles WHERE employee_id=?', (employee_id,))]
+        emp['photo_url'] = f"/api/verify/employees/{employee_id}/photo"
+        return {'success': True, 'data': emp, 'verified_by': actor_id}
+
+
+@router.get('/employees/{employee_id}/photo', summary="Ảnh cá nhân nhân viên (Verifying Endpoint)")
+def get_employee_personal_photo(employee_id: str, actor_id=Depends(actor)):
+    """Truy xuất ảnh cá nhân/thẻ nhân viên tại verifying endpoint sau khi xác thực danh tính."""
+    with st.readonly_connection() as conn:
+        st.employee(conn, actor_id)
+        emp = conn.execute('SELECT * FROM employees WHERE employee_id=?', (employee_id,)).fetchone()
+        if not emp:
+            raise HTTPException(404, f'Không tìm thấy nhân sự {employee_id}.')
+
+    # 1. Tìm trong proof_documents upload gần nhất bởi nhân viên
+    with st.readonly_connection() as conn:
+        doc = conn.execute('SELECT storage_name, mime_type FROM proof_documents WHERE employee_id=? ORDER BY created_at DESC LIMIT 1', (employee_id,)).fetchone()
+        if doc and doc['storage_name']:
+            upload_dir = Path(os.getenv('LEAVE_UPLOAD_DIR', str(_ROOT / 'backend' / 'uploads')))
+            target = upload_dir / doc['storage_name']
+            if target.is_file():
+                return FileResponse(
+                    target,
+                    media_type=doc['mime_type'] or "image/png",
+                    headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"}
+                )
+
+    # 2. Tìm ảnh trong các thư mục lưu trữ có chứa employee_id
+    emp_clean = employee_id.lower()
+    for directory in _PHOTO_DIRS:
+        if not directory.exists():
+            continue
+        for f in directory.iterdir():
+            if f.is_file() and emp_clean in f.name.lower() and f.suffix.lower() in _ALLOWED_PHOTO_SUFFIX:
+                return FileResponse(
+                    f,
+                    media_type=_ALLOWED_PHOTO_SUFFIX[f.suffix.lower()],
+                    headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"}
+                )
+
+    raise HTTPException(404, f'Không tìm thấy ảnh cá nhân cho nhân viên {employee_id}.')
+
+
+@router.get('/photos/{filename}', summary="Ảnh chứng từ cá nhân (Verifying Endpoint)")
+def get_verified_photo(filename: str, actor_id=Depends(actor)):
+    """Ảnh cá nhân / chứng từ tại verifying endpoint sau khi xác thực quyền truy cập."""
+    name = Path(filename).name
+    suffix = Path(name).suffix.lower()
+    if name != filename or suffix not in _ALLOWED_PHOTO_SUFFIX:
+        raise HTTPException(404, "Không tìm thấy ảnh hoặc định dạng không hợp lệ.")
+    for directory in _PHOTO_DIRS:
+        candidate = directory / name
+        if candidate.is_file():
+            return FileResponse(
+                candidate,
+                media_type=_ALLOWED_PHOTO_SUFFIX[suffix],
+                headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"}
+            )
+    raise HTTPException(404, "Không tìm thấy ảnh tại verifying endpoint.")
+
+
+@router.get('/proofs/{filename}', summary="Ảnh chứng từ (Bí danh)")
+def get_verified_proof(filename: str, actor_id=Depends(actor)):
+    """Bí danh cho /photos/{filename} tại verifying endpoint."""
+    return get_verified_photo(filename, actor_id=actor_id)
+

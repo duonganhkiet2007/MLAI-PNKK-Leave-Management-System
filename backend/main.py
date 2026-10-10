@@ -172,9 +172,14 @@ async def lifespan(app: FastAPI):
     init_db()
     print("✅ [BACKEND INIT] SQLite sẵn sàng.")
     print(f"🚀 [BACKEND INIT] AI stack: VLM={VLM_TARGET_MODEL} · LLM={LLM_TARGET_MODEL} (chỉ 2 model này).")
+    from services.inspection_service import GLOBAL_INSPECTION_SERVICE
+    GLOBAL_INSPECTION_SERVICE.start_worker()
     threading.Thread(target=_warmup_ai_stack_worker, daemon=True).start()
     print("   💡 GET /api/meta/ai-stack-status")
-    yield
+    try:
+        yield
+    finally:
+        GLOBAL_INSPECTION_SERVICE.stop_worker()
 
 
 
@@ -280,9 +285,17 @@ def api_sitemap():
             "submit_leave": "POST /api/leave/request",
             "list_leaves": "GET /api/leave/requests",
             "policy": "GET /api/meta/policy",
-            "employees": "GET /api/meta/employees"
+            "employees": "GET /api/verify/employees",
+            "employee_photos": "GET /api/verify/photos/{filename}",
+            "metrics": "GET /api/meta/metrics"
         }
     }
+
+
+@app.get("/api/meta/metrics", tags=["Meta"], summary="Chỉ số hiệu năng & thời gian xử lý")
+def get_performance_metrics():
+    from metrics import GLOBAL_METRICS
+    return {"success": True, "data": GLOBAL_METRICS.get_summary()}
 
 
 if __name__ == "__main__":

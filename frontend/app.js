@@ -655,7 +655,10 @@ function initDemoLoginAndRoles() {
 
 async function loadEmployees() {
   try {
-    const res = await apiFetch(`${API_BASE}/api/meta/employees`);
+    let res = await apiFetch(`${API_BASE}/api/verify/employees`);
+    if (!res.ok) {
+      res = await apiFetch(`${API_BASE}/api/meta/employees`);
+    }
     if (res.ok) {
       const data = await res.json();
       if (data.success && Array.isArray(data.data) && data.data.length > 0) {
@@ -2408,8 +2411,10 @@ function initSprint1Benchmark() {
     const progressPercent = document.getElementById("sprint1-progress-percent");
     const resultsCard = document.getElementById("sprint1-results-card");
     const resultsTbody = document.getElementById("sprint1-results-tbody");
+    const kpiGrid = document.getElementById("sprint1-kpi-grid");
 
     if (progressWrap) progressWrap.classList.remove("d-none");
+    if (kpiGrid) kpiGrid.classList.add("d-none");
     if (resultsCard) resultsCard.classList.remove("d-none");
     if (resultsTbody) resultsTbody.innerHTML = "";
 
@@ -2427,7 +2432,7 @@ function initSprint1Benchmark() {
         expectedDecision: "AUTO_APPROVE",
         proofFile: null,
         proofText: "Không",
-        dates: "05/10/2026",
+        dates: "16/10/2026",
         actionableQuestion: "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư, không cần chuyển người duyệt."
       },
       {
@@ -2442,7 +2447,7 @@ function initSprint1Benchmark() {
         expectedDecision: "AUTO_APPROVE",
         proofFile: null,
         proofText: "Không",
-        dates: "08/10 – 09/10/2026",
+        dates: "22/10 – 23/10/2026",
         actionableQuestion: "Tự động xử lý hoàn toàn: Phép năm 2 ngày có bàn giao hợp lệ cùng phòng, không cần chuyển người duyệt."
       },
       {
@@ -2457,7 +2462,7 @@ function initSprint1Benchmark() {
         expectedDecision: "AUTO_REJECT",
         proofFile: null,
         proofText: "Không",
-        dates: "05/10 – 06/10/2026",
+        dates: "19/10 – 20/10/2026",
         actionableQuestion: "Tự động xử lý hoàn toàn: Bị từ chối tự động do số ngày yêu cầu (2) vượt quá số dư phép năm còn lại (1)."
       },
       {
@@ -2487,7 +2492,7 @@ function initSprint1Benchmark() {
         expectedDecision: "ESCALATE",
         proofFile: "proof_emp009_wedding_valid.png",
         proofText: "proof_emp009_wedding_valid.png",
-        dates: "05/10 – 07/10/2026",
+        dates: "21/10 – 23/10/2026",
         actionableQuestion: "Nhân viên Võ Minh Khang xin nghỉ 3 ngày kết hôn kèm Giấy chứng nhận kết hôn hợp lệ. Quản lý trực tiếp có phê duyệt hưởng 100% lương 3 ngày chế độ đặc biệt theo Điều 115 BLLĐ không?"
       }
     ];
@@ -2621,6 +2626,33 @@ function initSprint1Benchmark() {
         if (resultsTbody) resultsTbody.appendChild(tr);
       }
 
+      // Tính toán kết quả thực tế sau khi tất cả các test case hoàn tất
+      const totalCases = benchmarkCases.length;
+      const passedCases = benchmarkCases.filter(c => c.isPassed).length;
+
+      const routineGroup = benchmarkCases.filter(c => c.group === "ROUTINE");
+      const routinePassed = routineGroup.filter(c => c.isPassed).length;
+
+      const escalateGroup = benchmarkCases.filter(c => c.group !== "ROUTINE");
+      const escalatePassed = escalateGroup.filter(c => c.isPassed).length;
+
+      const statTotalEl = document.getElementById("sprint1-stat-total");
+      const statAutoEl = document.getElementById("sprint1-stat-auto");
+      const statEscalateEl = document.getElementById("sprint1-stat-escalate");
+      const statStatusEl = document.getElementById("sprint1-stat-status");
+
+      if (statTotalEl) statTotalEl.innerText = `${totalCases}`;
+      if (statAutoEl) statAutoEl.innerText = `${routinePassed} / ${routineGroup.length}`;
+      if (statEscalateEl) statEscalateEl.innerText = `${escalatePassed} / ${escalateGroup.length}`;
+
+      if (statStatusEl) {
+        const passPercent = totalCases > 0 ? Math.round((passedCases / totalCases) * 100) : 0;
+        statStatusEl.innerText = `${passPercent}% ĐẠT`;
+        statStatusEl.className = `benchmark-kpi-val ${passPercent === 100 ? 'text-success' : 'text-danger'}`;
+      }
+
+      if (kpiGrid) kpiGrid.classList.remove("d-none");
+
       if (progressLabel) progressLabel.innerText = "✓ Hoàn thành kiểm thử 5/5 kịch bản chuẩn Sprint 1 bằng mô hình AI thật!";
       if (progressBar) {
         progressBar.classList.remove("progress-bar-animated");
@@ -2645,10 +2677,16 @@ async function openImageLightbox(url, caption) {
   if (existing) existing.remove();
 
   let resolvedSrc = url;
-  // Chuyển đổi đường dẫn tĩnh cũ sang endpoint có xác thực
-  if (url && url.startsWith('assets/proofs/')) {
-    const filename = url.replace('assets/proofs/', '');
-    resolvedSrc = `${API_BASE}/api/demo/proofs/${encodeURIComponent(filename)}`;
+  // Chuyển đổi đường dẫn tĩnh cũ sang verifying endpoint có xác thực
+  if (url && (url.startsWith('assets/proofs/') || url.startsWith('/assets/proofs/'))) {
+    const filename = url.replace(/^\/?assets\/proofs\//, '');
+    resolvedSrc = `${API_BASE}/api/verify/photos/${encodeURIComponent(filename)}`;
+  } else if (url && url.startsWith(`${API_BASE}/api/demo/proofs/`)) {
+    const filename = url.replace(`${API_BASE}/api/demo/proofs/`, '');
+    resolvedSrc = `${API_BASE}/api/verify/photos/${encodeURIComponent(filename)}`;
+  } else if (url && url.startsWith('/api/demo/proofs/')) {
+    const filename = url.replace('/api/demo/proofs/', '');
+    resolvedSrc = `${API_BASE}/api/verify/photos/${encodeURIComponent(filename)}`;
   }
 
   // Tải ảnh qua apiFetch để đính kèm header Bearer token
@@ -2769,9 +2807,15 @@ const TESTCASE_PROOF_MAP = {
 async function attachProofFileFromUrl(url, fileName, proofType) {
   try {
     let resolvedUrl = url;
-    if (url && url.startsWith('assets/proofs/')) {
-      const fn = url.replace('assets/proofs/', '');
-      resolvedUrl = `${API_BASE}/api/demo/proofs/${encodeURIComponent(fn)}`;
+    if (url && (url.startsWith('assets/proofs/') || url.startsWith('/assets/proofs/'))) {
+      const fn = url.replace(/^\/?assets\/proofs\//, '');
+      resolvedUrl = `${API_BASE}/api/verify/photos/${encodeURIComponent(fn)}`;
+    } else if (url && url.startsWith(`${API_BASE}/api/demo/proofs/`)) {
+      const fn = url.replace(`${API_BASE}/api/demo/proofs/`, '');
+      resolvedUrl = `${API_BASE}/api/verify/photos/${encodeURIComponent(fn)}`;
+    } else if (url && url.startsWith('/api/demo/proofs/')) {
+      const fn = url.replace('/api/demo/proofs/', '');
+      resolvedUrl = `${API_BASE}/api/verify/photos/${encodeURIComponent(fn)}`;
     }
     const res = await apiFetch(resolvedUrl);
     if (!res.ok) throw new Error(`Không tải được tệp đính kèm mẫu (${res.status})`);
@@ -4357,9 +4401,10 @@ function initFileUploadDropzone() {
     fileInput.click();
   });
 
-  fileInput.addEventListener("change", () => {
+  fileInput.addEventListener("change", async () => {
     if (fileInput.files && fileInput.files[0]) {
       const file = fileInput.files[0];
+      currentProofId = null;
       if (nameEl) nameEl.innerText = file.name;
       if (sizeEl) sizeEl.innerText = `${(file.size / 1024).toFixed(1)} KB`;
       if (iconEl) iconEl.innerText = "";
@@ -4369,7 +4414,29 @@ function initFileUploadDropzone() {
         cardEl.classList.add("d-flex");
       }
       if (attachTypeVal) attachTypeVal.value = "unverified";
-      showToast(`Đã đính kèm tệp: ${file.name}`, "info");
+      showToast(`Đã đính kèm tệp: ${file.name} (Đang nạp trước chứng từ...)`, "info");
+
+      // Khởi chạy nạp trước chứng từ bất đồng bộ trên nền để VLM phân tích sớm
+      try {
+        const ext = (file.name && file.name.lastIndexOf('.') !== -1)
+          ? file.name.substring(file.name.lastIndexOf('.'))
+          : '.png';
+        const uuidStr = (typeof crypto !== 'undefined' && crypto.randomUUID)
+          ? crypto.randomUUID().replace(/-/g, '')
+          : ('uuid_' + Date.now() + '_' + Math.random().toString(36).substring(2));
+        const uuidFileName = uuidStr + ext;
+        const fileToUpload = new File([file], uuidFileName, { type: file.type || 'image/png' });
+        const form = new FormData();
+        form.append('file', fileToUpload, uuidFileName);
+        form.append('proof_type', document.getElementById('staff-proof-type')?.value || 'MEDICAL_LEAVE_CERTIFICATE');
+        const response = await apiFetch(`${API_BASE}/api/leave/proofs`, { method: 'POST', body: form });
+        if (response.ok) {
+          const res = await response.json();
+          currentProofId = res.data?.proof_id;
+        }
+      } catch (err) {
+        console.warn("Background upload warning:", err);
+      }
     }
   });
 
@@ -4377,6 +4444,7 @@ function initFileUploadDropzone() {
     btnRemove.addEventListener("click", (e) => {
       e.stopPropagation();
       selectedProofFile = null;
+      currentProofId = null;
       fileInput.value = "";
       if (promptEl) promptEl.classList.remove("d-none");
       if (cardEl) {
@@ -4608,7 +4676,7 @@ async function handleStandardFormSubmit() {
 
   showSubmitProgress(!!file);
 
-  if (file) {
+  if (file && !currentProofId) {
     try {
       const ext = (file.name && file.name.lastIndexOf('.') !== -1)
         ? file.name.substring(file.name.lastIndexOf('.'))
@@ -4654,13 +4722,39 @@ async function submitLeaveToBackend(payload, hasFile = false) {
     }
     const url=editingRequestId ? `/api/leave/${editingRequestId}/resubmit` : '/api/leave/request';
     const res=await apiFetch(API_BASE+url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const result=await res.json();
-    if(!res.ok) {
+    let result=await res.json();
+    if(!res.ok && res.status !== 202) {
       finishSubmitProgress(false, () => showToast(JSON.stringify(result.detail),'error'));
       return false;
     }
+
+    // Nếu backend trả về HTTP 202 hoặc PROCESSING: poll trạng thái cho tới khi kiểm định hoàn tất
+    if (res.status === 202 || (result.data && result.data.status === 'PROCESSING')) {
+      const requestId = result.data.id;
+      let attempts = 0;
+      const maxAttempts = 35; // tối đa 35s
+      while (attempts < maxAttempts) {
+        await new Promise(r => setTimeout(r, 1000));
+        attempts++;
+        try {
+          const pollRes = await apiFetch(`${API_BASE}/api/leave/${requestId}`);
+          if (pollRes.ok) {
+            const pollData = await pollRes.json();
+            if (pollData.data && pollData.data.status !== 'PROCESSING') {
+              result = pollData;
+              break;
+            }
+          }
+        } catch (pollErr) {
+          console.warn("Polling error:", pollErr);
+        }
+      }
+    }
+
     finishSubmitProgress(true, async () => {
-      showToast(`${DECISION_LABELS[result.data.decision] || result.data.decision}: ${result.data.human_readable_explanation}`,'info');
+      const dec = result.data?.decision || "COMPLETED";
+      const exp = result.data?.human_readable_explanation || "Đơn đã được tiếp nhận và xử lý.";
+      showToast(`${DECISION_LABELS[dec] || dec}: ${exp}`,'info');
       editingRequestId=null; currentProofId=null; selectedProofFile=null;
       document.getElementById('form-staff-standard')?.reset();
       const attachTypeVal = document.getElementById("staff-attachment-type");

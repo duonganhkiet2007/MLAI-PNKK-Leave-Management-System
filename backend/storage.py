@@ -15,12 +15,19 @@ def now_iso(): return datetime.now(CalendarService().timezone).isoformat()
 
 @contextmanager
 def transaction():
+    from metrics import GLOBAL_METRICS
+    import time
     conn=db.get_db_connection()
+    t_wait_0 = time.perf_counter()
     try:
         conn.execute('BEGIN IMMEDIATE')
+        t_acq = time.perf_counter()
+        GLOBAL_METRICS.record_lock_wait(t_acq - t_wait_0)
         yield conn
         conn.commit()
+        GLOBAL_METRICS.record_tx_duration(time.perf_counter() - t_acq)
     except Exception:
+        GLOBAL_METRICS.record_tx_duration(time.perf_counter() - t_wait_0)
         conn.rollback(); raise
     finally: conn.close()
 
@@ -232,6 +239,10 @@ def set_steps(conn, record, roles, preserve=False):
 def serialize(conn, req):
     req=dict(req)
     req['leave_policy_tags'] = leave_policy_metadata(req.get('canonical_leave_type') or req.get('leave_type'))
+    if req.get('proof_id'):
+        p_row = conn.execute('SELECT inspection_status FROM proof_documents WHERE id=?', (req['proof_id'],)).fetchone()
+        if p_row:
+            req['proof_inspection_status'] = p_row['inspection_status']
     req['approval_steps']=[dict(r) for r in conn.execute('SELECT * FROM approval_steps WHERE request_id=? AND revision=? ORDER BY step_index',
         (req['id'],req.get('revision',0)))]
     for f in ('result_json', 'llm_summary_json', 'vlm_analysis_json', 'facts_json'):

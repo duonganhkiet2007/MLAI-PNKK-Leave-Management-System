@@ -1,4 +1,4 @@
-"""Leave API. Danh tính lấy từ token ký (Authorization: Bearer); X-Actor-ID chỉ dùng khi bật LEAVE_ALLOW_ACTOR_HEADER. Roles luôn lấy từ DB."""
+import hashlib
 import json
 import os
 import time
@@ -6,9 +6,11 @@ import uuid
 from pathlib import Path
 from typing import Optional, Literal
 from fastapi import APIRouter, Depends, Header, Query, UploadFile, File, Form, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from services.orchestration import LeaveOrchestratorService
+from services.inspection_service import GLOBAL_INSPECTION_SERVICE
+from metrics import GLOBAL_METRICS
 from domain import RequestFacts, ProofType, ProofExtraction, VerifiedProof, EditableFields, should_deduct_annual_balance
 import database as db
 import storage as st
@@ -51,10 +53,14 @@ def submit_leave_request(payload: NewLeaveRequestInput, actor_id=Depends(actor))
     data=payload.model_dump(exclude={'employee_id','raw_text'})
     res=service.process_new_request(payload.raw_text,actor_id,data)
     total_api_ms = round((time.perf_counter() - t0) * 1000, 2)
+    status_code = 202 if (isinstance(res, dict) and res.get('status') == 'PROCESSING') else 200
+    GLOBAL_METRICS.record_submission(total_api_ms / 1000.0, status_code=status_code)
     if isinstance(res, dict):
         res['total_api_ms'] = total_api_ms
         if isinstance(res.get('llm_summary_json'), dict):
             res['llm_summary_json'].setdefault('timings', {})['total_api_ms'] = total_api_ms
+    if status_code == 202:
+        return JSONResponse(status_code=202, content={'success':True,'data':res,'total_api_ms':total_api_ms})
     return {'success':True,'data':res,'total_api_ms':total_api_ms}
 
 @router.get('/requests')
@@ -88,15 +94,36 @@ async def upload_proof(file: UploadFile=File(...),proof_type: ProofType=Form(Pro
     incoming_raw_name = Path(file.filename or 'document').name
     # Nếu tên file tải lên chứa tiếng Việt hoặc ký tự non-ASCII, gán tên bằng UUID để tránh lỗi mở file trong VLM model
     safe_original_name = name if any(ord(c) > 127 for c in incoming_raw_name) else incoming_raw_name
+    file_sha256 = hashlib.sha256(content).hexdigest()
     try:
         with path.open('xb') as output: output.write(content)
         with st.transaction() as conn:
-            conn.execute('''INSERT INTO proof_documents(id,employee_id,storage_name,original_name,mime_type,size_bytes,proof_type,facts_json,created_at)
-                VALUES(?,?,?,?,?,?,?,?,?)''',(pid,actor_id,name,safe_original_name,actual,len(content),proof_type.value,proof.model_dump_json(),st.now_iso()))
+            conn.execute('''INSERT INTO proof_documents(id,employee_id,storage_name,original_name,mime_type,size_bytes,proof_type,facts_json,created_at,file_sha256,inspection_status,inspection_version)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,1)''',(pid,actor_id,name,safe_original_name,actual,len(content),proof_type.value,proof.model_dump_json(),st.now_iso(),file_sha256,'PENDING'))
             st.audit(conn,'PROOF-'+pid,'UPLOAD',actor_id)
     except Exception:
         path.unlink(missing_ok=True); raise
-    return {'success':True,'data':{'proof_id':pid,'proof_type':proof_type.value,'proof_verification_status':'UNVERIFIED'}}
+
+    # Trigger asynchronous proof inspection immediately
+    q_res = GLOBAL_INSPECTION_SERVICE.enqueue_proof_inspection(pid, actor_id, proof_type.value)
+    insp_status = q_res.get('inspection_status', 'PENDING')
+    return {'success':True,'data':{'proof_id':pid,'proof_type':proof_type.value,'proof_verification_status':'UNVERIFIED','inspection_status':insp_status}}
+
+@router.get('/proofs/{proof_id}/status')
+def get_proof_inspection_status(proof_id: str, actor_id=Depends(actor)):
+    with st.readonly_connection() as conn:
+        st.employee(conn, actor_id)
+        row = conn.execute('SELECT id, employee_id, proof_type, inspection_status, vlm_error, inspected_at FROM proof_documents WHERE id=?', (proof_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, 'Không tìm thấy chứng từ.')
+        doc = dict(row)
+        allowed = (doc['employee_id'] == actor_id or
+                   st.has_role(conn, actor_id, 'HR') or
+                   st.has_role(conn, actor_id, 'DIRECT_MANAGER') or
+                   st.has_role(conn, actor_id, 'CEO'))
+        if not allowed:
+            raise st.AccessDenied('Không có quyền xem chứng từ này.')
+        return {'success': True, 'data': doc}
 
 @router.get('/proofs/{proof_id}')
 def get_proof(proof_id,actor_id=Depends(actor)):

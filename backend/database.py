@@ -190,6 +190,13 @@ def _init_legacy_schema():
         ("document_readability", "TEXT"),
         ("signature_present",    "INTEGER"),
         ("digital_signature_present", "INTEGER"),
+        ("inspection_status",    "TEXT DEFAULT 'READY'"),
+        ("inspection_version",   "INTEGER DEFAULT 1"),
+        ("file_sha256",          "TEXT"),
+        ("vlm_analysis_json",    "TEXT"),
+        ("vlm_error",            "TEXT"),
+        ("inspected_at",         "TEXT"),
+        ("retry_count",          "INTEGER DEFAULT 0"),
     ]
     try:
         existing_proof_cols = {r[1].lower() for r in conn.execute("PRAGMA table_info(proof_documents)").fetchall()}
@@ -199,6 +206,23 @@ def _init_legacy_schema():
                     conn.execute(f"ALTER TABLE proof_documents ADD COLUMN {col_name} {col_type}")
                 except Exception:
                     pass
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS proof_inspection_jobs (
+                id TEXT PRIMARY KEY,
+                proof_id TEXT NOT NULL,
+                employee_id TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                version INTEGER NOT NULL DEFAULT 1,
+                retry_count INTEGER NOT NULL DEFAULT 0,
+                max_retries INTEGER NOT NULL DEFAULT 2,
+                error_message TEXT,
+                created_at TEXT NOT NULL,
+                started_at TEXT,
+                completed_at TEXT
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_inspection_jobs_status ON proof_inspection_jobs(status, created_at)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_inspection_jobs_proof ON proof_inspection_jobs(proof_id)")
         conn.commit()
     except Exception:
         pass

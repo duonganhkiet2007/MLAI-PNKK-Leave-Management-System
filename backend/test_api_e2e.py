@@ -164,7 +164,13 @@ def upload(client,owner='E'):
 def test_upload_hr_verification_medical_workflow(client,isolated_db):
     pid=upload(client)
     created=client.post('/api/leave/request',headers={'X-Actor-ID':'E'},json=payload(leave_type='SICK_MEDICAL',proof_id=pid,to_date='2026-10-05')).json()['data']
-    print("DEBUG CREATED:", created)
+    if created.get('status') == 'PROCESSING':
+        import time
+        for _ in range(50):
+            time.sleep(0.05)
+            created = client.get('/api/leave/' + created['id'], headers={'X-Actor-ID':'E'}).json()['data']
+            if created.get('status') != 'PROCESSING':
+                break
     assert created['target_role']=='HR' and created['error_code']=='PROOF_REVIEW_REQUIRED'
     assert client.get('/api/leave/proofs/'+pid,headers={'X-Actor-ID':'B'}).status_code==403
     assert client.get('/api/leave/proofs/'+pid,headers={'X-Actor-ID':'HR'}).content==PDF
@@ -184,6 +190,13 @@ def test_upload_limits_and_fake_mime(client):
 def test_manager_cannot_approve_unverified_proof(client):
     pid=upload(client)
     r=client.post('/api/leave/request',headers={'X-Actor-ID':'E'},json=payload(leave_type='SICK_MEDICAL',proof_id=pid)).json()['data']
+    if r.get('status') == 'PROCESSING':
+        import time
+        for _ in range(50):
+            time.sleep(0.05)
+            r = client.get('/api/leave/' + r['id'], headers={'X-Actor-ID':'E'}).json()['data']
+            if r.get('status') != 'PROCESSING':
+                break
     for actor,status in [('M',403),('HR',409)]:
         result=client.post('/api/leave/'+r['id']+'/human-decision',headers={'X-Actor-ID':actor},json={'action_type':'APPROVE'})
         assert result.status_code==status,result.text

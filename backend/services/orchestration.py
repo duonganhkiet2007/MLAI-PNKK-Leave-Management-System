@@ -31,8 +31,13 @@ class LeaveOrchestratorService:
         self.agent=agent or LeaveApprovalAgent()
         self.calendar=calendar or CalendarService()
         self.clock=clock or (lambda: datetime.now(self.calendar.timezone))
+        try:
+            from services.inspection_service import GLOBAL_INSPECTION_SERVICE
+            GLOBAL_INSPECTION_SERVICE.set_orchestrator(self)
+        except Exception:
+            pass
 
-    def _evaluate(self, conn, record, facts, granted=None, waived=None, enable_llm_polish=False, skip_vlm=False):
+    def _evaluate(self, conn, record, facts, granted=None, waived=None, enable_llm_polish=False, skip_vlm=False, precomputed_vlm=None):
         t_eval_0 = time.perf_counter()
         ctx=st.load_context(conn,record['employee_id'],facts,record['submitted_at'],record['id'],granted,waived,self.calendar)
 
@@ -101,69 +106,103 @@ class LeaveOrchestratorService:
                         attachment_for_vlm = str(uuid_cand)
                     except Exception:
                         pass
-            vlm_out: VLMInspectionOutput | None = None
-            try:
-                vlm_out = inspect_document_with_vlm(
-                    leave_type=str(getattr(facts,'leave_type','')),
-                    employee_name=getattr(ctx,'employee_name',None),
-                    reason=str(getattr(facts,'reason','') or ''),
-                    attachment_path_or_type=attachment_for_vlm,
-                    from_date=f_date, to_date=t_date,
-                    workdays=0,
-                    proof_type_hint=proof_type_hint,
-                    document_readability_hint=readability_hint,
-                    doc_flags=doc_flags,
-                    allow_mock_fallback=False,
-                )
-            except Exception as _vlm_exc:
-                # Nếu VLM hỏng nghiêm trọng: gắn vlm_error trực tiếp vào record VLM column
-                # để Manager panel thấy lỗi rõ ràng thay vì crash pipeline
-                from vlm_inspector import VLMInspectionOutput, ProofExtraction, ProofType
-                vlm_err_msg = f"VLM_EXCEPTION: {type(_vlm_exc).__name__}: {_vlm_exc}"
-                vlm_json_shell = {
-                    "inspector_persona": None,
-                    "target_model": VLM_TARGET_MODEL,
-                    "inspection_mode": "VLM_RUNTIME_ERROR",
-                    "inspected_at": datetime.now().isoformat(timespec="seconds"),
-                    "vlm_error": vlm_err_msg,
-                    "document_summary": {
-                        "patient_name": None, "diagnosis": None, "issuer": None,
-                        "issue_date": None, "doctor_recommended_range": {"from": None, "to": None, "days": None},
-                    },
-                    "flags": {
-                        "has_red_stamp": None, "has_doctor_signature": None,
-                        "signature_present_on_scan": None, "digital_signature_present": None,
-                        "document_readability": "UNKNOWN", "is_tampered": None, "ai_generated_or_edited": None,
-                    },
-                    "correlation_analysis": {"score": 0.0, "issues": [vlm_err_msg], "requested_workdays": 0},
-                    "escalation_flags": ["VLM_INFERENCE_FAILED"],
-                    "raw_fields_detected": [],
-                }
-                vlm_out = VLMInspectionOutput(
-                    vlm_analysis_json=vlm_json_shell,
-                    doc_patient_name=None, doc_diagnosis=None,
-                    has_red_stamp=None, has_doctor_signature=None,
-                    is_tampered=None, ai_edited=None,
-                    days_granted_by_doctor=None,
-                    correlation_score=0.0,
-                    correlation_issues=[vlm_err_msg],
-                    persona_role_used="VLM_RUNTIME_ERROR",
-                    escalation_reasons_json=["VLM_INFERENCE_FAILED"],
-                    proof_extraction=ProofExtraction(proof_type=ProofType.NONE),
-                    vlm_error=vlm_err_msg,
-                )
+            vlm_out: VLMInspectionOutput | None = precomputed_vlm
+            if vlm_out is None:
+                precomputed_mock = None
+                if proof_row and proof_row.get('vlm_analysis_json'):
+                    try:
+                        precomputed_mock = json.loads(proof_row['vlm_analysis_json'])
+                    except Exception:
+                        precomputed_mock = None
+
+                try:
+                    if proof_row and proof_row.get('inspection_status') == 'FAILED' and not precomputed_mock:
+                        raise RuntimeError(proof_row.get('vlm_error') or 'Proof inspection failed')
+                    vlm_out = inspect_document_with_vlm(
+                        leave_type=str(getattr(facts,'leave_type','')),
+                        employee_name=getattr(ctx,'employee_name',None),
+                        reason=str(getattr(facts,'reason','') or ''),
+                        attachment_path_or_type=attachment_for_vlm,
+                        from_date=f_date, to_date=t_date,
+                        workdays=0,
+                        mock_data=precomputed_mock,
+                        proof_type_hint=proof_type_hint,
+                        document_readability_hint=readability_hint,
+                        doc_flags=doc_flags,
+                        allow_mock_fallback=False,
+                    )
+                except Exception as _vlm_exc:
+                    # Nếu VLM hỏng nghiêm trọng: gắn vlm_error trực tiếp vào record VLM column
+                    # để Manager panel thấy lỗi rõ ràng thay vì crash pipeline
+                    from vlm_inspector import VLMInspectionOutput, ProofExtraction, ProofType
+                    vlm_err_msg = f"VLM_EXCEPTION: {type(_vlm_exc).__name__}: {_vlm_exc}"
+                    vlm_json_shell = {
+                        "inspector_persona": None,
+                        "target_model": VLM_TARGET_MODEL,
+                        "inspection_mode": "VLM_RUNTIME_ERROR",
+                        "inspected_at": datetime.now().isoformat(timespec="seconds"),
+                        "vlm_error": vlm_err_msg,
+                        "document_summary": {
+                            "patient_name": None, "diagnosis": None, "issuer": None,
+                            "issue_date": None, "doctor_recommended_range": {"from": None, "to": None, "days": None},
+                        },
+                        "flags": {
+                            "has_red_stamp": None, "has_doctor_signature": None,
+                            "signature_present_on_scan": None, "digital_signature_present": None,
+                            "document_readability": "UNKNOWN", "is_tampered": None, "ai_generated_or_edited": None,
+                        },
+                        "correlation_analysis": {"score": 0.0, "issues": [vlm_err_msg], "requested_workdays": 0},
+                        "escalation_flags": ["VLM_INFERENCE_FAILED"],
+                        "raw_fields_detected": [],
+                    }
+                    vlm_out = VLMInspectionOutput(
+                        vlm_analysis_json=vlm_json_shell,
+                        doc_patient_name=None, doc_diagnosis=None,
+                        has_red_stamp=None, has_doctor_signature=None,
+                        is_tampered=None, ai_edited=None,
+                        days_granted_by_doctor=None,
+                        correlation_score=0.0,
+                        correlation_issues=[vlm_err_msg],
+                        persona_role_used="VLM_RUNTIME_ERROR",
+                        escalation_reasons_json=["VLM_INFERENCE_FAILED"],
+                        proof_extraction=ProofExtraction(proof_type=ProofType.NONE),
+                        vlm_error=vlm_err_msg,
+                    )
             # Inject VLM proof fields into context so rule engine PROOF stage uses REAL VLM extraction
             # and not just storage heuristics.
-            if vlm_out.proof_extraction and getattr(ctx.proof, 'proof_verification_status', 'UNVERIFIED') != 'VERIFIED':
+            if vlm_out and vlm_out.proof_extraction and getattr(ctx.proof, 'proof_verification_status', 'UNVERIFIED') != 'VERIFIED':
                 proof_dict = vlm_out.proof_extraction.model_dump(mode='python')
                 existing_ver_status = getattr(ctx.proof, 'proof_verification_status', 'UNVERIFIED')
                 existing_notes = getattr(ctx.proof, 'verification_notes', None)
                 # Preserve storage-provided verification status; otherwise default to UNVERIFIED
                 proof_dict['proof_verification_status'] = existing_ver_status
                 proof_dict['verification_notes'] = existing_notes
-                if (not proof_dict.get('proof_type') or str(proof_dict['proof_type']) in ('NONE', 'ProofType.NONE')) and getattr(ctx.proof, 'proof_type', None):
-                    pt = ctx.proof.proof_type
-                    proof_dict['proof_type'] = pt.value if hasattr(pt, 'value') else pt
+                if (not proof_dict.get('proof_type') or str(proof_dict['proof_type']) in ('NONE', 'ProofType.NONE')):
+                    if proof_row and proof_row.get('proof_type'):
+                        proof_dict['proof_type'] = proof_row['proof_type']
+                    elif getattr(ctx.proof, 'proof_type', None):
+                        pt = ctx.proof.proof_type
+                        proof_dict['proof_type'] = pt.value if hasattr(pt, 'value') else pt
+
+                v_analysis = vlm_out.vlm_analysis_json or {}
+                doc_sum = v_analysis.get('document_summary') or {}
+                flags = v_analysis.get('flags') or {}
+                if not proof_dict.get('patient_name'):
+                    proof_dict['patient_name'] = doc_sum.get('patient_name') or vlm_out.doc_patient_name
+                if not proof_dict.get('issuer'):
+                    proof_dict['issuer'] = doc_sum.get('issuer')
+                if not proof_dict.get('issue_date'):
+                    proof_dict['issue_date'] = doc_sum.get('issue_date')
+                dr = doc_sum.get('doctor_recommended_range') or {}
+                if not proof_dict.get('recommended_from_date') and dr.get('from'):
+                    proof_dict['recommended_from_date'] = dr['from']
+                if not proof_dict.get('recommended_to_date') and dr.get('to'):
+                    proof_dict['recommended_to_date'] = dr['to']
+                if proof_dict.get('signature_present') is None:
+                    proof_dict['signature_present'] = bool(vlm_out.has_doctor_signature or flags.get('has_doctor_signature'))
+                if not proof_dict.get('document_readability') or proof_dict.get('document_readability') == 'UNKNOWN':
+                    proof_dict['document_readability'] = flags.get('document_readability') or 'READABLE'
+
                 try:
                     ctx.proof = VerifiedProof.model_validate(proof_dict)
                 except Exception:
@@ -755,22 +794,122 @@ class LeaveOrchestratorService:
         st.audit(conn,record['id'],'EVALUATED',json.dumps(result.model_dump(mode='json'),ensure_ascii=False))
         return result
 
+    def resume_pending_request(self, request_id: str):
+        """Called automatically after proof inspection completes to resume evaluation."""
+        with st.readonly_connection() as conn:
+            try:
+                req_dict = st.read_request(conn, request_id)
+            except LookupError:
+                return None
+            if req_dict.get('status') not in ('PROCESSING', 'PENDING_INSPECTION'):
+                return None
+            facts_raw = req_dict.get('facts_json')
+            if isinstance(facts_raw, str):
+                try: facts_raw = json.loads(facts_raw)
+                except Exception: facts_raw = {}
+            facts = RequestFacts.model_validate(facts_raw or {})
+
+        record = dict(req_dict)
+        record['updated_at'] = self.clock().isoformat()
+        with st.transaction() as conn:
+            fresh = conn.execute("SELECT status FROM leave_requests WHERE id=?", (request_id,)).fetchone()
+            if not fresh or fresh['status'] not in ('PROCESSING', 'PENDING_INSPECTION'):
+                return None
+            self._evaluate(conn, record, facts, skip_vlm=False)
+            st.audit(conn, request_id, 'INSPECTION_RESUMED', 'Proof inspection completed; leave policy evaluated.')
+            return st.serialize(conn, st.read_request(conn, record['id']))
+
     def process_new_request(self,raw_text=None,employee_id=None,structured_data=None,enable_llm_polish=False,custom_request_id=None,skip_vlm=False):
         data=dict(structured_data or {})
         emp_id=employee_id or data.pop('employee_id',None)
         data.pop('employee_id',None)
-        # Never derive identity from LLM. Validate caller before model work.
-        with st.transaction() as conn: st.employee(conn,emp_id)
+        # Readonly validation of caller before model work
+        with st.readonly_connection() as conn:
+            emp = st.employee(conn,emp_id)
         if raw_text:
             if any(data.get(k) for k in ('from_date','to_date','leave_type')):
                 raise ValueError('Chọn một đầu vào: form hoặc free text.')
             facts=RequestFacts.model_validate(self.agent.parse_natural_language(raw_text,current_date=self.clock().date()).model_dump())
-            # A model cannot attach another person's document or invent an attachment.
             facts.proof_id=None; facts.attachment_type='none'
         else: facts=RequestFacts.model_validate(data)
+
+        # Check proof inspection status if proof_id is provided
+        proof_row = None
+        if facts.proof_id:
+            with st.readonly_connection() as conn:
+                p = conn.execute('SELECT * FROM proof_documents WHERE id=?', (facts.proof_id,)).fetchone()
+                if not p: raise st.AccessDenied('Chứng từ không tồn tại.')
+                if p['employee_id'] != emp_id: raise st.AccessDenied('Chứng từ không thuộc người nộp đơn.')
+                proof_row = dict(p)
+
         req_id = custom_request_id or ('REQ-'+uuid.uuid4().hex[:16].upper())
+        now_str = self.clock().isoformat()
         record={'id':req_id,'employee_id':emp_id,
-                'submitted_at':self.clock().isoformat(),'revision':1,'human_resolution':None}
+                'submitted_at':now_str,'updated_at':now_str,'revision':1,'human_resolution':None}
+
+        # Case B: Proof inspection is still PENDING or PROCESSING -> Return 202 without blocking
+        if proof_row and not skip_vlm and (proof_row.get('inspection_status') in ('PENDING', 'PROCESSING')):
+            record.update({
+                'employee_name': emp['name'],
+                'department': emp['department'],
+                'leave_type': str(getattr(facts, 'leave_type', '')),
+                'canonical_leave_type': str(getattr(facts, 'leave_type', '')),
+                'from_date': str(facts.from_date) if facts.from_date else None,
+                'to_date': str(facts.to_date) if facts.to_date else None,
+                'reason': facts.reason,
+                'reason_category': str(getattr(facts, 'reason_category', '')),
+                'handover_person_id': facts.handover_person_id,
+                'handover_person_name': facts.handover_person_name,
+                'proof_id': facts.proof_id,
+                'attachment_type': facts.attachment_type or 'generic_attachment',
+                'facts_json': facts.model_dump(),
+                'status': 'PROCESSING',
+                'decision': 'PROCESSING',
+                'human_readable_explanation': 'Chứng từ đang được kiểm định tự động. Kết quả thẩm định sẽ được cập nhật ngay khi hoàn tất.',
+            })
+            with st.transaction() as conn:
+                st.save_record(conn, record)
+                st.audit(conn, req_id, 'SUBMIT_PENDING_INSPECTION', f'Waiting for proof {facts.proof_id} inspection')
+            return {
+                'id': req_id,
+                'status': 'PROCESSING',
+                'decision': 'PROCESSING',
+                'proof_id': facts.proof_id,
+                'proof_inspection_status': proof_row.get('inspection_status', 'PROCESSING'),
+                'human_readable_explanation': record['human_readable_explanation'],
+                'employee_id': emp_id,
+                'employee_name': emp['name'],
+                'department': emp['department'],
+                'submitted_at': now_str,
+                'facts_json': facts.model_dump(),
+            }
+
+        # Case A / Case C / No Proof:
+        # If synchronous VLM is required and wasn't pre-inspected via background queue:
+        precomputed_vlm = None
+        att = (getattr(facts,'attachment_type', None) or '').strip()
+        needs_vlm = not skip_vlm and (bool(att and att.casefold() != 'none') or bool(proof_row))
+        if needs_vlm and not (proof_row and (proof_row.get('vlm_analysis_json') or proof_row.get('inspection_status') == 'FAILED')):
+            try:
+                from vlm_inspector import inspect_document_with_vlm
+                attachment_for_vlm = att
+                if proof_row:
+                    from pathlib import Path as _P
+                    uploads_dir = _P(os.getenv('LEAVE_UPLOAD_DIR', str(_P(__file__).resolve().parents[1] / 'uploads')))
+                    candidate = uploads_dir / proof_row['storage_name']
+                    if candidate.exists(): attachment_for_vlm = str(candidate)
+                precomputed_vlm = inspect_document_with_vlm(
+                    leave_type=str(getattr(facts,'leave_type','')),
+                    employee_name=emp['name'],
+                    reason=str(getattr(facts,'reason','') or ''),
+                    attachment_path_or_type=attachment_for_vlm,
+                    from_date=facts.from_date, to_date=facts.to_date,
+                    allow_mock_fallback=False
+                )
+            except Exception:
+                pass
+
+        # Open short write transaction ONLY to persist (~1ms)
         with st.transaction() as conn:
             if custom_request_id:
                 prev = conn.execute('SELECT * FROM leave_requests WHERE id=?', (custom_request_id,)).fetchone()
@@ -783,7 +922,7 @@ class LeaveOrchestratorService:
                     conn.execute('DELETE FROM leave_bookings WHERE request_id=?', (custom_request_id,))
                     conn.execute('DELETE FROM leave_transactions WHERE request_id=?', (custom_request_id,))
                 conn.execute('DELETE FROM approval_steps WHERE request_id=?', (custom_request_id,))
-            self._evaluate(conn,record,facts,enable_llm_polish=enable_llm_polish,skip_vlm=skip_vlm)
+            self._evaluate(conn,record,facts,enable_llm_polish=enable_llm_polish,skip_vlm=skip_vlm,precomputed_vlm=precomputed_vlm)
             return st.serialize(conn,st.read_request(conn,record['id']))
 
     def resubmit(self,request_id,actor_id,data):

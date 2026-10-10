@@ -19,13 +19,15 @@ policy_path=Path(__file__).resolve().parents[2]/'Leave_Application'/'policy_rule
 def health_check(): return {'status':'ok','service':'Leave Approval Backend API','version':'3.0.0'}
 
 @router.get('/employees')
-def list_employees():
-    # Public demo actor directory. Not production authentication.
+def list_employees(actor_id=Depends(actor)):
+    # Đã bảo vệ xác thực; canonical verifying endpoint nằm tại /api/verify/employees.
     with st.transaction() as conn:
+        st.employee(conn, actor_id)
         rows=[dict(r) for r in conn.execute('SELECT * FROM employees')]
         for row in rows:
             row['actor_roles']=[dict(r) for r in conn.execute('SELECT role,department_scope FROM actor_roles WHERE employee_id=?',(row['employee_id'],))]
-        return {'success':True,'total':len(rows),'data':rows,'identity_mode':'DEMO'}
+            row['photo_url'] = f"/api/verify/employees/{row['employee_id']}/photo"
+        return {'success':True,'total':len(rows),'data':rows,'identity_mode':'VERIFIED','verified_by':actor_id,'canonical_endpoint':'/api/verify/employees'}
 
 @router.get('/options')
 def options():

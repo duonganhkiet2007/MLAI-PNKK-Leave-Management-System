@@ -11,7 +11,7 @@ import storage as st
 router = APIRouter(tags=["Auth & Demo proofs"])
 
 _ROOT = Path(__file__).resolve().parents[2]
-_PROOF_DIRS = (_ROOT / "tests" / "assets" / "proofs", _ROOT / "frontend" / "assets" / "proofs")
+_PROOF_DIRS = (_ROOT / "backend" / "uploads", _ROOT / "tests" / "assets" / "proofs", _ROOT / "frontend" / "assets" / "proofs")
 _ALLOWED_SUFFIX = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".pdf": "application/pdf"}
 
 

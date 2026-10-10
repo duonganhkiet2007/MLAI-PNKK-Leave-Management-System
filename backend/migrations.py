@@ -25,6 +25,27 @@ def migrate(conn):
     try:
         conn.execute('CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)')
         if conn.execute('SELECT 1 FROM schema_migrations WHERE version=?',(VERSION,)).fetchone():
+            # Additive assurance for Phase 1 columns & queue table
+            if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='proof_documents'").fetchone():
+                p_cols = {r[1] for r in conn.execute('PRAGMA table_info(proof_documents)')}
+                for c, k in [
+                    ('inspection_status', "TEXT NOT NULL DEFAULT 'PENDING'"),
+                    ('inspection_version', "INTEGER NOT NULL DEFAULT 1"),
+                    ('file_sha256', 'TEXT'),
+                    ('vlm_analysis_json', 'TEXT'),
+                    ('vlm_error', 'TEXT'),
+                    ('inspected_at', 'TEXT'),
+                    ('retry_count', 'INTEGER NOT NULL DEFAULT 0'),
+                ]:
+                    if c not in p_cols:
+                        conn.execute(f'ALTER TABLE proof_documents ADD COLUMN {c} {k}')
+            conn.execute('''CREATE TABLE IF NOT EXISTS proof_inspection_jobs (
+                id TEXT PRIMARY KEY, proof_id TEXT NOT NULL, employee_id TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING', version INTEGER NOT NULL DEFAULT 1,
+                retry_count INTEGER NOT NULL DEFAULT 0, max_retries INTEGER NOT NULL DEFAULT 2,
+                error_message TEXT, created_at TEXT NOT NULL, started_at TEXT, completed_at TEXT)''')
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_inspection_jobs_status ON proof_inspection_jobs(status, created_at)')
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_inspection_jobs_proof ON proof_inspection_jobs(proof_id)')
             conn.commit(); return
         additions = {
           'employees': {'employment_start_date':'TEXT','probation_start_date':'TEXT','probation_end_date':'TEXT',
@@ -34,20 +55,35 @@ def migrate(conn):
             'facts_json':'TEXT','proof_id':'TEXT','decision_trace':'TEXT','result_json':'TEXT',
             'revision':'INTEGER NOT NULL DEFAULT 0','human_resolution':'TEXT',
             'legacy_reconciliation_required':'INTEGER NOT NULL DEFAULT 1','policy_version':'TEXT',
-            'handover_status':'TEXT DEFAULT NULL','handover_decided_at':'TEXT','handover_decline_reason':'TEXT'}
+            'handover_status':'TEXT DEFAULT NULL','handover_decided_at':'TEXT','handover_decline_reason':'TEXT'},
+          'proof_documents': {'inspection_status':"TEXT NOT NULL DEFAULT 'READY'",
+                              'inspection_version':"INTEGER NOT NULL DEFAULT 1",
+                              'file_sha256':'TEXT','vlm_analysis_json':'TEXT',
+                              'vlm_error':'TEXT','inspected_at':'TEXT',
+                              'retry_count':'INTEGER NOT NULL DEFAULT 0'}
         }
         for table, fields in additions.items():
-            current={r[1] for r in conn.execute(f'PRAGMA table_info({table})')}
-            for name,kind in fields.items():
-                if name not in current: conn.execute(f'ALTER TABLE {table} ADD COLUMN {name} {kind}')
+            if conn.execute(f"SELECT 1 FROM sqlite_master WHERE type='table' AND name='{table}'").fetchone():
+                current={r[1] for r in conn.execute(f'PRAGMA table_info({table})')}
+                for name,kind in fields.items():
+                    if name not in current: conn.execute(f'ALTER TABLE {table} ADD COLUMN {name} {kind}')
         statements = [
-          '''CREATE TABLE proof_documents (
+          '''CREATE TABLE IF NOT EXISTS proof_documents (
             id TEXT PRIMARY KEY, employee_id TEXT NOT NULL, storage_name TEXT NOT NULL,
             original_name TEXT NOT NULL, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL,
             proof_type TEXT NOT NULL, proof_verification_status TEXT NOT NULL DEFAULT 'UNVERIFIED',
             issuer TEXT, patient_name TEXT, issue_date TEXT, recommended_from_date TEXT, recommended_to_date TEXT,
             signature_present INTEGER, digital_signature_present INTEGER, document_readability TEXT NOT NULL DEFAULT 'UNKNOWN',
-            verification_notes TEXT, verified_by TEXT, facts_json TEXT NOT NULL, created_at TEXT NOT NULL)''',
+            verification_notes TEXT, verified_by TEXT, facts_json TEXT NOT NULL, created_at TEXT NOT NULL,
+            inspection_status TEXT NOT NULL DEFAULT 'READY', inspection_version INTEGER NOT NULL DEFAULT 1,
+            file_sha256 TEXT, vlm_analysis_json TEXT, vlm_error TEXT, inspected_at TEXT, retry_count INTEGER NOT NULL DEFAULT 0)''',
+          '''CREATE TABLE IF NOT EXISTS proof_inspection_jobs (
+            id TEXT PRIMARY KEY, proof_id TEXT NOT NULL, employee_id TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'PENDING', version INTEGER NOT NULL DEFAULT 1,
+            retry_count INTEGER NOT NULL DEFAULT 0, max_retries INTEGER NOT NULL DEFAULT 2,
+            error_message TEXT, created_at TEXT NOT NULL, started_at TEXT, completed_at TEXT)''',
+          '''CREATE INDEX IF NOT EXISTS idx_inspection_jobs_status ON proof_inspection_jobs(status, created_at)''',
+          '''CREATE INDEX IF NOT EXISTS idx_inspection_jobs_proof ON proof_inspection_jobs(proof_id)''',
           '''CREATE TABLE approval_steps (
             request_id TEXT NOT NULL, revision INTEGER NOT NULL, step_index INTEGER NOT NULL,
             role TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING', approver_id TEXT, decided_at TEXT,

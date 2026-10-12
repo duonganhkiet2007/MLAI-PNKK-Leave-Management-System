@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Any, Dict, Optional
 root=Path(__file__).resolve().parents[2]
-for name in ('Leave_Application','backend'):
+for name in ('core','backend'):
     if str(root/name) not in sys.path: sys.path.insert(0,str(root/name))
 from domain import (RequestFacts, HumanFeedbackResolution, EditableFields,
                     names_approximately_match, should_deduct_annual_balance, VerifiedProof)

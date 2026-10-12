@@ -3,14 +3,14 @@ from benchmarks.common import BENCH, ROOT, read, dump
 from benchmarks.metrics.aggregate import classification, stats
 
 def run_policy(run):
-    for name in ('backend','Leave_Application'):sys.path.insert(0,str(ROOT/name))
+    for name in ('backend','core'):sys.path.insert(0,str(ROOT/name))
     from rule_engine import LeaveRequest, LeaveRuleEngine
     from calendar_service import CalendarService
     cases=read(BENCH/'datasets/applications.json');truth=read(BENCH/'datasets/ground_truth.json')
     expected=[];actual=[];routes=[];lat=[];violations=[];coverage=None
     try:
         import coverage as coverage_module
-        coverage=coverage_module.Coverage(branch=True,include=[str(ROOT/'Leave_Application/rule_engine.py')],data_file=str(run.path/'.coverage'))
+        coverage=coverage_module.Coverage(branch=True,include=[str(ROOT/'core/rule_engine.py')],data_file=str(run.path/'.coverage'))
         coverage.start()
     except ImportError:pass
     for case in cases:

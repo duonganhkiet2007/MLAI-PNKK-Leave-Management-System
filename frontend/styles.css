@@ -4758,38 +4758,55 @@ select option:checked {
   margin-bottom: 10px;
 }
 
+/* Benchmark tags — pill style with dot indicator */
 .benchmark-tag {
-  font-size: 0.73rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 3.5px 9px;
-  border-radius: 6px;
-  letter-spacing: -0.01em;
+  padding: 3px 9px 3px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.01em;
   white-space: nowrap;
+  line-height: 1.4;
+}
+.benchmark-tag::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .benchmark-tag-approve {
-  background: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
 }
+.benchmark-tag-approve::before { background: #16a34a; }
 
 .benchmark-tag-reject {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
 }
+.benchmark-tag-reject::before { background: #dc2626; }
 
 .benchmark-tag-correct {
-  background: #fffbeb;
+  background: #fef9c3;
   color: #92400e;
-  border: 1px solid #fde68a;
+  border: 1px solid #fde047;
 }
+.benchmark-tag-correct::before { background: #ca8a04; }
 
 .benchmark-tag-escalate {
-  background: #f5f3ff;
+  background: #ede9fe;
   color: #5b21b6;
-  border: 1px solid #ddd6fe;
+  border: 1px solid #c4b5fd;
 }
+.benchmark-tag-escalate::before { background: #7c3aed; }
 
 .benchmark-emp-name {
   font-size: 0.95rem;
@@ -4922,5 +4939,285 @@ select option:checked {
   letter-spacing: 0.03em;
   margin-top: 4px;
 }
+
+/* ========================================================================= */
+/* KHO DỮ LIỆU: HIỂN THỊ DẠNG Ô DÀI COMPACT THEO NHÓM KÉO THẢ ACCORDION     */
+/* ========================================================================= */
+.repo-outcome-group {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+.repo-outcome-group:hover {
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.07);
+}
+
+.repo-outcome-header {
+  padding: 11px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: filter 0.15s ease;
+}
+.repo-outcome-header:hover {
+  filter: brightness(0.96);
+}
+
+.repo-outcome-header.header-approve {
+  background: linear-gradient(90deg, #f0fdf4 0%, #f8fff9 100%);
+  border-bottom: 1px solid #bbf7d0;
+}
+.repo-outcome-header.header-escalate {
+  background: linear-gradient(90deg, #f5f3ff 0%, #faf8ff 100%);
+  border-bottom: 1px solid #ddd6fe;
+}
+.repo-outcome-header.header-correct {
+  background: linear-gradient(90deg, #fffbeb 0%, #fffef5 100%);
+  border-bottom: 1px solid #fde68a;
+}
+.repo-outcome-header.header-reject {
+  background: linear-gradient(90deg, #fff1f2 0%, #fffafa 100%);
+  border-bottom: 1px solid #fecdd3;
+}
+
+.repo-outcome-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.repo-outcome-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.repo-outcome-chevron {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+.repo-outcome-group.collapsed .repo-outcome-chevron {
+  transform: rotate(-90deg);
+}
+.repo-outcome-group.collapsed .repo-compact-list {
+  display: none;
+}
+.repo-outcome-group.collapsed .repo-outcome-header {
+  border-bottom: none;
+}
+
+/* Danh sách ô compact */
+.repo-compact-list {
+  padding: 8px 12px 10px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Mỗi case là một ô dài 2 dòng gọn */
+.repo-compact-row {
+  background: #ffffff;
+  border: 1px solid #e8edf2;
+  border-radius: 8px;
+  padding: 7px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+  cursor: pointer;
+  min-height: 0;
+}
+.repo-compact-row:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Left accent stripe based on group color */
+.repo-compact-row.row-approve { border-left: 3px solid #22c55e; }
+.repo-compact-row.row-escalate { border-left: 3px solid #818cf8; }
+.repo-compact-row.row-correct  { border-left: 3px solid #f59e0b; }
+.repo-compact-row.row-reject   { border-left: 3px solid #f87171; }
+
+/* Main info column — takes remaining space */
+.repo-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Line 1: ID + name + dept */
+.repo-row-line1 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+/* Line 2: Leave type + days + desc */
+.repo-row-line2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #475569;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+/* Actions column — always right-aligned */
+.repo-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.repo-case-id {
+  font-family: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #dde3ec;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  letter-spacing: 0.01em;
+}
+
+.repo-row-emp-name {
+  font-size: 0.855rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repo-row-dept {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.repo-row-leave-type {
+  font-weight: 600;
+  color: #3b82f6;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.repo-row-sep {
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.repo-row-days {
+  font-weight: 700;
+  color: #334155;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.repo-row-desc {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Nút bấm gọn nhẹ */
+.repo-btn-sm-detail {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+.repo-btn-sm-detail:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.repo-btn-sm-fill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid #2563eb;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  white-space: nowrap;
+}
+.repo-btn-sm-fill:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+/* View Switcher Controls */
+.repo-view-switcher {
+  display: inline-flex;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 8px;
+  gap: 3px;
+}
+.repo-view-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+.repo-view-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+
 
 

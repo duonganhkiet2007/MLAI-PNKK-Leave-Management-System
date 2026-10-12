@@ -56,7 +56,7 @@ def build():
                 'variant':i%len(variants),'synthetic':True})
             truth[id]={'expected':expected,'expected_state':{'AUTO_APPROVE':'COMPLETED','AUTO_REJECT':'REJECTED',
                 'NEED_CORRECTION':'WAITING_EMPLOYEE','ESCALATE':'PENDING_ESCALATION','NO_LEAVE_REQUIRED':'COMPLETED'}[expected['decision']],
-                'expected_audit_events':['EVALUATED'],'policy_reference':'Leave_Application/'+ref,
+                'expected_audit_events':['EVALUATED'],'policy_reference':'core/'+ref,
                 'rationale':rationale,'annotation_status':'policy_conflict' if conflict else 'independently_authored',
                 'policy_conflict':conflict,'severity':'critical' if category.startswith('proof') else 'major'}
     free=[('Tôi xin nghỉ phép năm ngày 14/09/2026.',{'from_date':'2026-09-14','to_date':'2026-09-14','leave_type':'ANNUAL'}),
@@ -90,7 +90,7 @@ def build():
     write('proof_annotations.json',annotations)
     write('manifest.json',{'version':'1.0','cases':len(cases),'distinct_templates':sum(len(v[1]) for v in templates.values())+len(free)+len(replies),
         'limitation':'140 cases are variations of a smaller authored template set, not 140 independent policy branches.',
-        'ground_truth_source':['Leave_Application/policy_rules.md','Leave_Application/raw_policy.json'],
+        'ground_truth_source':['core/policy_rules.md','core/raw_policy.json'],
         'conflicts':'Conflicting policy labels are excluded from headline accuracy and retained as diagnostic observations.'})
     print(f'Generated {len(cases)} cases without importing the evaluated engine.')
 

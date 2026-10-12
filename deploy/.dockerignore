@@ -10,3 +10,4 @@ backend/uploads
 backend/backups
 docs
 tests
+benchmarks

@@ -191,7 +191,7 @@ MLAI/
 │   ├── app.js                    # Xử lý logic nghiệp vụ, gọi API, quản lý Modal
 │   ├── styles.css                # Thiết kế giao diện hiện đại, responsive
 │   └── assets/proofs/            # Bộ chứng từ mẫu thực tế (y tế, kết hôn...)
-├── Leave_Application/             # Bộ máy Quy chế Tất định (Deterministic Engine)
+├── core/             # Bộ máy Quy chế Tất định (Deterministic Engine)
 │   ├── policy_rules.md           # Bản quy chế nội bộ (Single Source of Truth)
 │   ├── rule_engine.py            # Bộ quy tắc 7 bước thẩm định
 │   └── vlm_inspector.py          # Module tích hợp Vision-Language Model
@@ -352,7 +352,7 @@ MLAI/
 │   ├── app.js                           # Logic xử lý giao diện, gọi API, quản lý Modal
 │   ├── styles.css                       # Bảng định kiểu CSS responsive
 │   └── assets/proofs/                   # Bộ chứng từ mẫu kiểm thử (y tế, kết hôn...)
-├── Leave_Application/                   # Bộ máy Quy chế Tất định (Deterministic Engine)
+├── core/                   # Bộ máy Quy chế Tất định (Deterministic Engine)
 │   ├── policy_rules.md                  # Bản quy chế nội bộ (Single Source of Truth)
 │   ├── rule_engine.py                   # 7 bước kiểm tra điều kiện nghiệp vụ
 │   └── vlm_inspector.py                 # Tích hợp Vision-Language Model quét chứng từ

@@ -19,7 +19,7 @@ Pending proof submissions persist immediately and return 202. Completion resumes
 
 The default orchestrator has `agent=None`. Free-text applications are rejected; summary generation is deterministic and polishing is disabled. `LeaveApprovalAgent(llm_client=...)` retains explicitly injectable Qwen extraction and reviewer classification methods. `--live-llm` evaluates that existing optional adapter and is not described as default production behavior. Default reviewer text uses keyword classification, with an approval fallback. Ambiguous text is therefore an explicit safety probe.
 
-VLM entry: `Leave_Application/vlm_inspector.py::inspect_document_with_vlm`. It resizes images, applies a CV blur gate, consults memory/disk cache, calls Ollama `/api/generate`, parses JSON and normalizes `ProofExtraction`. Actual request options in source are `num_ctx=4096`, `num_predict=512`, `temperature=0.0`. Ollama duration/token fields were not exposed by production results; optional benchmark observers retain them without recording prompts, images or document text. Client duration includes transport and Ollama-side queuing; it is not pure GPU execution.
+VLM entry: `core/vlm_inspector.py::inspect_document_with_vlm`. It resizes images, applies a CV blur gate, consults memory/disk cache, calls Ollama `/api/generate`, parses JSON and normalizes `ProofExtraction`. Actual request options in source are `num_ctx=4096`, `num_predict=512`, `temperature=0.0`. Ollama duration/token fields were not exposed by production results; optional benchmark observers retain them without recording prompts, images or document text. Client duration includes transport and Ollama-side queuing; it is not pure GPU execution.
 
 ## Deterministic evaluation, persistence and audit
 

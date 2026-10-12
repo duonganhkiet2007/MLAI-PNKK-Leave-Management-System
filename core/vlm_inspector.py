@@ -1107,7 +1107,7 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
         "images": [img],
         "keep_alive": OLLAMA_KEEP_ALIVE,
         "options": {
-            "num_ctx": 4096,
+            "num_ctx": int(os.getenv("VLM_NUM_CTX", "8192")),
             "num_predict": 512,
             "temperature": 0.0,
         },

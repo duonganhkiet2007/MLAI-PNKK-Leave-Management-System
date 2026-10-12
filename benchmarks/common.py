@@ -26,7 +26,7 @@ def command(args):
 
 def code_digest():
     h = hashlib.sha256()
-    for folder in ('backend', 'Leave_Application'):
+    for folder in ('backend', 'core'):
         for p in sorted((ROOT / folder).glob('**/*.py')):
             if any(x in p.parts for x in ('test_env', '.venv', '__pycache__')): continue
             h.update(str(p.relative_to(ROOT)).encode()); h.update(p.read_bytes())
@@ -41,7 +41,7 @@ def bootstrap(directory):
         LEAVE_UPLOAD_DIR=str(directory/'uploads'), SEED_DEMO_DATA='false', APP_ENV='test',
         LEAVE_ALLOW_ACTOR_HEADER='true', VLM_WARMUP_ON_STARTUP='0',
         VLM_FORCE_MOCK='0', VLM_ALLOW_MOCK_FALLBACK='0')
-    for name in ('backend', 'Leave_Application'):
+    for name in ('backend', 'core'):
         sys.path.insert(0, str(ROOT/name))
     if 'database' in sys.modules:
         import database
@@ -98,7 +98,7 @@ class Run:
             'source_sha256':code_digest(), 'dataset_sha256':sha(BENCH/'datasets/applications.json'),
             'annotations_sha256':sha(BENCH/'datasets/proof_annotations.json'),
             'ground_truth_sha256':sha(BENCH/'datasets/ground_truth.json'),
-            'policy_sha256':{str(p.relative_to(ROOT)):sha(p) for p in [ROOT/'Leave_Application/policy_rules.md',ROOT/'Leave_Application/raw_policy.json']},
+            'policy_sha256':{str(p.relative_to(ROOT)):sha(p) for p in [ROOT/'core/policy_rules.md',ROOT/'core/raw_policy.json']},
             'hardware':{'platform':platform.platform(),'cpu':platform.processor(), 'logical_cpus':os.cpu_count(),
                 'gpu':command(['nvidia-smi','--query-gpu=name,memory.total,driver_version','--format=csv,noheader']),
                 'memory':command(['getconf','_PHYS_PAGES'])},

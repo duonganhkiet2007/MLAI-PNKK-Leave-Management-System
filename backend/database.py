@@ -10,10 +10,12 @@ import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-DB_PATH = os.getenv("LEAVE_DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "leave_app.db"))
+_DATA_DIR = os.getenv("LEAVE_DATA_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"))
+os.makedirs(_DATA_DIR, exist_ok=True)
+DB_PATH = os.getenv("LEAVE_DB_PATH", os.path.join(_DATA_DIR, "leave_app.db"))
 EMPLOYEES_JSON_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "Leave_Application",
+    "core",
     "employees.json"
 )
 

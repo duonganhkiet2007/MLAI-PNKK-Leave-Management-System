@@ -25,7 +25,7 @@ from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor
 
 ROOT = Path(__file__).resolve().parents[1]
-for name in ('Leave_Application', 'backend', 'tests'):
+for name in ('core', 'backend', 'tests'):
     if str(ROOT / name) not in sys.path:
         sys.path.insert(0, str(ROOT / name))
 

@@ -13,7 +13,7 @@ import database as db
 import storage as st
 
 router=APIRouter(prefix='/api/meta',tags=['Metadata & Policy'])
-policy_path=Path(__file__).resolve().parents[2]/'Leave_Application'/'policy_rules.md'
+policy_path=Path(__file__).resolve().parents[2]/'core'/'policy_rules.md'
 
 @router.get('/health')
 def health_check(): return {'status':'ok','service':'Leave Approval Backend API','version':'3.0.0'}

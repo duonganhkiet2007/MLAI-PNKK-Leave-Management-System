@@ -2186,16 +2186,119 @@ function initStaffTestCaseCard() {
   renderStaffTestCaseCard();
 }
 
-function renderStaffTestCaseCard() {
-  const tbody = document.getElementById("repo-overview-tbody");
-  if (!tbody) return;
+let currentRepoViewMode = 'cards'; // 'cards' | 'table'
 
-  // 1. Filter by 4 groups
+function setRepoViewMode(mode) {
+  currentRepoViewMode = mode;
+  const btnCards = document.getElementById("btn-repo-view-cards");
+  const btnTable = document.getElementById("btn-repo-view-table");
+  const containerCards = document.getElementById("repo-outcome-groups-container");
+  const containerTable = document.getElementById("repo-cases-overview");
+
+  if (btnCards) btnCards.classList.toggle("active", mode === "cards");
+  if (btnTable) btnTable.classList.toggle("active", mode === "table");
+
+  if (containerCards) containerCards.classList.toggle("d-none", mode !== "cards");
+  if (containerTable) containerTable.classList.toggle("d-none", mode !== "table");
+}
+window.setRepoViewMode = setRepoViewMode;
+
+function getTestCaseOutcomeGroup(tc) {
+  const dec = (tc.expected && tc.expected.decision ? tc.expected.decision : "").toUpperCase();
+  if (dec === "AUTO_APPROVE" || dec === "NO_LEAVE_REQUIRED" || dec === "APPROVE") {
+    return "AUTO_APPROVE";
+  } else if (dec === "ESCALATE") {
+    return "ESCALATE";
+  } else if (dec === "NEED_CORRECTION" || dec === "REQUEST_INFO") {
+    return "NEED_CORRECTION";
+  } else if (dec === "AUTO_REJECT" || dec === "REJECT") {
+    return "AUTO_REJECT";
+  }
+  const meta = TESTCASE_SPRINT1_METADATA[tc.id] || {};
+  if (meta.group === "ROUTINE") return "AUTO_APPROVE";
+  if (meta.group === "UNCERTAIN_FACTS") return "NEED_CORRECTION";
+  if (meta.group === "OUT_OF_POLICY") return "AUTO_REJECT";
+  if (meta.group === "AUTHORITY_ESCALATION") return "ESCALATE";
+  return "AUTO_APPROVE";
+}
+
+const REPO_OUTCOME_GROUPS_CONFIG = [
+  {
+    key: "AUTO_APPROVE",
+    title: "Tự động phê duyệt (AUTO_APPROVE)",
+    desc: "Đơn đạt chuẩn chính sách, số dư hợp lệ, hệ thống tự động phê duyệt ngay.",
+    headerClass: "header-approve",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+    badgeBg: "#10b981",
+    tagClass: "benchmark-tag-approve",
+    expectedClass: "repo-expected-approve",
+    tagLabel: "Tự động duyệt"
+  },
+  {
+    key: "ESCALATE",
+    title: "Chuyển cấp có thẩm quyền (ESCALATE)",
+    desc: "Vượt trần hạn mức Quản lý hoặc thuộc diện chế độ đặc biệt cần cấp thẩm quyền xem xét.",
+    headerClass: "header-escalate",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>`,
+    badgeBg: "#6366f1",
+    tagClass: "benchmark-tag-escalate",
+    expectedClass: "repo-expected-escalate",
+    tagLabel: "Chuyển cấp duyệt"
+  },
+  {
+    key: "NEED_CORRECTION",
+    title: "Yêu cầu bổ sung & Xác minh (NEED_CORRECTION)",
+    desc: "Chứng từ bị mờ/mất nét, thiếu thông tin hoặc phát hiện điểm nghi vấn cần nhân viên bổ sung.",
+    headerClass: "header-correct",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`,
+    badgeBg: "#f59e0b",
+    tagClass: "benchmark-tag-correct",
+    expectedClass: "repo-expected-correct",
+    tagLabel: "Cần xác minh"
+  },
+  {
+    key: "AUTO_REJECT",
+    title: "Tự động từ chối theo chính sách (AUTO_REJECT)",
+    desc: "Vượt quá số dư phép năm cho phép hoặc vi phạm nghiêm trọng quy chế chính sách.",
+    headerClass: "header-reject",
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`,
+    badgeBg: "#ef4444",
+    tagClass: "benchmark-tag-reject",
+    expectedClass: "repo-expected-reject",
+    tagLabel: "Tự động từ chối"
+  }
+];
+
+async function fillTestScenarioToForm(caseId) {
+  const tc = STAFF_TEST_CASES.find(t => t.id === caseId);
+  if (!tc) return;
+  await fillStaffTestCaseIntoForm(tc);
+  showToast(`Đã nạp kịch bản ${tc.id} vào Form nộp đơn!`, 'success');
+}
+window.fillTestScenarioToForm = fillTestScenarioToForm;
+
+let repoGroupCollapsedState = {};
+
+function toggleRepoGroup(groupKey) {
+  repoGroupCollapsedState[groupKey] = !repoGroupCollapsedState[groupKey];
+  const el = document.getElementById(`repo-group-${groupKey}`);
+  if (el) {
+    el.classList.toggle("collapsed", repoGroupCollapsedState[groupKey]);
+  }
+}
+window.toggleRepoGroup = toggleRepoGroup;
+
+function renderStaffTestCaseCard() {
+  const containerCards = document.getElementById("repo-outcome-groups-container");
+  const tbody = document.getElementById("repo-overview-tbody");
+
+  // 1. Filter by outcome group or legacy category
   let filteredCases = STAFF_TEST_CASES;
   if (currentTestCaseFilter && currentTestCaseFilter !== "ALL") {
     filteredCases = filteredCases.filter(t => {
+      const outcome = getTestCaseOutcomeGroup(t);
       const meta = TESTCASE_SPRINT1_METADATA[t.id];
-      return meta && meta.group === currentTestCaseFilter;
+      return outcome === currentTestCaseFilter || (meta && meta.group === currentTestCaseFilter);
     });
   }
 
@@ -2230,84 +2333,187 @@ function renderStaffTestCaseCard() {
     badgeCount.innerText = `${filteredCases.length} kịch bản · ${filterText}`;
   }
 
+  // Handle empty state
   if (filteredCases.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center py-4 text-muted" style="font-size: 0.88rem;">
-          Không tìm thấy kịch bản nào phù hợp với bộ lọc hoặc từ khóa tìm kiếm.
-        </td>
-      </tr>
+    const emptyHtml = `
+      <div class="text-center py-5 bg-white rounded border" style="border-color: #e2e8f0 !important;">
+        <div style="font-size: 2.2rem; margin-bottom: 8px;">🔍</div>
+        <div class="fw-bold text-dark" style="font-size: 0.95rem;">Không tìm thấy kịch bản nào phù hợp</div>
+        <div class="text-muted" style="font-size: 0.82rem; margin-top: 4px;">Vui lòng thử từ khóa khác hoặc bấm chọn "Tất cả" kịch bản.</div>
+      </div>
     `;
+    if (containerCards) containerCards.innerHTML = emptyHtml;
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center py-4 text-muted" style="font-size: 0.88rem;">
+            Không tìm thấy kịch bản nào phù hợp với bộ lọc hoặc từ khóa tìm kiếm.
+          </td>
+        </tr>
+      `;
+    }
     return;
   }
 
-  let html = "";
-  filteredCases.forEach((tc) => {
-    const empName = EMP_NAME_MAP[tc.primaryEmpId] || tc.primaryEmpId;
-    const empObj = employeesCache.find(e => e.employee_id === tc.primaryEmpId);
-    const dept = empObj ? empObj.department : "Engineering";
-    const meta = TESTCASE_SPRINT1_METADATA[tc.id] || {};
+  // --- RENDER DẠNG CÁC Ô DÀI 2-3 DÒNG THEO NHÓM KÉO XỔ ACCORDION ---
+  if (containerCards) {
+    let groupsHtml = "";
 
-    // Calculate duration in days
-    let days = 1;
-    if (tc.payload.requested_working_days) {
-      days = tc.payload.requested_working_days;
-    } else if (tc.payload.from_date && tc.payload.to_date) {
-      const d1 = new Date(tc.payload.from_date);
-      const d2 = new Date(tc.payload.to_date);
-      const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
-      days = diff > 0 ? diff : 1;
-    }
+    REPO_OUTCOME_GROUPS_CONFIG.forEach(grp => {
+      const groupCases = filteredCases.filter(t => getTestCaseOutcomeGroup(t) === grp.key);
+      if (groupCases.length === 0) return;
 
-    // Status badge matching Image 2 format
-    let statusClass = "benchmark-tag-approve";
-    let statusLabel = meta.shortPrefix || "1. Thường quy · Duyệt";
+      const isCollapsed = !!repoGroupCollapsedState[grp.key];
 
-    if (meta.group === "ROUTINE") {
-      if (tc.expected.decision === "AUTO_APPROVE") {
-        statusClass = "benchmark-tag-approve";
-      } else {
-        statusClass = "benchmark-tag-reject";
+      let rowsHtml = "";
+      groupCases.forEach(tc => {
+        const empName = EMP_NAME_MAP[tc.primaryEmpId] || tc.primaryEmpId;
+        const empObj = employeesCache.find(e => e.employee_id === tc.primaryEmpId);
+        const dept = empObj ? empObj.department : "Engineering";
+        const meta = TESTCASE_SPRINT1_METADATA[tc.id] || {};
+
+        // Calculate duration in days
+        let days = 1;
+        if (tc.payload.requested_working_days) {
+          days = tc.payload.requested_working_days;
+        } else if (tc.payload.from_date && tc.payload.to_date) {
+          const d1 = new Date(tc.payload.from_date);
+          const d2 = new Date(tc.payload.to_date);
+          const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+          days = diff > 0 ? diff : 1;
+        }
+
+        const dateRange = `${tc.payload.from_date} &rarr; ${tc.payload.to_date}`;
+        const leaveLabel = meta.leaveTypeFriendly || tc.payload.leave_type || "Nghỉ phép";
+        const targetRole = (tc.expected && tc.expected.target_role) ? tc.expected.target_role : "";
+        const roleBadge = targetRole && targetRole !== "NONE" ? ` &rarr; <b>${escapeHtml(targetRole)}</b>` : "";
+        const noteText = (tc.expected && (tc.expected.note || tc.expected.error_code)) ? escapeHtml(tc.expected.note || tc.expected.error_code) : "";
+        const shortDesc = escapeHtml(tc.desc || tc.title || tc.payload.reason || "");
+
+        // Determine accent stripe class
+        const stripeClass = grp.key === 'AUTO_APPROVE' ? 'row-approve'
+          : grp.key === 'ESCALATE' ? 'row-escalate'
+          : grp.key === 'NEED_CORRECTION' ? 'row-correct'
+          : 'row-reject';
+
+        const errorCode = tc.expected?.error_code || tc.expected?.note || '';
+        const shortNote = errorCode ? escapeHtml(errorCode).slice(0, 60) : escapeHtml(tc.desc || tc.payload.reason || '').slice(0, 60);
+
+        rowsHtml += `
+          <div class="repo-compact-row ${stripeClass}" onclick="openRepoCaseDetail('${escapeHtml(tc.id)}')">
+            <!-- Tag kết quả — góc trái -->
+            <span class="benchmark-tag ${grp.tagClass}">${escapeHtml(grp.tagLabel)}</span>
+
+            <!-- Khối thông tin 2 dòng -->
+            <div class="repo-row-info">
+              <div class="repo-row-line1">
+                <span class="repo-case-id">${escapeHtml(tc.id)}</span>
+                <b class="repo-row-emp-name">${escapeHtml(empName)}</b>
+                <span class="repo-row-dept">${escapeHtml(dept.replace('Marketing & Operations', 'Mkt & Ops'))}</span>
+              </div>
+              <div class="repo-row-line2">
+                <span class="repo-row-leave-type">${escapeHtml(leaveLabel)}</span>
+                <span class="repo-row-sep">·</span>
+                <span class="repo-row-days">${days}d</span>
+                <span class="repo-row-sep">·</span>
+                <span class="repo-row-desc" title="${shortNote}">${shortNote}</span>
+              </div>
+            </div>
+
+            <!-- Nút hành động -->
+            <div class="repo-row-actions">
+              <button type="button" class="repo-btn-sm-detail" onclick="event.stopPropagation(); openRepoCaseDetail('${escapeHtml(tc.id)}')" title="Xem chi tiết phân tích">Chi tiết</button>
+              <button type="button" class="repo-btn-sm-fill" onclick="event.stopPropagation(); fillTestScenarioToForm('${escapeHtml(tc.id)}')" title="Nạp thử kịch bản">Nạp thử</button>
+            </div>
+          </div>
+        `;
+      });
+
+      groupsHtml += `
+        <div class="repo-outcome-group ${isCollapsed ? 'collapsed' : ''}" id="repo-group-${grp.key}">
+          <div class="repo-outcome-header ${grp.headerClass}" onclick="toggleRepoGroup('${grp.key}')" title="Nhấn để đóng/mở danh sách kịch bản">
+            <div class="d-flex align-items-center gap-2">
+              ${grp.icon}
+              <div>
+                <h4 class="repo-outcome-title">
+                  <span>${escapeHtml(grp.title)}</span>
+                </h4>
+                <div class="repo-outcome-desc">${escapeHtml(grp.desc)}</div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-2.5">
+              <span class="badge" style="background: ${grp.badgeBg}; color: #ffffff; font-weight: 700; padding: 4px 11px; border-radius: 6px; font-size: 0.76rem;">
+                ${groupCases.length} kịch bản
+              </span>
+              <svg class="repo-outcome-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="repo-compact-list">
+            ${rowsHtml}
+          </div>
+        </div>
+      `;
+    });
+
+    containerCards.innerHTML = groupsHtml;
+  }
+
+  // --- RENDER DẠNG BẢNG (CHO KHI BẬT VIEW TABLE) ---
+  if (tbody) {
+    let tableHtml = "";
+    filteredCases.forEach((tc) => {
+      const empName = EMP_NAME_MAP[tc.primaryEmpId] || tc.primaryEmpId;
+      const empObj = employeesCache.find(e => e.employee_id === tc.primaryEmpId);
+      const dept = empObj ? empObj.department : "Engineering";
+      const outcomeGroup = getTestCaseOutcomeGroup(tc);
+      const grpConfig = REPO_OUTCOME_GROUPS_CONFIG.find(g => g.key === outcomeGroup) || REPO_OUTCOME_GROUPS_CONFIG[0];
+
+      let days = 1;
+      if (tc.payload.requested_working_days) {
+        days = tc.payload.requested_working_days;
+      } else if (tc.payload.from_date && tc.payload.to_date) {
+        const d1 = new Date(tc.payload.from_date);
+        const d2 = new Date(tc.payload.to_date);
+        const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+        days = diff > 0 ? diff : 1;
       }
-    } else if (meta.group === "UNCERTAIN_FACTS") {
-      statusClass = "benchmark-tag-correct";
-    } else if (meta.group === "OUT_OF_POLICY") {
-      statusClass = "benchmark-tag-reject";
-    } else if (meta.group === "AUTHORITY_ESCALATION") {
-      statusClass = "benchmark-tag-escalate";
-    }
 
-    const dateRange = `${tc.payload.from_date} &rarr; ${tc.payload.to_date}`;
+      const dateRange = `${tc.payload.from_date} &rarr; ${tc.payload.to_date}`;
 
-    html += `
-      <tr id="repo-row-${escapeHtml(tc.id)}">
-        <td style="padding: 12px 16px;">
-          <b class="text-dark">${escapeHtml(empName)}</b>
-        </td>
-        <td style="padding: 12px 16px;">
-          <span class="badge bg-secondary-lt fw-semibold">${escapeHtml(dept)}</span>
-        </td>
-        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">
-          ${dateRange}
-        </td>
-        <td style="padding: 12px 16px;">
-          <b class="text-dark">${days} ngày</b>
-        </td>
-        <td style="padding: 12px 16px;">
-          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openRepoCaseDetail('${escapeHtml(tc.id)}')" title="Xem chi tiết kịch bản">
-            Chi tiết
-          </button>
-        </td>
-        <td style="padding: 12px 16px;">
-          <span class="benchmark-tag ${statusClass}" id="repo-status-${escapeHtml(tc.id)}">
-            ${escapeHtml(statusLabel)}
-          </span>
-        </td>
-      </tr>
-    `;
-  });
-
-  tbody.innerHTML = html;
+      tableHtml += `
+        <tr id="repo-row-${escapeHtml(tc.id)}">
+          <td style="padding: 12px 16px;">
+            <b class="text-dark">${escapeHtml(empName)}</b>
+          </td>
+          <td style="padding: 12px 16px;">
+            <span class="badge bg-secondary-lt fw-semibold">${escapeHtml(dept)}</span>
+          </td>
+          <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">
+            ${dateRange}
+          </td>
+          <td style="padding: 12px 16px;">
+            <b class="text-dark">${days} ngày</b>
+          </td>
+          <td style="padding: 12px 16px;">
+            <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold me-1" onclick="openRepoCaseDetail('${escapeHtml(tc.id)}')" title="Xem chi tiết kịch bản">
+              Chi tiết
+            </button>
+            <button type="button" class="btn btn-sm btn-primary px-2 py-1 fw-semibold" onclick="fillTestScenarioToForm('${escapeHtml(tc.id)}')" title="Nạp nhanh vào form">
+              Nạp
+            </button>
+          </td>
+          <td style="padding: 12px 16px;">
+            <span class="benchmark-tag ${grpConfig.tagClass}" id="repo-status-${escapeHtml(tc.id)}">
+              ${escapeHtml(grpConfig.tagLabel)}
+            </span>
+          </td>
+        </tr>
+      `;
+    });
+    tbody.innerHTML = tableHtml;
+  }
 }
 
 async function openRepoCaseDetail(caseId) {

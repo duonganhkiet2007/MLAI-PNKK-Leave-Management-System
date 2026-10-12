@@ -2,7 +2,7 @@ import os, sys
 from pathlib import Path
 import pytest
 ROOT=Path(__file__).resolve().parents[2]
-for name in ('backend','Leave_Application'):sys.path.insert(0,str(ROOT/name))
+for name in ('backend','core'):sys.path.insert(0,str(ROOT/name))
 
 @pytest.fixture
 def bench_db(tmp_path,monkeypatch):

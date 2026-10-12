@@ -19,6 +19,7 @@ import database as db
 router=APIRouter(prefix='/api/verify',tags=['Verify Harness'])
 _ROOT = Path(__file__).resolve().parents[2]
 _PHOTO_DIRS = (
+    _ROOT / "backend" / "data" / "uploads",
     _ROOT / "backend" / "uploads",
     _ROOT / "tests" / "assets" / "proofs",
     _ROOT / "frontend" / "assets" / "proofs",
@@ -42,7 +43,7 @@ def _cleanup_benchmark_request(req_id: str):
             conn.execute('DELETE FROM audit_logs WHERE request_id=?', (req_id,))
     except Exception:
         pass
-TEST_CASES_FILE=Path(__file__).resolve().parents[2]/'Leave_Application'/'test_cases.json'
+TEST_CASES_FILE=Path(__file__).resolve().parents[2]/'core'/'test_cases.json'
 CHECK_FIELDS=('decision','target_role','requested_working_days','deducted_days','annual_balance_change','uncertainty_category','error_code')
 
 def evaluate_case(data):

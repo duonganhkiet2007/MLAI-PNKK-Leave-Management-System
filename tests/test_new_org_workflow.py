@@ -20,7 +20,7 @@ from calendar_service import CalendarService
 import storage as st
 
 ASSETS_DIR = Path(__file__).resolve().parent / "assets" / "proofs"
-EMPLOYEES_FILE = Path(__file__).resolve().parents[1] / "Leave_Application" / "employees.json"
+EMPLOYEES_FILE = Path(__file__).resolve().parents[1] / "core" / "employees.json"
 
 @pytest.fixture(scope="module")
 def employees_data():

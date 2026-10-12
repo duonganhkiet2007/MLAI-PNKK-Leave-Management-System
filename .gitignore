@@ -57,9 +57,8 @@ dist/
 build/
 *.egg-info/
 
-# ------ Uploads / runtime files -----------------------------
-backend/uploads/*
-!backend/uploads/.gitkeep
+# ------ Runtime Data (DB, uploads, logs) --------------------
+backend/data/
 
 # ------ AI tools / Agent runtime ----------------------------
 .agents/
@@ -67,4 +66,14 @@ backend/uploads/*
 .local/
 .nfs*
 **/.nfs*
+
+# ------ Pytest / test cache ---------------------------------
+.pytest_cache/
+**/.pytest_cache/
+
+# ------ VLM inference cache ---------------------------------
+backend/uploads/vlm_cache/
+
+# ------ Benchmark run results (timestamped) -----------------
+benchmarks/results/20*/
 

@@ -8,7 +8,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "One working day, sufficient balance/notice; no proof needed",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -23,7 +23,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Two working days within automatic annual limit",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -38,7 +38,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "One working day, sufficient balance/notice; no proof needed",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -53,7 +53,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Two working days within automatic annual limit",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -68,7 +68,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "One working day, sufficient balance/notice; no proof needed",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -83,7 +83,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Two working days within automatic annual limit",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -98,7 +98,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "One working day, sufficient balance/notice; no proof needed",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -113,7 +113,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Two working days within automatic annual limit",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -128,7 +128,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "One working day, sufficient balance/notice; no proof needed",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -143,7 +143,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Two working days within automatic annual limit",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -158,7 +158,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "One working day, sufficient balance/notice; no proof needed",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -173,7 +173,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Two working days within automatic annual limit",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -188,7 +188,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "One working day, sufficient balance/notice; no proof needed",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -203,7 +203,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Two working days within automatic annual limit",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -218,7 +218,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "One working day, sufficient balance/notice; no proof needed",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -233,7 +233,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Two working days within automatic annual limit",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -248,7 +248,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "One working day, sufficient balance/notice; no proof needed",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -263,7 +263,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Two working days within automatic annual limit",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -278,7 +278,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "One working day, sufficient balance/notice; no proof needed",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -293,7 +293,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Two working days within automatic annual limit",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -308,7 +308,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "policy_reference": "core/policy_rules.md §2.1, §3.4",
     "rationale": "Requested annual days exceed balance",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -323,7 +323,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "policy_reference": "core/policy_rules.md §2.1",
     "rationale": "Two days exceed balance one",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -338,7 +338,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "policy_reference": "core/policy_rules.md §2.1, §3.4",
     "rationale": "Requested annual days exceed balance",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -353,7 +353,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "policy_reference": "core/policy_rules.md §2.1",
     "rationale": "Two days exceed balance one",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -368,7 +368,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "policy_reference": "core/policy_rules.md §2.1, §3.4",
     "rationale": "Requested annual days exceed balance",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -383,7 +383,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "policy_reference": "core/policy_rules.md §2.1",
     "rationale": "Two days exceed balance one",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -398,7 +398,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "policy_reference": "core/policy_rules.md §2.1, §3.4",
     "rationale": "Requested annual days exceed balance",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -413,7 +413,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "policy_reference": "core/policy_rules.md §2.1",
     "rationale": "Two days exceed balance one",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -428,7 +428,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "policy_reference": "core/policy_rules.md §2.1, §3.4",
     "rationale": "Requested annual days exceed balance",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -443,7 +443,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "policy_reference": "core/policy_rules.md §2.1",
     "rationale": "Two days exceed balance one",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -458,7 +458,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1; policy_rules.md §3.4",
+    "policy_reference": "core/raw_policy.json Điều 10.1; policy_rules.md §3.4",
     "rationale": "Same-day annual notice is below one working day",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -473,7 +473,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1",
+    "policy_reference": "core/raw_policy.json Điều 10.1",
     "rationale": "Four days require three working days notice",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -488,7 +488,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1; policy_rules.md §3.4",
+    "policy_reference": "core/raw_policy.json Điều 10.1; policy_rules.md §3.4",
     "rationale": "Same-day annual notice is below one working day",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -503,7 +503,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1",
+    "policy_reference": "core/raw_policy.json Điều 10.1",
     "rationale": "Four days require three working days notice",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -518,7 +518,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1; policy_rules.md §3.4",
+    "policy_reference": "core/raw_policy.json Điều 10.1; policy_rules.md §3.4",
     "rationale": "Same-day annual notice is below one working day",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -533,7 +533,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1",
+    "policy_reference": "core/raw_policy.json Điều 10.1",
     "rationale": "Four days require three working days notice",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -548,7 +548,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1; policy_rules.md §3.4",
+    "policy_reference": "core/raw_policy.json Điều 10.1; policy_rules.md §3.4",
     "rationale": "Same-day annual notice is below one working day",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -563,7 +563,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1",
+    "policy_reference": "core/raw_policy.json Điều 10.1",
     "rationale": "Four days require three working days notice",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -578,7 +578,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1; policy_rules.md §3.4",
+    "policy_reference": "core/raw_policy.json Điều 10.1; policy_rules.md §3.4",
     "rationale": "Same-day annual notice is below one working day",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -593,7 +593,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1",
+    "policy_reference": "core/raw_policy.json Điều 10.1",
     "rationale": "Four days require three working days notice",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -608,7 +608,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Adding employee exceeds 30% quota",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -623,7 +623,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Date-specific capacity breach",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -638,7 +638,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Adding employee exceeds 30% quota",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -653,7 +653,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Date-specific capacity breach",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -668,7 +668,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Adding employee exceeds 30% quota",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -683,7 +683,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Date-specific capacity breach",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -698,7 +698,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Adding employee exceeds 30% quota",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -713,7 +713,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Date-specific capacity breach",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -728,7 +728,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Adding employee exceeds 30% quota",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -743,7 +743,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Date-specific capacity breach",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -758,7 +758,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "policy_reference": "core/policy_rules.md §2.1, §3.4",
     "rationale": "Three annual days require manager; explicit no-work exception",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -773,7 +773,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.3; policy_rules.md §3.1/3.4",
+    "policy_reference": "core/raw_policy.json Điều 10.3; policy_rules.md §3.1/3.4",
     "rationale": "Six annual days require higher authority",
     "annotation_status": "policy_conflict",
     "policy_conflict": "§3.1 says CEO above five; raw policy says department head",
@@ -788,7 +788,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Out-of-automation maternity scope routed HR",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -803,7 +803,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Work accident routed HR",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -818,7 +818,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 18.1",
+    "policy_reference": "core/raw_policy.json Điều 18.1",
     "rationale": "Unpaid personal leave needs explicit human approval",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -833,7 +833,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "policy_reference": "core/policy_rules.md §2.1, §3.4",
     "rationale": "Three annual days require manager; explicit no-work exception",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -848,7 +848,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.3; policy_rules.md §3.1/3.4",
+    "policy_reference": "core/raw_policy.json Điều 10.3; policy_rules.md §3.1/3.4",
     "rationale": "Six annual days require higher authority",
     "annotation_status": "policy_conflict",
     "policy_conflict": "§3.1 says CEO above five; raw policy says department head",
@@ -863,7 +863,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Out-of-automation maternity scope routed HR",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -878,7 +878,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Work accident routed HR",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -893,7 +893,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 18.1",
+    "policy_reference": "core/raw_policy.json Điều 18.1",
     "rationale": "Unpaid personal leave needs explicit human approval",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -908,7 +908,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "policy_reference": "core/policy_rules.md §2.1, §3.4",
     "rationale": "Three annual days require manager; explicit no-work exception",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -923,7 +923,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 10.3; policy_rules.md §3.1/3.4",
+    "policy_reference": "core/raw_policy.json Điều 10.3; policy_rules.md §3.1/3.4",
     "rationale": "Six annual days require higher authority",
     "annotation_status": "policy_conflict",
     "policy_conflict": "§3.1 says CEO above five; raw policy says department head",
@@ -938,7 +938,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Out-of-automation maternity scope routed HR",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -953,7 +953,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Work accident routed HR",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -968,7 +968,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 18.1",
+    "policy_reference": "core/raw_policy.json Điều 18.1",
     "rationale": "Unpaid personal leave needs explicit human approval",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -983,7 +983,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.2, §3.4",
+    "policy_reference": "core/policy_rules.md §2.2, §3.4",
     "rationale": "Missing required evidence",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -998,7 +998,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §5",
+    "policy_reference": "core/policy_rules.md §5",
     "rationale": "Unreadable evidence needs human review",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1013,7 +1013,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Unverified new medical proof should require HR",
     "annotation_status": "policy_conflict",
     "policy_conflict": "Code permits complete unverified short medical proof; §3.4 requires verification",
@@ -1028,7 +1028,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.2, §3.4",
+    "policy_reference": "core/policy_rules.md §2.2, §3.4",
     "rationale": "Missing required evidence",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1043,7 +1043,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §5",
+    "policy_reference": "core/policy_rules.md §5",
     "rationale": "Unreadable evidence needs human review",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1058,7 +1058,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Unverified new medical proof should require HR",
     "annotation_status": "policy_conflict",
     "policy_conflict": "Code permits complete unverified short medical proof; §3.4 requires verification",
@@ -1073,7 +1073,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.2, §3.4",
+    "policy_reference": "core/policy_rules.md §2.2, §3.4",
     "rationale": "Missing required evidence",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1088,7 +1088,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §5",
+    "policy_reference": "core/policy_rules.md §5",
     "rationale": "Unreadable evidence needs human review",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1103,7 +1103,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Unverified new medical proof should require HR",
     "annotation_status": "policy_conflict",
     "policy_conflict": "Code permits complete unverified short medical proof; §3.4 requires verification",
@@ -1118,7 +1118,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.2, §3.4",
+    "policy_reference": "core/policy_rules.md §2.2, §3.4",
     "rationale": "Missing required evidence",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1133,7 +1133,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §5",
+    "policy_reference": "core/policy_rules.md §5",
     "rationale": "Unreadable evidence needs human review",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1148,7 +1148,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Unverified new medical proof should require HR",
     "annotation_status": "policy_conflict",
     "policy_conflict": "Code permits complete unverified short medical proof; §3.4 requires verification",
@@ -1163,7 +1163,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.2, §3.4",
+    "policy_reference": "core/policy_rules.md §2.2, §3.4",
     "rationale": "Missing required evidence",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1178,7 +1178,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §5",
+    "policy_reference": "core/policy_rules.md §5",
     "rationale": "Unreadable evidence needs human review",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1193,7 +1193,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Unverified new medical proof should require HR",
     "annotation_status": "policy_conflict",
     "policy_conflict": "Code permits complete unverified short medical proof; §3.4 requires verification",
@@ -1208,7 +1208,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "policy_reference": "core/policy_rules.md §1, §2.2",
     "rationale": "Subject identity must match",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1223,7 +1223,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "policy_reference": "core/policy_rules.md §1, §2.2",
     "rationale": "Requested dates outside supporting document",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1238,7 +1238,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.2",
+    "policy_reference": "core/policy_rules.md §2.2",
     "rationale": "Wrong supporting document type",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1253,7 +1253,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "policy_reference": "core/policy_rules.md §1, §2.2",
     "rationale": "Subject identity must match",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1268,7 +1268,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "policy_reference": "core/policy_rules.md §1, §2.2",
     "rationale": "Requested dates outside supporting document",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1283,7 +1283,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.2",
+    "policy_reference": "core/policy_rules.md §2.2",
     "rationale": "Wrong supporting document type",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1298,7 +1298,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "policy_reference": "core/policy_rules.md §1, §2.2",
     "rationale": "Subject identity must match",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1313,7 +1313,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "policy_reference": "core/policy_rules.md §1, §2.2",
     "rationale": "Requested dates outside supporting document",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1328,7 +1328,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.2",
+    "policy_reference": "core/policy_rules.md §2.2",
     "rationale": "Wrong supporting document type",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1343,7 +1343,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "policy_reference": "core/policy_rules.md §1, §2.2",
     "rationale": "Subject identity must match",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1358,7 +1358,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "policy_reference": "core/policy_rules.md §1, §2.2",
     "rationale": "Requested dates outside supporting document",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1373,7 +1373,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.2",
+    "policy_reference": "core/policy_rules.md §2.2",
     "rationale": "Wrong supporting document type",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1388,7 +1388,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "policy_reference": "core/policy_rules.md §1, §2.2",
     "rationale": "Subject identity must match",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1403,7 +1403,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "policy_reference": "core/policy_rules.md §1, §2.2",
     "rationale": "Requested dates outside supporting document",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1418,7 +1418,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.2",
+    "policy_reference": "core/policy_rules.md §2.2",
     "rationale": "Wrong supporting document type",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1433,7 +1433,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Duplicate approved leave must not deduct twice",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1448,7 +1448,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Partially overlapping dates require correction",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1463,7 +1463,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Duplicate approved leave must not deduct twice",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1478,7 +1478,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Partially overlapping dates require correction",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1493,7 +1493,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Duplicate approved leave must not deduct twice",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1508,7 +1508,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Partially overlapping dates require correction",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1523,7 +1523,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Duplicate approved leave must not deduct twice",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1538,7 +1538,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Partially overlapping dates require correction",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1553,7 +1553,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Duplicate approved leave must not deduct twice",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1568,7 +1568,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Partially overlapping dates require correction",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1583,7 +1583,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "policy_reference": "core/policy_rules.md §2.1",
     "rationale": "Exactly enough balance",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1598,7 +1598,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Exactly 30% quota",
     "annotation_status": "policy_conflict",
     "policy_conflict": "§3.4 uses <30%; code accepts ≤30%; threshold needs policy owner",
@@ -1613,7 +1613,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1; calendars/holidays_2026.json",
+    "policy_reference": "core/policy_rules.md §1; calendars/holidays_2026.json",
     "rationale": "Weekend has no working dates",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1628,7 +1628,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Missing start date",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1643,7 +1643,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "End precedes start",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1658,7 +1658,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "policy_reference": "core/policy_rules.md §2.1",
     "rationale": "Three days missing handover and exception",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1673,7 +1673,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 8",
+    "policy_reference": "core/raw_policy.json Điều 8",
     "rationale": "Probation annual restrictions",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1688,7 +1688,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.1, §3.4",
+    "policy_reference": "core/policy_rules.md §3.1, §3.4",
     "rationale": "Two medical days require manager",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1703,7 +1703,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "policy_reference": "core/policy_rules.md §2.1",
     "rationale": "Exactly enough balance",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1718,7 +1718,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Exactly 30% quota",
     "annotation_status": "policy_conflict",
     "policy_conflict": "§3.4 uses <30%; code accepts ≤30%; threshold needs policy owner",
@@ -1733,7 +1733,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §1; calendars/holidays_2026.json",
+    "policy_reference": "core/policy_rules.md §1; calendars/holidays_2026.json",
     "rationale": "Weekend has no working dates",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1748,7 +1748,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "Missing start date",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1763,7 +1763,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "policy_reference": "core/policy_rules.md §3.4",
     "rationale": "End precedes start",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1778,7 +1778,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "policy_reference": "core/policy_rules.md §2.1",
     "rationale": "Three days missing handover and exception",
     "annotation_status": "independently_authored",
     "policy_conflict": null,
@@ -1793,7 +1793,7 @@
     "expected_audit_events": [
       "EVALUATED"
     ],
-    "policy_reference": "Leave_Application/raw_policy.json Điều 8",
+    "policy_reference": "core/raw_policy.json Điều 8",
     "rationale": "Probation annual restrictions",
     "annotation_status": "independently_authored",
     "policy_conflict": null,

@@ -6,7 +6,6 @@ services:
     environment:
       # Ollama chạy trên host; đổi thành http://ollama:11434 nếu dùng service bên dưới
       OLLAMA_BASE: ${OLLAMA_BASE:-http://host.docker.internal:11434}
-      LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b-instruct}
       VLM_TARGET_MODEL: ${VLM_TARGET_MODEL:-qwen2.5vl:7b}
       VLM_MAX_IMAGE_DIM: ${VLM_MAX_IMAGE_DIM:-1600}
       LEAVE_DB_PATH: /data/leave_app.db

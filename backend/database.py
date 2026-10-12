@@ -19,11 +19,17 @@ EMPLOYEES_JSON_PATH = os.path.join(
 
 
 def get_db_connection() -> sqlite3.Connection:
-    """Tạo kết nối tới SQLite DB với row_factory dạng dict-like và bật WAL mode cho đa luồng."""
+    """Tạo kết nối tới SQLite DB với row_factory dạng dict-like và bật WAL mode (nếu file system hỗ trợ)."""
     conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=60)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA journal_mode=WAL")
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.OperationalError:
+        try:
+            conn.execute("PRAGMA journal_mode=DELETE")
+        except sqlite3.OperationalError:
+            pass
     conn.execute("PRAGMA busy_timeout=60000")
     return conn
 

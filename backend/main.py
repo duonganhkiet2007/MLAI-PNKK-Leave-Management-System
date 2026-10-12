@@ -39,20 +39,15 @@ from routers.verify_router import router as verify_router
 from routers.meta_router import router as meta_router
 from routers.auth_router import router as auth_router
 from ai.ai_stack import (
-    LLM_TARGET_MODEL,
-    LLM_TIMEOUT_SEC,
     OLLAMA_BASE,
     OLLAMA_KEEP_ALIVE,
     VLM_TARGET_MODEL,
     VLM_TIMEOUT_SEC,
     has_model,
-    ollama_chat,
-    ollama_generate,
     ollama_ps,
     ollama_tags,
 )
 
-LLM_WARMUP_ON_STARTUP = str(os.getenv("LLM_WARMUP_ON_STARTUP", "0")).strip().lower() in {"1", "true", "yes"}
 VLM_WARMUP_ON_STARTUP = str(os.getenv("VLM_WARMUP_ON_STARTUP", "1")).strip().lower() not in {"0", "false", "no"}
 
 
@@ -97,7 +92,7 @@ def _warmup_vlm() -> None:
 
 
 def _warmup_ai_stack_worker():
-    """Nạp tuần tự VLM rồi LLM. Lỗi một con không chặn con kia."""
+    """Chỉ nạp VLM (Qwen-VL) nếu được cấu hình. LLM đã được loại bỏ hoàn toàn để tránh hallucination."""
     if VLM_WARMUP_ON_STARTUP:
         try:
             _warmup_vlm()
@@ -105,73 +100,13 @@ def _warmup_ai_stack_worker():
             print(f"⚠️ [VLM WARM-UP] {type(e).__name__}: {str(e)[:400]}")
     else:
         print("ℹ️ [VLM WARM-UP] Tắt (VLM_WARMUP_ON_STARTUP=0).")
-    if LLM_WARMUP_ON_STARTUP:
-        try:
-            _warmup_llm()
-        except Exception as e:
-            print(f"⚠️ [LLM WARM-UP] {type(e).__name__}: {str(e)[:400]}")
-    else:
-        print("ℹ️ [LLM WARM-UP] Tắt (LLM_WARMUP_ON_STARTUP=0).")
-
-
-def _warmup_llm() -> None:
-    print(f"🧠 [LLM WARM-UP] Nạp {LLM_TARGET_MODEL} qua Ollama (keep_alive={OLLAMA_KEEP_ALIVE})...")
-    reachable, names, err = ollama_tags()
-    if not reachable:
-        print(f"⚠️ [LLM WARM-UP] Ollama không chạy tại {OLLAMA_BASE}. {err or ''}".strip())
-        return
-    if not has_model(names, LLM_TARGET_MODEL):
-        print(f"⚠️ [LLM WARM-UP] Chưa pull {LLM_TARGET_MODEL}. Chạy: ollama pull {LLM_TARGET_MODEL}")
-        return
-    from ai.llm_client import get_qwen_engine
-    engine = get_qwen_engine()
-    with engine._lock:
-        engine.is_loading = True
-        engine.load_error = None
-    try:
-        ollama_chat(
-            {
-                "model": LLM_TARGET_MODEL,
-                "format": "json",
-                "messages": [{"role": "user", "content": 'Trả JSON: {"ok": true}'}],
-                "options": {"num_predict": 16, "temperature": 0.0},
-            },
-            timeout=LLM_TIMEOUT_SEC,
-        )
-        with engine._lock:
-            engine.is_ready = True
-            engine.is_loading = False
-        vram = _vram_of(LLM_TARGET_MODEL)
-        where = f"GPU {vram / (1024**3):.1f} GB" if vram > 0 else "không thấy VRAM (kiểm tra /api/ps)"
-        print(f"✅ [LLM WARM-UP] {LLM_TARGET_MODEL} sẵn sàng ({where}). JSON ~0.5–2s.")
-    except Exception as e:
-        with engine._lock:
-            engine.is_loading = False
-            engine.is_ready = False
-            engine.load_error = str(e)
-        raise
-
-
-def _warmup_ai_stack_worker():
-    """Nạp tuần tự VLM rồi LLM để cả hai keep_alive=-1 cùng resident."""
-    try:
-        if VLM_WARMUP_ON_STARTUP:
-            _warmup_vlm()
-        else:
-            print("ℹ️ [VLM WARM-UP] Tắt (VLM_WARMUP_ON_STARTUP=0).")
-        if LLM_WARMUP_ON_STARTUP:
-            _warmup_llm()
-        else:
-            print("ℹ️ [LLM WARM-UP] Tắt (LLM_WARMUP_ON_STARTUP=0).")
-    except Exception as e:
-        print(f"⚠️ [AI STACK WARM-UP] {type(e).__name__}: {str(e)[:240]}")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     print("✅ [BACKEND INIT] SQLite sẵn sàng.")
-    print(f"🚀 [BACKEND INIT] AI stack: VLM={VLM_TARGET_MODEL} · LLM={LLM_TARGET_MODEL} (chỉ 2 model này).")
+    print(f"🚀 [BACKEND INIT] AI stack: Deterministic Rule Engine + VLM={VLM_TARGET_MODEL}. LLM disabled by design (Zero Hallucination).")
     from services.inspection_service import GLOBAL_INSPECTION_SERVICE
     GLOBAL_INSPECTION_SERVICE.start_worker()
     threading.Thread(target=_warmup_ai_stack_worker, daemon=True).start()

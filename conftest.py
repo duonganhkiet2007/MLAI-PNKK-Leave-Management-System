@@ -17,10 +17,14 @@ os.environ['LEAVE_ALLOW_ACTOR_HEADER']='true'
 
 @pytest.fixture(autouse=True)
 def prohibit_live_models(monkeypatch):
-    import ai.llm_client as llm_client
     def forbidden(*args,**kwargs): raise AssertionError('Live model access is forbidden in tests')
-    monkeypatch.setattr(llm_client.LocalQwenEngine,'load_model',forbidden)
-    monkeypatch.setattr(llm_client.LocalQwenEngine,'generate_json',forbidden)
+    try:
+        import ai.llm_client as llm_client
+        if hasattr(llm_client, 'LocalQwenEngine'):
+            monkeypatch.setattr(llm_client.LocalQwenEngine,'load_model',forbidden)
+            monkeypatch.setattr(llm_client.LocalQwenEngine,'generate_json',forbidden)
+    except Exception:
+        pass
 
 @pytest.fixture
 def isolated_db(tmp_path,monkeypatch):

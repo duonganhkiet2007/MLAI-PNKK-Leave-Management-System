@@ -14,7 +14,6 @@ from domain import (RequestFacts, HumanFeedbackResolution, EditableFields,
                     names_approximately_match, should_deduct_annual_balance, VerifiedProof)
 from rule_engine import LeaveRuleEngine
 from taxonomy import ErrorCode, DecisionType
-from ai.agent_orchestrator import LeaveApprovalAgent
 from calendar_service import CalendarService
 from vlm_inspector import inspect_document_with_vlm, VLMInspectionOutput
 from ai.ai_stack import VLM_TARGET_MODEL
@@ -28,7 +27,7 @@ STATES={'AUTO_APPROVE':'COMPLETED','NO_LEAVE_REQUIRED':'COMPLETED','AUTO_REJECT'
 
 class LeaveOrchestratorService:
     def __init__(self, agent=None, clock=None, calendar=None):
-        self.agent=agent or LeaveApprovalAgent()
+        self.agent=agent
         self.calendar=calendar or CalendarService()
         self.clock=clock or (lambda: datetime.now(self.calendar.timezone))
         try:
@@ -598,98 +597,9 @@ class LeaveOrchestratorService:
             "manager_risk_level_vn": manager_risk_level,
             "manager_recommendation_vn": manager_recommendation,
         }
+        llm_engine_used = "Deterministic Rule Engine (No LLM)"
+        llm_call_error = None
         llm_gen_ms = 0.0
-
-        if enable_llm_polish:
-            # Opt-in polish only when explicitly enabled (never on production synchronous requests)
-            t_llm_0 = time.perf_counter()
-            try:
-                from ai.llm_client import LLMClient
-                from ai.prompts import SUMMARY_MANAGER_SYSTEM_PROMPT
-                from ai.schemas import ManagerSummaryLLMResponse
-                _llm = LLMClient()
-                raw_context = {
-                    "context_employee": {
-                        "employee_name": emp_n,
-                        "employee_id": getattr(ctx, 'employee_id', None),
-                        "department": getattr(ctx, 'department', None),
-                    },
-                    "leave_request": {
-                        "leave_type_enum": ltype,
-                        "leave_type_vi": ltype_vi,
-                        "from_date": from_d,
-                        "to_date": to_d,
-                        "requested_calendar_days": int(requested_cd or 0),
-                        "requested_working_days": int(requested_wd or 0),
-                        "reason": reason,
-                    },
-                    "vlm_analysis": {
-                        "ran_vlm": bool(vlm_fields_present),
-                        "patient_name_on_doc": doc_patient,
-                        "issuer": getattr(proof_extraction, 'issuer', None) or (vlm_analysis_data.get('document_summary') or {}).get('issuer'),
-                        "issue_date": getattr(proof_extraction, 'issue_date', None).isoformat() if getattr(proof_extraction, 'issue_date', None) else None,
-                        "diagnosis": diag,
-                        "doctor_recommended_range": {
-                            "from": dfd.isoformat() if dfd else None,
-                            "to": dtd.isoformat() if dtd else None,
-                            "days": doctor_days,
-                        },
-                        "has_red_stamp": rs,
-                        "has_doctor_signature": sig,
-                        "is_tampered": tamper,
-                        "ai_edited": ai_ed,
-                        "correlation_score": corr_score,
-                        "correlation_tier": correlation_tier,
-                        "integrity_flags_text": integrity_assess,
-                    },
-                    "facts_comparison_summary": {
-                        "name_comparison": name_status,
-                        "diagnosis_comparison": diag_status,
-                        "date_comparison": date_status,
-                        "stamp_and_signature": stamp_sig_status,
-                    },
-                    "rule_engine_result": {
-                        "decision": decision_val,
-                        "decision_vi": decision_vi,
-                        "status": status_val,
-                        "error_code": error_code,
-                        "error_code_vi_fallback": ERROR_VI.get(error_code, error_code or '—'),
-                        "uncertainty_category": _v_enum(result.uncertainty_category),
-                        "target_role": target_role,
-                        "target_role_vi_fallback": ROLE_VI.get(target_role, target_role or '—'),
-                        "human_readable_explanation": result.human_readable_explanation or '',
-                        "quick_action_options_enum": list(result.quick_action_options or []),
-                        "applied_policy_clauses_enum": [str(x) for x in list(result.applied_policy_clauses or [])],
-                        "warnings_enum": [str(x) for x in list(getattr(result,'warnings',[]) or [])],
-                        "why_escalated_template": why_escalated_vi,
-                        "actionable_question_template": aq_vi,
-                        "summary_template_text": template_summary_full,
-                    }
-                }
-                user_prompt = (
-                    "Dưới đây là context đầy đủ của đơn nghỉ phép và kết quả đối soát chứng từ (JSON).\n"
-                    "Hãy tổng hợp thành bản báo cáo trung thực, chính xác theo schema ManagerSummaryLLMResponse.\n\n"
-                    "CONTEXT_JSON_BEGIN\n"
-                    + json.dumps(raw_context, ensure_ascii=False, indent=2)
-                    + "\nCONTEXT_JSON_END\n"
-                )
-                llm_out = _llm.generate_json(
-                    system_prompt=SUMMARY_MANAGER_SYSTEM_PROMPT,
-                    user_prompt=user_prompt,
-                    response_model=ManagerSummaryLLMResponse,
-                )
-                llm_parsed.update(llm_out)
-                # Error lists are evidence-backed deterministic findings. Do not
-                # let a generative summary add comments, recommendations, or routing.
-                llm_parsed['info_missing_vn'] = list(info_mis)
-                llm_parsed['staff_errors_vn'] = list(staff_errors)
-                llm_parsed['manager_suspicions_vn'] = list(manager_suspicions)
-                llm_engine_used = "qwen2.5:3b-instruct (Ollama)"
-                llm_gen_ms = round((time.perf_counter() - t_llm_0) * 1000, 3)
-            except Exception as e:
-                llm_call_error = f"{type(e).__name__}: {e}"
-                llm_engine_used += f" | llm_call_failed: {llm_call_error[:160]}"
-
         template_ms = round((time.perf_counter() - t_tmpl_0) * 1000, 3)
 
         # Build structured summary (24 keys như cũ, hoàn toàn tương thích ngược)
@@ -829,7 +739,10 @@ class LeaveOrchestratorService:
         if raw_text:
             if any(data.get(k) for k in ('from_date','to_date','leave_type')):
                 raise ValueError('Chọn một đầu vào: form hoặc free text.')
-            facts=RequestFacts.model_validate(self.agent.parse_natural_language(raw_text,current_date=self.clock().date()).model_dump())
+            if self.agent and hasattr(self.agent, 'parse_natural_language'):
+                facts=RequestFacts.model_validate(self.agent.parse_natural_language(raw_text,current_date=self.clock().date()).model_dump())
+            else:
+                raise ValueError('Hệ thống chỉ chấp nhận dữ liệu form có cấu trúc. LLM xử lý văn bản tự do đã được tắt hoàn toàn để tránh hallucination.')
             facts.proof_id=None; facts.attachment_type='none'
         else: facts=RequestFacts.model_validate(data)
 
@@ -946,8 +859,17 @@ class LeaveOrchestratorService:
         if action_type:
             action={'APPROVE':'APPROVE_OVERRIDE','REQUEST_INFO':'REQUEST_MORE_INFO'}.get(action_type,action_type)
             feedback=HumanFeedbackResolution(action=action,updated_fields=updated_fields or {},feedback_notes=feedback_text)
-        else:
+        elif self.agent and hasattr(self.agent, 'process_human_feedback'):
             feedback=self.agent.process_human_feedback(feedback_text)
+        else:
+            fb_u = (feedback_text or '').upper()
+            if any(k in fb_u for k in ('TỪ CHỐI', 'REJECT', 'BÁC BỎ', 'KHÔNG ĐỒNG Ý')):
+                act = 'REJECT'
+            elif any(k in fb_u for k in ('BỔ SUNG', 'INFO', 'THÊM THÔNG TIN', 'SỬA')):
+                act = 'REQUEST_MORE_INFO'
+            else:
+                act = 'APPROVE_OVERRIDE'
+            feedback=HumanFeedbackResolution(action=act,updated_fields=updated_fields or {},feedback_notes=feedback_text)
         with st.transaction() as conn:
             req=st.read_request(conn,request_id)
             if (req['revision'],req['updated_at'])!=token: raise st.Conflict('Đơn đã thay đổi; vui lòng tải lại.')

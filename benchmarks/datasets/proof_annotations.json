@@ -1,0 +1,53 @@
+[
+  {
+    "id": "doc-000",
+    "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+    "title": "MEDICAL LEAVE CERTIFICATE",
+    "patient_name": "Benchmark Person 000",
+    "issuer": "Synthetic Evaluation Clinic",
+    "issue_date": "2026-09-13",
+    "recommended_from_date": "2026-09-14",
+    "recommended_to_date": "2026-09-15",
+    "signature_present": true,
+    "digital_signature_present": false,
+    "has_red_stamp": true,
+    "document_readability": "READABLE",
+    "diagnosis": "Synthetic supporting reason",
+    "source": "deterministic printed synthetic fixture, no real person or medical record",
+    "readability_after_corruption": null
+  },
+  {
+    "id": "doc-001",
+    "proof_type": "HOSPITAL_DISCHARGE",
+    "title": "HOSPITAL DISCHARGE",
+    "patient_name": "Benchmark Person 001",
+    "issuer": "Synthetic Evaluation Clinic",
+    "issue_date": "2026-09-13",
+    "recommended_from_date": "2026-09-14",
+    "recommended_to_date": "2026-09-15",
+    "signature_present": true,
+    "digital_signature_present": false,
+    "has_red_stamp": true,
+    "document_readability": "READABLE",
+    "diagnosis": "Synthetic supporting reason",
+    "source": "deterministic printed synthetic fixture, no real person or medical record",
+    "readability_after_corruption": null
+  },
+  {
+    "id": "doc-002",
+    "proof_type": "MARRIAGE_CERTIFICATE",
+    "title": "MARRIAGE CERTIFICATE",
+    "patient_name": "Benchmark Person 002",
+    "issuer": "Synthetic Evaluation Clinic",
+    "issue_date": "2026-09-13",
+    "recommended_from_date": "2026-09-14",
+    "recommended_to_date": "2026-09-15",
+    "signature_present": true,
+    "digital_signature_present": false,
+    "has_red_stamp": true,
+    "document_readability": "READABLE",
+    "diagnosis": "Synthetic supporting reason",
+    "source": "deterministic printed synthetic fixture, no real person or medical record",
+    "readability_after_corruption": null
+  }
+]

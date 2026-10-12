@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "cases": 140,
+  "distinct_templates": 43,
+  "limitation": "140 cases are variations of a smaller authored template set, not 140 independent policy branches.",
+  "ground_truth_source": [
+    "Leave_Application/policy_rules.md",
+    "Leave_Application/raw_policy.json"
+  ],
+  "conflicts": "Conflicting policy labels are excluded from headline accuracy and retained as diagnostic observations."
+}

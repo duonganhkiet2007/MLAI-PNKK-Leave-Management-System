@@ -65,3 +65,6 @@ backend/uploads/*
 .agents/
 .codex/
 .local/
+.nfs*
+**/.nfs*
+

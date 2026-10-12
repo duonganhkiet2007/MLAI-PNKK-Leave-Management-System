@@ -1,0 +1,1962 @@
+{
+  "valid-001": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "One working day, sufficient balance/notice; no proof needed",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-002": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Two working days within automatic annual limit",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-003": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "One working day, sufficient balance/notice; no proof needed",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-004": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Two working days within automatic annual limit",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-005": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "One working day, sufficient balance/notice; no proof needed",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-006": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Two working days within automatic annual limit",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-007": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "One working day, sufficient balance/notice; no proof needed",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-008": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Two working days within automatic annual limit",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-009": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "One working day, sufficient balance/notice; no proof needed",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-010": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Two working days within automatic annual limit",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-011": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "One working day, sufficient balance/notice; no proof needed",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-012": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Two working days within automatic annual limit",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-013": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "One working day, sufficient balance/notice; no proof needed",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-014": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Two working days within automatic annual limit",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-015": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "One working day, sufficient balance/notice; no proof needed",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-016": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Two working days within automatic annual limit",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-017": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "One working day, sufficient balance/notice; no proof needed",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-018": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Two working days within automatic annual limit",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-019": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "One working day, sufficient balance/notice; no proof needed",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "valid-020": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Two working days within automatic annual limit",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "balance-001": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "rationale": "Requested annual days exceed balance",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "balance-002": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "rationale": "Two days exceed balance one",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "balance-003": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "rationale": "Requested annual days exceed balance",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "balance-004": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "rationale": "Two days exceed balance one",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "balance-005": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "rationale": "Requested annual days exceed balance",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "balance-006": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "rationale": "Two days exceed balance one",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "balance-007": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "rationale": "Requested annual days exceed balance",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "balance-008": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "rationale": "Two days exceed balance one",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "balance-009": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "rationale": "Requested annual days exceed balance",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "balance-010": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "rationale": "Two days exceed balance one",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "notice-001": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1; policy_rules.md §3.4",
+    "rationale": "Same-day annual notice is below one working day",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "notice-002": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1",
+    "rationale": "Four days require three working days notice",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "notice-003": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1; policy_rules.md §3.4",
+    "rationale": "Same-day annual notice is below one working day",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "notice-004": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1",
+    "rationale": "Four days require three working days notice",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "notice-005": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1; policy_rules.md §3.4",
+    "rationale": "Same-day annual notice is below one working day",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "notice-006": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1",
+    "rationale": "Four days require three working days notice",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "notice-007": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1; policy_rules.md §3.4",
+    "rationale": "Same-day annual notice is below one working day",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "notice-008": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1",
+    "rationale": "Four days require three working days notice",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "notice-009": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1; policy_rules.md §3.4",
+    "rationale": "Same-day annual notice is below one working day",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "notice-010": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.1",
+    "rationale": "Four days require three working days notice",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "quota-001": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Adding employee exceeds 30% quota",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "quota-002": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Date-specific capacity breach",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "quota-003": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Adding employee exceeds 30% quota",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "quota-004": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Date-specific capacity breach",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "quota-005": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Adding employee exceeds 30% quota",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "quota-006": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Date-specific capacity breach",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "quota-007": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Adding employee exceeds 30% quota",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "quota-008": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Date-specific capacity breach",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "quota-009": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Adding employee exceeds 30% quota",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "quota-010": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Date-specific capacity breach",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-001": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "rationale": "Three annual days require manager; explicit no-work exception",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-002": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DEPARTMENT_HEAD"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.3; policy_rules.md §3.1/3.4",
+    "rationale": "Six annual days require higher authority",
+    "annotation_status": "policy_conflict",
+    "policy_conflict": "§3.1 says CEO above five; raw policy says department head",
+    "severity": "major"
+  },
+  "exception-003": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Out-of-automation maternity scope routed HR",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-004": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Work accident routed HR",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-005": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 18.1",
+    "rationale": "Unpaid personal leave needs explicit human approval",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-006": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "rationale": "Three annual days require manager; explicit no-work exception",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-007": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DEPARTMENT_HEAD"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.3; policy_rules.md §3.1/3.4",
+    "rationale": "Six annual days require higher authority",
+    "annotation_status": "policy_conflict",
+    "policy_conflict": "§3.1 says CEO above five; raw policy says department head",
+    "severity": "major"
+  },
+  "exception-008": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Out-of-automation maternity scope routed HR",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-009": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Work accident routed HR",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-010": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 18.1",
+    "rationale": "Unpaid personal leave needs explicit human approval",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-011": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1, §3.4",
+    "rationale": "Three annual days require manager; explicit no-work exception",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-012": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DEPARTMENT_HEAD"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 10.3; policy_rules.md §3.1/3.4",
+    "rationale": "Six annual days require higher authority",
+    "annotation_status": "policy_conflict",
+    "policy_conflict": "§3.1 says CEO above five; raw policy says department head",
+    "severity": "major"
+  },
+  "exception-013": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Out-of-automation maternity scope routed HR",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-014": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Work accident routed HR",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "exception-015": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 18.1",
+    "rationale": "Unpaid personal leave needs explicit human approval",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "proof_missing_unreadable-001": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.2, §3.4",
+    "rationale": "Missing required evidence",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-002": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §5",
+    "rationale": "Unreadable evidence needs human review",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-003": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Unverified new medical proof should require HR",
+    "annotation_status": "policy_conflict",
+    "policy_conflict": "Code permits complete unverified short medical proof; §3.4 requires verification",
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-004": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.2, §3.4",
+    "rationale": "Missing required evidence",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-005": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §5",
+    "rationale": "Unreadable evidence needs human review",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-006": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Unverified new medical proof should require HR",
+    "annotation_status": "policy_conflict",
+    "policy_conflict": "Code permits complete unverified short medical proof; §3.4 requires verification",
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-007": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.2, §3.4",
+    "rationale": "Missing required evidence",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-008": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §5",
+    "rationale": "Unreadable evidence needs human review",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-009": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Unverified new medical proof should require HR",
+    "annotation_status": "policy_conflict",
+    "policy_conflict": "Code permits complete unverified short medical proof; §3.4 requires verification",
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-010": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.2, §3.4",
+    "rationale": "Missing required evidence",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-011": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §5",
+    "rationale": "Unreadable evidence needs human review",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-012": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Unverified new medical proof should require HR",
+    "annotation_status": "policy_conflict",
+    "policy_conflict": "Code permits complete unverified short medical proof; §3.4 requires verification",
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-013": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.2, §3.4",
+    "rationale": "Missing required evidence",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-014": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §5",
+    "rationale": "Unreadable evidence needs human review",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_missing_unreadable-015": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Unverified new medical proof should require HR",
+    "annotation_status": "policy_conflict",
+    "policy_conflict": "Code permits complete unverified short medical proof; §3.4 requires verification",
+    "severity": "critical"
+  },
+  "proof_mismatch-001": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "rationale": "Subject identity must match",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-002": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "rationale": "Requested dates outside supporting document",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-003": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.2",
+    "rationale": "Wrong supporting document type",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-004": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "rationale": "Subject identity must match",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-005": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "rationale": "Requested dates outside supporting document",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-006": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.2",
+    "rationale": "Wrong supporting document type",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-007": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "rationale": "Subject identity must match",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-008": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "rationale": "Requested dates outside supporting document",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-009": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.2",
+    "rationale": "Wrong supporting document type",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-010": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "rationale": "Subject identity must match",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-011": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "rationale": "Requested dates outside supporting document",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-012": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.2",
+    "rationale": "Wrong supporting document type",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-013": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "rationale": "Subject identity must match",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-014": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1, §2.2",
+    "rationale": "Requested dates outside supporting document",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "proof_mismatch-015": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.2",
+    "rationale": "Wrong supporting document type",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "critical"
+  },
+  "duplicate_conflict-001": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Duplicate approved leave must not deduct twice",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "duplicate_conflict-002": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Partially overlapping dates require correction",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "duplicate_conflict-003": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Duplicate approved leave must not deduct twice",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "duplicate_conflict-004": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Partially overlapping dates require correction",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "duplicate_conflict-005": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Duplicate approved leave must not deduct twice",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "duplicate_conflict-006": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Partially overlapping dates require correction",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "duplicate_conflict-007": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Duplicate approved leave must not deduct twice",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "duplicate_conflict-008": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Partially overlapping dates require correction",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "duplicate_conflict-009": {
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "REJECTED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Duplicate approved leave must not deduct twice",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "duplicate_conflict-010": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Partially overlapping dates require correction",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-001": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "rationale": "Exactly enough balance",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-002": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Exactly 30% quota",
+    "annotation_status": "policy_conflict",
+    "policy_conflict": "§3.4 uses <30%; code accepts ≤30%; threshold needs policy owner",
+    "severity": "major"
+  },
+  "boundary-003": {
+    "expected": {
+      "decision": "NO_LEAVE_REQUIRED",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1; calendars/holidays_2026.json",
+    "rationale": "Weekend has no working dates",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-004": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Missing start date",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-005": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "End precedes start",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-006": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "rationale": "Three days missing handover and exception",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-007": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 8",
+    "rationale": "Probation annual restrictions",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-008": {
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER"
+    },
+    "expected_state": "PENDING_ESCALATION",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.1, §3.4",
+    "rationale": "Two medical days require manager",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-009": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "rationale": "Exactly enough balance",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-010": {
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Exactly 30% quota",
+    "annotation_status": "policy_conflict",
+    "policy_conflict": "§3.4 uses <30%; code accepts ≤30%; threshold needs policy owner",
+    "severity": "major"
+  },
+  "boundary-011": {
+    "expected": {
+      "decision": "NO_LEAVE_REQUIRED",
+      "target_role": null
+    },
+    "expected_state": "COMPLETED",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §1; calendars/holidays_2026.json",
+    "rationale": "Weekend has no working dates",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-012": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "Missing start date",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-013": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §3.4",
+    "rationale": "End precedes start",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-014": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/policy_rules.md §2.1",
+    "rationale": "Three days missing handover and exception",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "boundary-015": {
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE"
+    },
+    "expected_state": "WAITING_EMPLOYEE",
+    "expected_audit_events": [
+      "EVALUATED"
+    ],
+    "policy_reference": "Leave_Application/raw_policy.json Điều 8",
+    "rationale": "Probation annual restrictions",
+    "annotation_status": "independently_authored",
+    "policy_conflict": null,
+    "severity": "major"
+  },
+  "language-001": {
+    "expected": {
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "leave_type": "ANNUAL"
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-002": {
+    "expected": {
+      "from_date": "2026-09-02",
+      "to_date": "2026-09-02",
+      "leave_type": "ANNUAL"
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-003": {
+    "expected": {
+      "from_date": "2026-09-14",
+      "leave_type": "SICK_MEDICAL"
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-004": {
+    "expected": {
+      "date_ambiguous": true
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-005": {
+    "expected": {
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "leave_type": "UNPAID_OTHER"
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-006": {
+    "expected": {
+      "handover_person_name": "Benchmark Person 001",
+      "leave_type": "ANNUAL"
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-007": {
+    "expected": {
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "leave_type": "ANNUAL"
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-008": {
+    "expected": {
+      "from_date": "2026-09-02",
+      "to_date": "2026-09-02",
+      "leave_type": "ANNUAL"
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-009": {
+    "expected": {
+      "from_date": "2026-09-14",
+      "leave_type": "SICK_MEDICAL"
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-010": {
+    "expected": {
+      "date_ambiguous": true
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-011": {
+    "expected": {
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "leave_type": "UNPAID_OTHER"
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-012": {
+    "expected": {
+      "handover_person_name": "Benchmark Person 001",
+      "leave_type": "ANNUAL"
+    },
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-013": {
+    "expected": "APPROVE_OVERRIDE",
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-014": {
+    "expected": "REJECT",
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-015": {
+    "expected": "REQUEST_MORE_INFO",
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-016": {
+    "expected": "MODIFY_CONDITIONAL",
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-017": {
+    "expected": "AMBIGUOUS",
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "critical"
+  },
+  "language-018": {
+    "expected": "AMBIGUOUS",
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "critical"
+  },
+  "language-019": {
+    "expected": "REJECT",
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "major"
+  },
+  "language-020": {
+    "expected": "AMBIGUOUS",
+    "policy_reference": "User-authored literal text / policy_rules.md §3.4 human authority",
+    "annotation_status": "independently_authored",
+    "severity": "critical"
+  }
+}

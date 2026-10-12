@@ -1,0 +1,2983 @@
+[
+  {
+    "id": "valid-001",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "valid-002",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "valid-003",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "valid-004",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "valid-005",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "valid-006",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "valid-007",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "valid-008",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "valid-009",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "valid-010",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "valid-011",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "valid-012",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "valid-013",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "valid-014",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "valid-015",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "valid-016",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "valid-017",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "valid-018",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "valid-019",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "valid-020",
+    "category": "valid",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "balance-001",
+    "category": "balance",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 0,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "balance-002",
+    "category": "balance",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 1,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "balance-003",
+    "category": "balance",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 0,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "balance-004",
+    "category": "balance",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 1,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "balance-005",
+    "category": "balance",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 0,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "balance-006",
+    "category": "balance",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 1,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "balance-007",
+    "category": "balance",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 0,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "balance-008",
+    "category": "balance",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 1,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "balance-009",
+    "category": "balance",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 0,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "balance-010",
+    "category": "balance",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 1,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "notice-001",
+    "category": "notice",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-14T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "notice-002",
+    "category": "notice",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-11T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-17",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "notice-003",
+    "category": "notice",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-14T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "notice-004",
+    "category": "notice",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-11T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-17",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "notice-005",
+    "category": "notice",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-14T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "notice-006",
+    "category": "notice",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-11T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-17",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "notice-007",
+    "category": "notice",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-14T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "notice-008",
+    "category": "notice",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-11T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-17",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "notice-009",
+    "category": "notice",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-14T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "notice-010",
+    "category": "notice",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-11T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-17",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "quota-001",
+    "category": "quota",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absent_count": 3
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "quota-002",
+    "category": "quota",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absences_by_date": {
+        "2026-09-14": 3
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "quota-003",
+    "category": "quota",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absent_count": 3
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "quota-004",
+    "category": "quota",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absences_by_date": {
+        "2026-09-14": 3
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "quota-005",
+    "category": "quota",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absent_count": 3
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "quota-006",
+    "category": "quota",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absences_by_date": {
+        "2026-09-14": 3
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "quota-007",
+    "category": "quota",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absent_count": 3
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "quota-008",
+    "category": "quota",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absences_by_date": {
+        "2026-09-14": 3
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "quota-009",
+    "category": "quota",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absent_count": 3
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "quota-010",
+    "category": "quota",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absences_by_date": {
+        "2026-09-14": 3
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "exception-001",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "exception-002",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-21",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "exception-003",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "MATERNITY",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "exception-004",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "WORK_ACCIDENT",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 3,
+    "synthetic": true
+  },
+  {
+    "id": "exception-005",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "UNPAID_OTHER",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 4,
+    "synthetic": true
+  },
+  {
+    "id": "exception-006",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "exception-007",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-21",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "exception-008",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "MATERNITY",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "exception-009",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "WORK_ACCIDENT",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 3,
+    "synthetic": true
+  },
+  {
+    "id": "exception-010",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "UNPAID_OTHER",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 4,
+    "synthetic": true
+  },
+  {
+    "id": "exception-011",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "exception-012",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-21",
+      "reason": "Synthetic personal leave",
+      "no_handover_needed": true
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "exception-013",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "MATERNITY",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "exception-014",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "WORK_ACCIDENT",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 3,
+    "synthetic": true
+  },
+  {
+    "id": "exception-015",
+    "category": "exception",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "UNPAID_OTHER",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 4,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-001",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-002",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "UNREADABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-003",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "UNVERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-004",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-005",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "UNREADABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-006",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "UNVERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-007",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-008",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "UNREADABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-009",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "UNVERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-010",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-011",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "UNREADABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-012",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "UNVERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-013",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-014",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "UNREADABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "proof_missing_unreadable-015",
+    "category": "proof_missing_unreadable",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "UNVERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-001",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Entirely Different Identity",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-002",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-15",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-003",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-004",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Entirely Different Identity",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-005",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-15",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-006",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-007",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Entirely Different Identity",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-008",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-15",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-009",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-010",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Entirely Different Identity",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-011",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-15",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-012",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-013",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Entirely Different Identity",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-014",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-15",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "proof_mismatch-015",
+    "category": "proof_mismatch",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "duplicate_conflict-001",
+    "category": "duplicate_conflict",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "approved_working_dates": [
+        "2026-09-14"
+      ]
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "duplicate_conflict-002",
+    "category": "duplicate_conflict",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave",
+      "approved_working_dates": [
+        "2026-09-14"
+      ]
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "duplicate_conflict-003",
+    "category": "duplicate_conflict",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "approved_working_dates": [
+        "2026-09-14"
+      ]
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "duplicate_conflict-004",
+    "category": "duplicate_conflict",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave",
+      "approved_working_dates": [
+        "2026-09-14"
+      ]
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "duplicate_conflict-005",
+    "category": "duplicate_conflict",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "approved_working_dates": [
+        "2026-09-14"
+      ]
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "duplicate_conflict-006",
+    "category": "duplicate_conflict",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave",
+      "approved_working_dates": [
+        "2026-09-14"
+      ]
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "duplicate_conflict-007",
+    "category": "duplicate_conflict",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "approved_working_dates": [
+        "2026-09-14"
+      ]
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "duplicate_conflict-008",
+    "category": "duplicate_conflict",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave",
+      "approved_working_dates": [
+        "2026-09-14"
+      ]
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "duplicate_conflict-009",
+    "category": "duplicate_conflict",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "approved_working_dates": [
+        "2026-09-14"
+      ]
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "duplicate_conflict-010",
+    "category": "duplicate_conflict",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave",
+      "approved_working_dates": [
+        "2026-09-14"
+      ]
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-001",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 1,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-002",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absent_count": 2
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-003",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-19",
+      "to_date": "2026-09-20",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-004",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": null,
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 3,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-005",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-13",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 4,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-006",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 5,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-007",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "PROBATION",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 6,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-008",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Synthetic personal leave",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Synthetic Evaluation Clinic",
+        "patient_name": "Benchmark Person 000",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "digital_signature_present": false,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED",
+        "verified_by": "BENCH-HR"
+      }
+    },
+    "variant": 7,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-009",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 1,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 0,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-010",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 10,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave",
+      "team_absent_count": 2
+    },
+    "variant": 1,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-011",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-19",
+      "to_date": "2026-09-20",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 2,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-012",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": null,
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 3,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-013",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-13",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 4,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-014",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "REGULAR",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 5,
+    "synthetic": true
+  },
+  {
+    "id": "boundary-015",
+    "category": "boundary",
+    "kind": "policy",
+    "request": {
+      "employee_id": "BENCH-000",
+      "employee_name": "Benchmark Person 000",
+      "department": "BENCH-TEAM",
+      "remaining_leave_days": 100,
+      "employment_status": "PROBATION",
+      "total_team_members": 100,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Synthetic personal leave"
+    },
+    "variant": 6,
+    "synthetic": true
+  },
+  {
+    "id": "language-001",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Tôi xin nghỉ phép năm ngày 14/09/2026.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-002",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Cho em nghỉ phép năm ngày mai nhé.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-003",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Em xin nghỉ ốm ngày 14/09/2026.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-004",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Em muốn nghỉ một hôm, chưa biết ngày nào.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-005",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-006",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Benchmark Person 001.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-007",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Tôi xin nghỉ phép năm ngày 14/09/2026.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-008",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Cho em nghỉ phép năm ngày mai nhé.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-009",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Em xin nghỉ ốm ngày 14/09/2026.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-010",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Em muốn nghỉ một hôm, chưa biết ngày nào.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-011",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-012",
+    "category": "language",
+    "kind": "free_text",
+    "text": "Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Benchmark Person 001.",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-013",
+    "category": "language",
+    "kind": "reviewer",
+    "text": "Đồng ý duyệt",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-014",
+    "category": "language",
+    "kind": "reviewer",
+    "text": "Từ chối",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-015",
+    "category": "language",
+    "kind": "reviewer",
+    "text": "Cần bổ sung chứng từ",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-016",
+    "category": "language",
+    "kind": "reviewer",
+    "text": "Sửa ngày bắt đầu sang 15/09/2026",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-017",
+    "category": "language",
+    "kind": "reviewer",
+    "text": "Để tôi xem lại sau",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-018",
+    "category": "language",
+    "kind": "reviewer",
+    "text": "Chưa quyết định",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-019",
+    "category": "language",
+    "kind": "reviewer",
+    "text": "Không đồng ý",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  {
+    "id": "language-020",
+    "category": "language",
+    "kind": "reviewer",
+    "text": "Tôi cần kiểm tra thêm",
+    "synthetic": true,
+    "reference_time": "2026-09-01T08:00:00+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  }
+]

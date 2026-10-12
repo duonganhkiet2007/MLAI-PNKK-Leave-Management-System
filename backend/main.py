@@ -44,6 +44,7 @@ from ai.ai_stack import (
     VLM_TARGET_MODEL,
     VLM_TIMEOUT_SEC,
     has_model,
+    ollama_generate,
     ollama_ps,
     ollama_tags,
 )

@@ -541,7 +541,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         _advance_str = f"Đã gửi trước {_advance_days} ngày" if _advance_days is not None else ''
         if 'notice' not in ec:
             n_status = "PASS"; n_pass = True; n_severity = "SUCCESS"
-            n_note = ("Đủ thời hạn báo trước theo quy định của bộ phận" + (f" ({_advance_str})" if _advance_str else "") + ".")
+            n_note = "Đủ thời hạn báo trước theo quy định của bộ phận" + (f" • {_advance_str}" if _advance_str else "") + "."
         else:
             if is_op_warn:
                 n_status = "WARN"; n_pass = True; n_severity = "WARNING"
@@ -549,13 +549,12 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 n_status = "FAIL"; n_pass = False; n_severity = "WARNING"
             ec_label_vn = ''
             if 'notice' in ec:
-                if 'operational' in ec: ec_label_vn = 'Thời hạn báo trước dưới ngưỡng hoạt động (dưới 3 ngày đối với nghỉ 3-5d)'
-                elif 'violation' in ec: ec_label_vn = 'Thời hạn báo trước không đạt chuẩn theo chính sách (vd báo 1d cho đơn 5d)'
-            elif 'out_of_policy' in unc: ec_label_vn = 'Vượt ngoài phạm vi quy định (Manager có thể bỏ qua nếu phù hợp)'
-            n_note = "{vn}{adv}. {final}".format(
+                if 'operational' in ec: ec_label_vn = 'Thời hạn báo trước dưới ngưỡng hoạt động'
+                elif 'violation' in ec: ec_label_vn = 'Thời hạn báo trước không đạt chuẩn theo chính sách'
+            elif 'out_of_policy' in unc: ec_label_vn = 'Vượt ngoài phạm vi quy định'
+            n_note = "{vn}{adv} • Quản lý có thể ghi chú và xem xét ngoại lệ nếu cần.".format(
                 vn = ec_label_vn or _s(req.get('human_readable_explanation')) or 'Vi phạm thời hạn báo trước.',
-                adv = f" ({_advance_str})" if _advance_str else '',
-                final = 'Quản lý có thể ghi chú và xem xét ngoại lệ nếu cần.'
+                adv = f" • {_advance_str}" if _advance_str else '',
             )
         checklist.append(_node(10,"NOTICE",n_status, n_pass, n_note,
                                title_vi="Kiểm tra thời hạn báo trước & cảnh báo hoạt động",
@@ -579,10 +578,10 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         _ratio_str = f"{_after_on_leave}/{_team_total} người nghỉ"
         if quota_breach:
             q_status='WARN'; q_pass=True; q_severity='WARNING'
-            q_note = f'Phát hiện team đang có nhiều nhân viên nghỉ đồng thời (sau khi duyệt: {_ratio_str}, tỷ lệ {_ratio_after:.1%}). Trưởng bộ phận cần đối chiếu & chấp nhận hoặc điều chỉnh lịch.'
+            q_note = f'Phát hiện team đang có nhiều nhân viên nghỉ đồng thời • Sau khi duyệt: {_ratio_str} • Tỷ lệ {_ratio_after:.1%} — vượt ngưỡng 30% • Trưởng bộ phận cần đối chiếu và xác nhận.'
         else:
             q_status='PASS'; q_pass=True; q_severity='SUCCESS'
-            q_note = f'Team KHÔNG vi phạm giới hạn nghỉ đồng thời (sau khi duyệt đơn này: {_ratio_str}, tỷ lệ {_ratio_after:.1%} — ngưỡng an toàn < 30%).'
+            q_note = f'Team KHÔNG vi phạm giới hạn nghỉ đồng thời • Sau khi duyệt đơn này: {_ratio_str} • Tỷ lệ {_ratio_after:.1%} — ngưỡng an toàn < 30%.'
         checklist.append(_node(11,"TEAM_QUOTA",q_status, q_pass, q_note,
                                title_vi="Kiểm tra tỷ lệ nhân sự nghỉ đồng thời trong team (quy tắc 30%)",
                                severity=q_severity))

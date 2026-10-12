@@ -6136,6 +6136,8 @@ async function openRequestDetailModal(requestId) {
       if (String(req.decision || '').toUpperCase() === 'AUTO_APPROVE' && ['PROOF_VERIFICATION', 'AUTHORITY'].includes(node.stage)) return false;
       if (node.stage === 'AUTHORITY' && ['NONE', 'EMPLOYEE'].includes(String(req.target_role || 'NONE').toUpperCase())) return false;
       if (node.stage === 'AUTHORITY') return false;
+      // NOTICE & TEAM_QUOTA: Chỉ hiển thị trên giao diện Quản lý (Manager)
+      if (!_isManagerAudience && (node.stage === 'NOTICE' || node.stage === 'TEAM_QUOTA')) return false;
       return true;
     }).reduce(function(acc, node) {
       if (node.stage === 'VLM_INTEGRITY' && _treeNodes.some(function(other) { return other.stage === 'PROOF'; })) {
@@ -6173,7 +6175,7 @@ async function openRequestDetailModal(requestId) {
         PROOF_VERIFICATION: 'Xác minh chứng từ',
         AUTHORITY: 'Thẩm quyền duyệt',
         NOTICE: 'Thời hạn báo trước',
-        TEAM_QUOTA: 'Tỷ lệ nghỉ trong team',
+        TEAM_QUOTA: 'Tỷ lệ nghỉ trong phòng ban',
       };
       const color = isReview ? '#b91c1c' : '#065f46';
       const title = shortTitles[node.stage] || node.title_vi || node.stage || 'Kiểm tra hồ sơ';
@@ -6184,7 +6186,7 @@ async function openRequestDetailModal(requestId) {
         .replaceAll('Xác minh chứng từ', 'Đủ thông tin chứng từ')
         .replaceAll('Thẩm quyền duyệt', '')
         .replaceAll('Điều kiện duyệt', '')
-        .replace(/\s*\([^)]*\)/g, '')
+        .replace(/\s*\([A-Z0-9_]{3,}\)/g, '')
         .replace(/\s*•\s*/g, ' • ')
         .replace(/\s*·\s*/g, ' • ')
         .replace(/\s*;\s*/g, ' • ')

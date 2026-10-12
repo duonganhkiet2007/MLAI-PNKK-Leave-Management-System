@@ -15,7 +15,7 @@ from domain import (RequestFacts, HumanFeedbackResolution, EditableFields,
 from rule_engine import LeaveRuleEngine
 from taxonomy import ErrorCode, DecisionType
 from calendar_service import CalendarService
-from vlm_inspector import inspect_document_with_vlm, VLMInspectionOutput
+from vlm_inspector import inspect_document_with_vlm, VLMInspectionOutput, _resolve_persona_config, PERSONA_CONFIGS
 from ai.ai_stack import VLM_TARGET_MODEL
 import storage as st
 import json
@@ -59,6 +59,8 @@ class LeaveOrchestratorService:
                     att = 'image_attachment'
                 else:
                     att = proof_row.get('proof_type') or 'generic_attachment'
+        if str(getattr(facts, 'leave_type', '')).upper() == 'ANNUAL':
+            skip_vlm = True
         vlm_out: VLMInspectionOutput | None = None
         needs_vlm = not skip_vlm and (bool(att and att.casefold() != 'none') or bool(proof_row))
         if needs_vlm:
@@ -108,28 +110,101 @@ class LeaveOrchestratorService:
             vlm_out: VLMInspectionOutput | None = precomputed_vlm
             if vlm_out is None:
                 precomputed_mock = None
+                cached_vlm_json = None
                 if proof_row and proof_row.get('vlm_analysis_json'):
                     try:
-                        precomputed_mock = json.loads(proof_row['vlm_analysis_json'])
+                        cached_vlm_json = json.loads(proof_row['vlm_analysis_json'])
                     except Exception:
-                        precomputed_mock = None
+                        cached_vlm_json = None
+
+                # ---- Optimisation: nếu proof_documents đã có kết quả VLM thật (READY),
+                # tái sử dụng trực tiếp mà KHÔNG pass qua inspect_document_with_vlm như mock_data.
+                # Reason: real VLM JSON dùng cấu trúc document_summary.* (nested), còn mock profile
+                # dùng flat keys (doc_patient_name, doc_diagnosis, ...). Nếu pass nhầm sang mock_data
+                # thì vlm_inspector sẽ không map được fields → document_summary trống rỗng.
+                _proof_ready = (
+                    proof_row
+                    and proof_row.get('inspection_status') == 'READY'
+                    and cached_vlm_json
+                    and cached_vlm_json.get('inspection_mode', '').startswith('OLLAMA_REAL')
+                )
+                if _proof_ready:
+                    from vlm_inspector import VLMInspectionOutput as _VLMOut, ProofExtraction as _PE, ProofType as _PT, _normalize_proof_type
+                    _cj = cached_vlm_json
+                    _ds = _cj.get('document_summary') or {}
+                    _fl = _cj.get('flags') or {}
+                    _ca = _cj.get('correlation_analysis') or {}
+                    _dr = _ds.get('doctor_recommended_range') or {}
+                    _pt_raw = proof_row.get('proof_type') or _cj.get('proof_type') or 'NONE'
+                    _pt = _normalize_proof_type(_pt_raw)
+                    def _safe_date(v):
+                        if not v: return None
+                        from datetime import date as _d
+                        try: return _d.fromisoformat(str(v))
+                        except Exception: return None
+                    try:
+                        _pe = _PE(
+                            proof_type=_pt,
+                            patient_name=_ds.get('patient_name'),
+                            issuer=_ds.get('issuer'),
+                            issue_date=_safe_date(_ds.get('issue_date')),
+                            recommended_from_date=_safe_date(_dr.get('from')),
+                            recommended_to_date=_safe_date(_dr.get('to')),
+                            signature_present=_fl.get('signature_present_on_scan') or _fl.get('has_doctor_signature'),
+                            digital_signature_present=_fl.get('digital_signature_present'),
+                            document_readability=_fl.get('document_readability') or 'READABLE',
+                            fields_detected=list(_cj.get('raw_fields_detected') or []),
+                            is_open_ended=_ds.get('is_open_ended'),
+                            requires_followup_proof=_ds.get('requires_followup_proof'),
+                            admission_date=_safe_date(_ds.get('admission_date')),
+                            discharge_date=_safe_date(_ds.get('discharge_date')),
+                            deceased_name=_ds.get('deceased_name'),
+                            subject_name=_ds.get('subject_name'),
+                            wedding_date=_safe_date(_ds.get('wedding_date')),
+                        )
+                    except Exception:
+                        _pe = _PE(proof_type=_PT.NONE)
+                    vlm_out = _VLMOut(
+                        vlm_analysis_json=_cj,
+                        doc_patient_name=_ds.get('patient_name'),
+                        doc_diagnosis=_ds.get('diagnosis'),
+                        has_red_stamp=_fl.get('has_red_stamp'),
+                        has_doctor_signature=_fl.get('has_doctor_signature'),
+                        is_tampered=_fl.get('is_tampered'),
+                        ai_edited=_fl.get('ai_generated_or_edited'),
+                        days_granted_by_doctor=_dr.get('days'),
+                        correlation_score=_ca.get('score'),
+                        correlation_issues=list(_ca.get('issues') or []),
+                        persona_role_used=_cj.get('inspector_persona'),
+                        escalation_reasons_json=list(_cj.get('escalation_flags') or []),
+                        proof_extraction=_pe,
+                        vlm_error=_cj.get('vlm_error'),
+                    )
+                else:
+                    # Chỉ dùng cached JSON như mock khi không phải real VLM result
+                    if cached_vlm_json and cached_vlm_json.get('inspection_mode', '').startswith('OLLAMA_REAL'):
+                        pass  # đã được xử lý ở trên
+                    elif cached_vlm_json:
+                        precomputed_mock = cached_vlm_json
 
                 try:
-                    if proof_row and proof_row.get('inspection_status') == 'FAILED' and not precomputed_mock:
-                        raise RuntimeError(proof_row.get('vlm_error') or 'Proof inspection failed')
-                    vlm_out = inspect_document_with_vlm(
-                        leave_type=str(getattr(facts,'leave_type','')),
-                        employee_name=getattr(ctx,'employee_name',None),
-                        reason=str(getattr(facts,'reason','') or ''),
-                        attachment_path_or_type=attachment_for_vlm,
-                        from_date=f_date, to_date=t_date,
-                        workdays=0,
-                        mock_data=precomputed_mock,
-                        proof_type_hint=proof_type_hint,
-                        document_readability_hint=readability_hint,
-                        doc_flags=doc_flags,
-                        allow_mock_fallback=False,
-                    )
+                    if vlm_out is None:
+                        if proof_row and proof_row.get('inspection_status') == 'FAILED' and not precomputed_mock:
+                            raise RuntimeError(proof_row.get('vlm_error') or 'Proof inspection failed')
+                        vlm_out = inspect_document_with_vlm(
+                            leave_type=str(getattr(facts,'leave_type','')),
+                            employee_name=getattr(ctx,'employee_name',None),
+                            reason=str(getattr(facts,'reason','') or ''),
+                            attachment_path_or_type=attachment_for_vlm,
+                            from_date=f_date, to_date=t_date,
+                            workdays=0,
+                            mock_data=precomputed_mock,
+                            proof_type_hint=proof_type_hint,
+                            document_readability_hint=readability_hint,
+                            doc_flags=doc_flags,
+                            allow_mock_fallback=False,
+                            reason_category=getattr(facts, 'reason_category', None),
+                        )
                 except Exception as _vlm_exc:
                     # Nếu VLM hỏng nghiêm trọng: gắn vlm_error trực tiếp vào record VLM column
                     # để Manager panel thấy lỗi rõ ràng thay vì crash pipeline
@@ -375,6 +450,12 @@ class LeaveOrchestratorService:
         err_vi = ERROR_VI.get(error_code) or (result.human_readable_explanation or error_code or '—')
         role_vi = ROLE_VI.get(target_role, target_role or 'Cấp quản lý')
 
+        # Resolve persona config and schema key
+        reason_cat = getattr(facts, 'reason_category', None)
+        persona_cfg = _resolve_persona_config(ltype, reason_cat)
+        schema_key = persona_cfg.get('schema_key', 'ADMINISTRATIVE')
+        pe = proof_extraction or (getattr(vlm_out, 'proof_extraction', None) if vlm_out else None)
+
         bullet_lines = [
             f"• Đơn xin nghỉ: Nhân viên {emp_n} nộp đơn {ltype_vi} {requested_wd or requested_cd or 1} ngày làm việc (từ {from_d} đến {to_d}) với lý do \"{reason or 'Nghỉ theo kế hoạch cá nhân'}\".",
             f"• Bàn giao & Quỹ phép: Người nhận bàn giao là {handover_name}; số dư quỹ phép đủ điều kiện.",
@@ -382,12 +463,94 @@ class LeaveOrchestratorService:
 
         if vlm_fields_present and proof_relevant:
             doc_parts = []
-            if doc_patient: doc_parts.append(f"Tên trên giấy: {doc_patient}")
-            if diag: doc_parts.append(f"Chẩn đoán: {diag}")
-            if doctor_days: doc_parts.append(f"Bác sĩ cho nghỉ: {doctor_days} ngày")
-            if rs is True: doc_parts.append("Có dấu đỏ")
-            if sig is True: doc_parts.append("Có chữ ký")
-            bullet_lines.append(f"• Chứng từ y tế: {', '.join(doc_parts) if doc_parts else 'Đã đính kèm chứng từ hợp lệ'}.")
+            if schema_key == 'SICK_MEDICAL':
+                if doc_patient: doc_parts.append(f"Bệnh nhân: {doc_patient}")
+                if diag: doc_parts.append(f"Chẩn đoán: {diag}")
+                if doctor_days: doc_parts.append(f"Bác sĩ cho nghỉ: {doctor_days} ngày ({dfd} → {dtd})")
+                elif dfd and dtd: doc_parts.append(f"Thời gian chỉ định: {dfd} → {dtd}")
+                if rs is True: doc_parts.append("Có dấu đỏ cơ sở y tế")
+                if sig is True: doc_parts.append("Có chữ ký bác sĩ")
+                bullet_lines.append(f"• Chứng từ y tế ({persona_cfg['persona']}): {', '.join(doc_parts) if doc_parts else 'Đã đính kèm chứng từ hợp lệ'}.")
+            elif schema_key == 'EMERGENCY':
+                adm_d = getattr(pe, 'admission_date', None) or dfd
+                is_oo = getattr(pe, 'is_open_ended', None)
+                em_diag = getattr(pe, 'emergency_diagnosis', None) or diag
+                if doc_patient: doc_parts.append(f"Bệnh nhân: {doc_patient}")
+                if em_diag: doc_parts.append(f"Lý do cấp cứu: {em_diag}")
+                if adm_d: doc_parts.append(f"Tiếp nhận viện: {adm_d}")
+                if is_oo: doc_parts.append("Đang cấp cứu (chưa ra viện, cần bổ sung giấy ra viện sau)")
+                elif getattr(pe, 'discharge_date', None): doc_parts.append(f"Ra viện: {getattr(pe, 'discharge_date', None)}")
+                if rs is True or getattr(pe, 'has_hospital_stamp', None) is True: doc_parts.append("Có dấu bệnh viện")
+                if sig is True: doc_parts.append("Có chữ ký bác sĩ")
+                bullet_lines.append(f"• Hồ sơ cấp cứu ({persona_cfg['persona']}): {', '.join(doc_parts) if doc_parts else 'Đã đính kèm giấy cấp cứu'}.")
+            elif schema_key == 'WEDDING':
+                sub_n = getattr(pe, 'subject_name', None) or doc_patient
+                part_n = getattr(pe, 'partner_name', None)
+                wed_d = getattr(pe, 'wedding_date', None) or dfd
+                iss = getattr(pe, 'issuer', None)
+                if sub_n and part_n: doc_parts.append(f"Cặp đôi: {sub_n} & {part_n}")
+                elif sub_n: doc_parts.append(f"Người kết hôn: {sub_n}")
+                if wed_d: doc_parts.append(f"Ngày cưới: {wed_d}")
+                if iss: doc_parts.append(f"Cơ quan cấp: {iss}")
+                if rs is True: doc_parts.append("Có dấu đỏ UBND/cơ quan")
+                bullet_lines.append(f"• Chứng từ hôn sự ({persona_cfg['persona']}): {', '.join(doc_parts) if doc_parts else 'Đã đính kèm giấy kết hôn / thiệp cưới'}.")
+            elif schema_key == 'BEREAVEMENT':
+                dec_n = getattr(pe, 'deceased_name', None) or doc_patient
+                rel_lbl = getattr(pe, 'relationship_label', None) or getattr(pe, 'relationship_to_employee', None)
+                dod = getattr(pe, 'date_of_death', None) or dfd
+                iss = getattr(pe, 'issuer', None)
+                if dec_n: doc_parts.append(f"Người quá cố: {dec_n}")
+                if rel_lbl: doc_parts.append(f"Quan hệ: {rel_lbl}")
+                if dod: doc_parts.append(f"Ngày mất: {dod}")
+                if getattr(pe, 'funeral_date', None): doc_parts.append(f"Tang lễ: {getattr(pe, 'funeral_date', None)}")
+                if iss: doc_parts.append(f"Đơn vị cấp: {iss}")
+                if rs is True: doc_parts.append("Có dấu đỏ")
+                bullet_lines.append(f"• Chứng từ tang chế ({persona_cfg['persona']}): {', '.join(doc_parts) if doc_parts else 'Đã đính kèm giấy chứng tử'}.")
+            elif schema_key == 'STATUTORY':
+                sub_n = getattr(pe, 'subject_name', None) or doc_patient
+                rel_emp = getattr(pe, 'relationship_to_employee', None) or getattr(pe, 'relationship_label', None)
+                ev_d = getattr(pe, 'event_date', None) or dfd
+                ev_conf = getattr(pe, 'evidence_confidence', None)
+                if sub_n: doc_parts.append(f"Thân nhân: {sub_n}")
+                if rel_emp: doc_parts.append(f"Mối quan hệ: {rel_emp}")
+                if ev_d: doc_parts.append(f"Ngày sự kiện: {ev_d}")
+                if ev_conf: doc_parts.append(f"Độ tin cậy: {ev_conf}")
+                if rs is True: doc_parts.append("Có dấu đỏ")
+                bullet_lines.append(f"• Chứng từ thân nhân BLLĐ ({persona_cfg['persona']}): {', '.join(doc_parts) if doc_parts else 'Đã đính kèm xác nhận thân nhân'}.")
+            elif schema_key == 'MATERNITY':
+                sub_n = getattr(pe, 'subject_name', None) or doc_patient
+                mat_ph = getattr(pe, 'maternity_phase', None)
+                due_d = getattr(pe, 'expected_due_date', None) or dfd
+                bhxh = getattr(pe, 'bhxh_code', None)
+                if sub_n: doc_parts.append(f"Thai phụ: {sub_n}")
+                if mat_ph: doc_parts.append(f"Giai đoạn: {mat_ph}")
+                if due_d: doc_parts.append(f"Ngày dự sinh/sinh: {due_d}")
+                if bhxh: doc_parts.append(f"Mã BHXH: {bhxh}")
+                if doctor_days: doc_parts.append(f"Chỉ định nghỉ: {doctor_days} ngày ({dfd} → {dtd})")
+                if rs is True: doc_parts.append("Có dấu đỏ")
+                bullet_lines.append(f"• Hồ sơ thai sản ({persona_cfg['persona']}): {', '.join(doc_parts) if doc_parts else 'Đã đính kèm hồ sơ thai sản'}.")
+            elif schema_key == 'WORK_ACCIDENT':
+                sub_n = getattr(pe, 'subject_name', None) or doc_patient
+                inj_d = getattr(pe, 'injury_description', None) or diag
+                wp_rel = getattr(pe, 'is_workplace_related', None)
+                inj_dt = getattr(pe, 'injury_date', None) or dfd
+                if sub_n: doc_parts.append(f"Người bị nạn: {sub_n}")
+                if inj_d: doc_parts.append(f"Thương tật: {inj_d}")
+                if wp_rel is True: doc_parts.append("Liên quan công việc")
+                if inj_dt: doc_parts.append(f"Ngày xảy ra: {inj_dt}")
+                if getattr(pe, 'has_bhxh_stamp', None) is True: doc_parts.append("Có dấu BHXH")
+                if rs is True: doc_parts.append("Có dấu đỏ cơ sở y tế")
+                bullet_lines.append(f"• Hồ sơ tai nạn lao động ({persona_cfg['persona']}): {', '.join(doc_parts) if doc_parts else 'Đã đính kèm hồ sơ tai nạn'}.")
+            else:
+                sub_n = getattr(pe, 'subject_name', None) or doc_patient
+                purp = getattr(pe, 'document_purpose', None)
+                v_fr = getattr(pe, 'valid_from', None) or dfd
+                v_to = getattr(pe, 'valid_to', None) or dtd
+                if sub_n: doc_parts.append(f"Chủ giấy tờ: {sub_n}")
+                if purp: doc_parts.append(f"Mục đích: {purp}")
+                if v_fr and v_to: doc_parts.append(f"Thời hạn: {v_fr} → {v_to}")
+                if rs is True: doc_parts.append("Có dấu đỏ")
+                bullet_lines.append(f"• Giấy tờ hành chính ({persona_cfg['persona']}): {', '.join(doc_parts) if doc_parts else 'Đã đính kèm giấy tờ hành chính'}.")
         else:
             bullet_lines.append("• Tình trạng chứng từ: Không yêu cầu chứng từ đối với loại nghỉ này.")
 
@@ -477,14 +640,45 @@ class LeaveOrchestratorService:
 
         # Pre-calculated deterministic facts
         if vlm_fields_present:
-            name_match = names_approximately_match(emp_n, doc_patient) if (emp_n and doc_patient) else None
-            name_status = (
-                f"Trùng khớp: '{emp_n}'" if name_match is True
-                else f"BẤT THƯỜNG / KHÔNG KHỚP TÊN: Nhân viên nộp là '{emp_n}', nhưng chứng từ đứng tên '{doc_patient}'" if name_match is False
-                else "Chưa đọc được tên trên chứng từ"
-            )
-            diag_status = f"Đơn khai: '{reason}' | Giấy ghi: '{diag}'" if (reason or diag) else "—"
-            date_status = f"Đơn xin: {from_d} đến {to_d} ({requested_wd} ngày làm việc) | Bác sĩ chỉ định: {dfd} đến {dtd} ({doctor_days} ngày)"
+            if schema_key == 'BEREAVEMENT':
+                dec_n = getattr(pe, 'deceased_name', None) or doc_patient
+                rel_lbl = getattr(pe, 'relationship_label', None) or getattr(pe, 'relationship_to_employee', None) or 'Thân nhân'
+                name_status = f"Chứng từ tang chế: Người mất là '{dec_n or '—'}' ({rel_lbl}). Người nộp đơn là nhân viên '{emp_n}'."
+            elif schema_key == 'WEDDING':
+                sub_n = getattr(pe, 'subject_name', None) or doc_patient
+                part_n = getattr(pe, 'partner_name', None)
+                m_sub = names_approximately_match(emp_n, sub_n) if (emp_n and sub_n) else False
+                m_part = names_approximately_match(emp_n, part_n) if (emp_n and part_n) else False
+                if m_sub or m_part:
+                    name_status = f"Trùng khớp: Nhân viên '{emp_n}' là đương sự trên giấy kết hôn/thiệp cưới."
+                else:
+                    name_status = f"Cần đối chiếu tên: Giấy ghi '{sub_n}' & '{part_n}', nhân viên nộp là '{emp_n}'."
+            elif schema_key == 'STATUTORY':
+                sub_n = getattr(pe, 'subject_name', None) or doc_patient
+                rel_emp = getattr(pe, 'relationship_to_employee', None) or getattr(pe, 'relationship_label', None) or 'Thân nhân'
+                name_status = f"Chứng từ thân nhân: Người trên giấy là '{sub_n or '—'}' ({rel_emp}). Nhân viên nộp đơn: '{emp_n}'."
+            else:
+                target_check_name = doc_patient or getattr(pe, 'subject_name', None)
+                name_match = names_approximately_match(emp_n, target_check_name) if (emp_n and target_check_name) else None
+                name_status = (
+                    f"Trùng khớp: '{emp_n}'" if name_match is True
+                    else f"BẤT THƯỜNG / KHÔNG KHỚP TÊN: Nhân viên nộp là '{emp_n}', nhưng chứng từ đứng tên '{target_check_name}'" if name_match is False
+                    else "Chưa đọc được tên trên chứng từ"
+                )
+
+            if schema_key == 'EMERGENCY' and getattr(pe, 'is_open_ended', None):
+                diag_status = f"Lý do cấp cứu: '{getattr(pe, 'emergency_diagnosis', None) or diag or reason}'"
+                date_status = f"Đơn xin: {from_d} đến {to_d} ({requested_wd} ngày) | Cấp cứu từ: {getattr(pe, 'admission_date', None) or dfd} (Chưa xuất viện - Cấp cứu mở)"
+            elif schema_key == 'WEDDING':
+                diag_status = f"Lý do kết hôn: '{reason}'"
+                date_status = f"Đơn xin: {from_d} đến {to_d} ({requested_wd} ngày) | Ngày cưới trên giấy: {getattr(pe, 'wedding_date', None) or 'Theo đơn'}"
+            elif schema_key == 'BEREAVEMENT':
+                diag_status = f"Lý do tang chế: '{reason}'"
+                date_status = f"Đơn xin: {from_d} đến {to_d} ({requested_wd} ngày) | Ngày mất: {getattr(pe, 'date_of_death', None) or 'Ghi trên giấy'}"
+            else:
+                diag_status = f"Đơn khai: '{reason}' | Giấy ghi: '{diag or getattr(pe, 'doc_diagnosis', None) or '—'}'" if (reason or diag) else "—"
+                date_status = f"Đơn xin: {from_d} đến {to_d} ({requested_wd} ngày làm việc) | Chỉ định y tế: {dfd} đến {dtd} ({doctor_days} ngày)"
+
             stamp_sig_status = f"Dấu đỏ: {'Có' if rs is True else 'Thiếu' if rs is False else 'Chưa rõ'}, Chữ ký: {'Có' if sig is True else 'Thiếu' if sig is False else 'Chưa rõ'}"
         else:
             name_status = f"Không có chứng từ đính kèm (loại nghỉ '{ltype_vi}' không bắt buộc chứng từ)"
@@ -559,8 +753,9 @@ class LeaveOrchestratorService:
             staff_next_steps.append('Chờ HR xác minh chứng từ; không cần nộp lại nếu chưa được yêu cầu.')
 
         manager_suspicions = []
-        if doc_patient and emp_n and not names_approximately_match(doc_patient, emp_n):
-            manager_suspicions.append(f'Tên trên chứng từ ({doc_patient}) không khớp nhân viên ({emp_n}).')
+        if schema_key not in ('BEREAVEMENT', 'STATUTORY', 'WEDDING'):
+            if doc_patient and emp_n and not names_approximately_match(doc_patient, emp_n):
+                manager_suspicions.append(f'Tên trên chứng từ ({doc_patient}) không khớp nhân viên ({emp_n}).')
         if error_code == 'FLAG_ABUSE_PATTERN':
             manager_suspicions.append('Có nhiều đơn phép năm rời rạc trong cùng tháng.')
         if error_code in ('TEAM_QUOTA_EXCEEDED', 'NOTICE_PERIOD_VIOLATED', 'NOTICE_PERIOD_VIOLATION'):
@@ -651,6 +846,9 @@ class LeaveOrchestratorService:
             },
             "vlm_summary": {
                 "fields_extracted": bool(vlm_fields_present),
+                "schema_key": schema_key,
+                "persona": persona_cfg.get("persona"),
+                "decision_tree": persona_cfg.get("decision_tree"),
                 "patient_name": doc_patient,
                 "diagnosis": diag,
                 "doctor_recommended_days": doctor_days,
@@ -659,6 +857,35 @@ class LeaveOrchestratorService:
                 "is_tampered": tamper,
                 "ai_edited": ai_ed,
                 "correlation_score": corr_score,
+                "schema_data": {
+                    "is_open_ended": getattr(pe, "is_open_ended", None),
+                    "requires_followup_proof": getattr(pe, "requires_followup_proof", None),
+                    "admission_date": getattr(pe, "admission_date", None).isoformat() if getattr(pe, "admission_date", None) else None,
+                    "discharge_date": getattr(pe, "discharge_date", None).isoformat() if getattr(pe, "discharge_date", None) else None,
+                    "emergency_diagnosis": getattr(pe, "emergency_diagnosis", None),
+                    "subject_name": getattr(pe, "subject_name", None),
+                    "partner_name": getattr(pe, "partner_name", None),
+                    "wedding_date": getattr(pe, "wedding_date", None).isoformat() if getattr(pe, "wedding_date", None) else None,
+                    "deceased_name": getattr(pe, "deceased_name", None),
+                    "relationship_label": getattr(pe, "relationship_label", None),
+                    "relationship_to_employee": getattr(pe, "relationship_to_employee", None),
+                    "date_of_death": getattr(pe, "date_of_death", None).isoformat() if getattr(pe, "date_of_death", None) else None,
+                    "funeral_date": getattr(pe, "funeral_date", None).isoformat() if getattr(pe, "funeral_date", None) else None,
+                    "evidence_confidence": getattr(pe, "evidence_confidence", None),
+                    "needs_manager_review": getattr(pe, "needs_manager_review", None),
+                    "maternity_phase": getattr(pe, "maternity_phase", None),
+                    "expected_due_date": getattr(pe, "expected_due_date", None).isoformat() if getattr(pe, "expected_due_date", None) else None,
+                    "bhxh_code": getattr(pe, "bhxh_code", None),
+                    "injury_description": getattr(pe, "injury_description", None),
+                    "is_workplace_related": getattr(pe, "is_workplace_related", None),
+                    "injury_date": getattr(pe, "injury_date", None).isoformat() if getattr(pe, "injury_date", None) else None,
+                    "has_bhxh_stamp": getattr(pe, "has_bhxh_stamp", None),
+                    "has_hospital_stamp": getattr(pe, "has_hospital_stamp", None),
+                    "document_purpose": getattr(pe, "document_purpose", None),
+                    "valid_from": getattr(pe, "valid_from", None).isoformat() if getattr(pe, "valid_from", None) else None,
+                    "valid_to": getattr(pe, "valid_to", None).isoformat() if getattr(pe, "valid_to", None) else None,
+                    "issuer": getattr(pe, "issuer", None),
+                },
             },
             "staff_summary": {
                 "errors_vn": staff_errors,
@@ -801,6 +1028,8 @@ class LeaveOrchestratorService:
         # If synchronous VLM is required and wasn't pre-inspected via background queue:
         precomputed_vlm = None
         att = (getattr(facts,'attachment_type', None) or '').strip()
+        if str(getattr(facts, 'leave_type', '')).upper() == 'ANNUAL':
+            skip_vlm = True
         needs_vlm = not skip_vlm and (bool(att and att.casefold() != 'none') or bool(proof_row))
         if needs_vlm and not (proof_row and (proof_row.get('vlm_analysis_json') or proof_row.get('inspection_status') == 'FAILED')):
             try:
@@ -817,7 +1046,8 @@ class LeaveOrchestratorService:
                     reason=str(getattr(facts,'reason','') or ''),
                     attachment_path_or_type=attachment_for_vlm,
                     from_date=facts.from_date, to_date=facts.to_date,
-                    allow_mock_fallback=False
+                    allow_mock_fallback=False,
+                    reason_category=getattr(facts, 'reason_category', None),
                 )
             except Exception:
                 pass

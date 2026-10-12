@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/static/vendor/tabler/tabler.min.css">
   
   <!-- Custom Styling & Refinements -->
-  <link rel="stylesheet" href="styles.css?v=20261012_v35">
+  <link rel="stylesheet" href="styles.css?v=20261012_v46">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e40af'/><text x='16' y='22' font-family='sans-serif' font-size='16' font-weight='bold' fill='white' text-anchor='middle'>HR</text></svg>">
 </head>
 <body>
@@ -182,16 +182,7 @@
             <span id="mgr-queue-badge" class="saas-nav-badge saas-nav-badge-warn">0</span>
           </button>
 
-          <button class="saas-nav-item tab-btn" data-tab="tab-mgr-auto-logs" id="btn-tab-mgr-logs">
-            <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            <span class="saas-nav-text">Nhật ký AI tự duyệt</span>
-          </button>
+
 
           <button class="saas-nav-item tab-btn" data-tab="tab-mgr-all-requests" id="btn-tab-mgr-all">
             <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -430,12 +421,31 @@
               <div class="saas-panel-body p-4">
                 <!-- Filter Pills and Search Bar -->
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-                  <div class="d-flex align-items-center gap-1.5 flex-wrap" id="testcase-filter-pills">
-                    <button type="button" class="btn btn-sm btn-outline-primary active" data-filter="ALL">Tất cả</button>
-                    <button type="button" class="btn btn-sm btn-outline-success" data-filter="AUTO_APPROVE">Tự động duyệt</button>
-                    <button type="button" class="btn btn-sm btn-outline-purple" data-filter="ESCALATE">Chuyển cấp duyệt</button>
-                    <button type="button" class="btn btn-sm btn-outline-warning" data-filter="NEED_CORRECTION">Cần xác minh</button>
-                    <button type="button" class="btn btn-sm btn-outline-danger" data-filter="AUTO_REJECT">Từ chối</button>
+                  <div class="repo-filter-chips" id="testcase-filter-pills">
+                    <button type="button" class="repo-chip active" data-filter="ALL" onclick="setRepoFilter('ALL')">
+                      <span class="repo-chip-label">Tất cả</span>
+                      <span class="repo-chip-count" id="repo-count-ALL">0</span>
+                    </button>
+                    <button type="button" class="repo-chip chip-approve" data-filter="AUTO_APPROVE" onclick="setRepoFilter('AUTO_APPROVE')">
+                      <span class="repo-chip-dot" style="background:#16a34a"></span>
+                      <span class="repo-chip-label">Tự động duyệt</span>
+                      <span class="repo-chip-count" id="repo-count-AUTO_APPROVE">0</span>
+                    </button>
+                    <button type="button" class="repo-chip chip-escalate" data-filter="ESCALATE" onclick="setRepoFilter('ESCALATE')">
+                      <span class="repo-chip-dot" style="background:#6366f1"></span>
+                      <span class="repo-chip-label">Chuyển cấp duyệt</span>
+                      <span class="repo-chip-count" id="repo-count-ESCALATE">0</span>
+                    </button>
+                    <button type="button" class="repo-chip chip-correct" data-filter="NEED_CORRECTION" onclick="setRepoFilter('NEED_CORRECTION')">
+                      <span class="repo-chip-dot" style="background:#f59e0b"></span>
+                      <span class="repo-chip-label">Cần xác minh</span>
+                      <span class="repo-chip-count" id="repo-count-NEED_CORRECTION">0</span>
+                    </button>
+                    <button type="button" class="repo-chip chip-reject" data-filter="AUTO_REJECT" onclick="setRepoFilter('AUTO_REJECT')">
+                      <span class="repo-chip-dot" style="background:#dc2626"></span>
+                      <span class="repo-chip-label">Từ chối</span>
+                      <span class="repo-chip-count" id="repo-count-AUTO_REJECT">0</span>
+                    </button>
                   </div>
                   <div class="d-flex align-items-center gap-2">
                     <div style="position: relative;">
@@ -906,75 +916,48 @@
             </div>
           </section>
 
-          <!-- TAB M3: NHẬT KÝ DUYỆT -->
-          <section id="tab-mgr-auto-logs" class="tab-pane">
-            <div class="saas-panel">
-              <div class="saas-panel-header d-flex justify-content-between align-items-center">
-                <div>
-                  <h3 class="saas-panel-title">NHẬT KÝ AI TỰ DUYỆT</h3>
-                  <div class="saas-panel-subtitle">Các ca thường quy được AI tự duyệt. Quản lý có quyền bấm <b>[ Hủy lệnh AI ]</b> để thu hồi khi cần thiết.</div>
-                </div>
-                <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-mgr-logs">Làm mới</button>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-vcenter card-table table-hover table-striped" id="table-auto-approved-logs">
-                  <thead>
-                    <tr>
-                      <th>Nhân viên</th>
-                      <th>Phòng ban</th>
-                      <th>Thời gian nghỉ</th>
-                      <th>Số ngày</th>
-                      <th>Chi tiết</th>
-                      <th>Quyền kiểm soát</th>
-                    </tr>
-                  </thead>
-                  <tbody id="auto-approved-logs-body">
-                    <!-- Rendered dynamically -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <!-- TAB M4: HỒ SƠ ĐƠN -->
+          <!-- TAB M3+M4 (MERGED): HỒ SƠ ĐƠN -->
           <section id="tab-mgr-all-requests" class="tab-pane">
             <div class="saas-panel">
+              <!-- Header -->
               <div class="saas-panel-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                  <h3 class="saas-panel-title">TOÀN BỘ HỒ SƠ ĐƠN NGHỈ PHÉP</h3>
-                  <div class="saas-panel-subtitle">Tổng hợp và tra cứu tất cả các đơn nghỉ phép trong toàn hệ thống</div>
-                </div>
-                <div class="d-flex align-items-center">
-                  <div class="staff-filter-wrapper">
-                    <select id="mgr-filter-status" class="staff-status-select" style="padding-left: 14px !important; min-width: 175px;">
-                      <option value="ALL">Tất cả trạng thái</option>
-                      <option value="PENDING_ESCALATION">Chờ duyệt</option>
-                      <option value="COMPLETED">Đã duyệt</option>
-                      <option value="REJECTED">Đã từ chối</option>
-                      <option value="CANCELLED">Đã hủy</option>
-                    </select>
-                    <svg class="staff-chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                  </div>
+                <h3 class="saas-panel-title m-0">HỒ SƠ ĐƠN NGHỈ PHÉP</h3>
+                <div class="staff-filter-wrapper">
+                  <svg class="staff-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                  </svg>
+                  <select id="mgr-records-filter" class="staff-status-select" aria-label="Lọc theo trạng thái đơn">
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="AUTO_APPROVE">AI Tự duyệt</option>
+                    <option value="PENDING_ESCALATION">Chờ duyệt</option>
+                    <option value="COMPLETED">Đã xử lý</option>
+                    <option value="REJECTED">Từ chối</option>
+                  </select>
+                  <svg class="staff-chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
                 </div>
               </div>
-              <div class="table-responsive">
-                <table class="table table-vcenter card-table table-hover table-striped" id="table-mgr-all-requests">
-                  <thead>
-                    <tr>
-                      <th>Nhân viên</th>
-                      <th>Phòng ban</th>
-                      <th>Thời gian</th>
-                      <th>Số ngày</th>
-                      <th>Trạng thái</th>
-                      <th>Chi tiết</th>
-                    </tr>
-                  </thead>
-                  <tbody id="mgr-all-requests-body">
-                    <!-- Rendered dynamically -->
-                  </tbody>
-                </table>
+
+              <!-- Records Table -->
+              <div class="saas-panel-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-vcenter card-table table-hover table-striped m-0 mgr-records-table" id="table-mgr-records">
+                    <thead>
+                      <tr>
+                        <th>Nhân viên</th>
+                        <th>Thời gian nghỉ</th>
+                        <th>Số ngày</th>
+                        <th>Trạng thái</th>
+                        <th>Chi tiết</th>
+                        <th>Quyền kiểm soát</th>
+                      </tr>
+                    </thead>
+                    <tbody id="mgr-all-requests-body">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </section>
@@ -1095,13 +1078,14 @@
 
     <!-- MODAL: CHI TIẾT ĐƠN NGHỈ PHÉP (CHUẨN HÓA THEO BIỂU MẪU ĐÃ ĐIỀN) -->
     <div class="modal modal-blur" id="modal-request-detail" tabindex="-1" style="display: none; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);">
-      <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+      <div class="modal-dialog modal-dialog-scrollable modal-xl" role="document">
         <div class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;">
           <div class="modal-header py-3 px-4" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
             <div>
               <h5 class="modal-title fw-bold text-dark mb-0" id="modal-req-detail-title">CHI TIẾT ĐƠN NGHỈ PHÉP</h5>
               <div class="text-secondary small" id="modal-req-detail-sub" style="font-size: 0.78rem;"></div>
             </div>
+            <div class="rd-head-badges" id="modal-req-detail-badges"></div>
             <button type="button" class="btn-close" id="btn-close-req-detail" aria-label="Close"></button>
           </div>
           <div class="modal-body p-4 bg-white" id="modal-req-detail-body">
@@ -1109,7 +1093,6 @@
           </div>
           <div class="modal-footer py-2 px-4 bg-light border-top d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-2">
-              <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="btn-req-detail-view-audit" style="font-size: 0.82rem; font-weight: 500;">Nhật ký xử lý</button>
               <button type="button" class="btn btn-primary btn-sm px-3" id="btn-req-detail-fill-form" style="display: none; font-size: 0.82rem; font-weight: 600;">Nạp vào form</button>
             </div>
             <button type="button" class="btn btn-secondary btn-sm px-4" id="btn-close-req-detail-footer" style="font-size: 0.82rem; font-weight: 500;">Đóng</button>
@@ -1275,6 +1258,6 @@
   <script src="/static/vendor/tabler/tabler.min.js" defer></script>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20261012_v35"></script>
+  <script src="app.js?v=20261012_v46"></script>
 </body>
 </html>

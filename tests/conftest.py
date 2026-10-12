@@ -19,6 +19,8 @@ os.environ['LEAVE_UPLOAD_DIR'] = str(Path(_collection_tmp.name) / 'uploads')
 os.environ['SEED_DEMO_DATA'] = 'false'
 os.environ['APP_ENV'] = 'test'
 os.environ['LEAVE_ALLOW_ACTOR_HEADER'] = 'true'
+os.environ['VLM_WARMUP_ON_STARTUP'] = '0'
+os.environ['VLM_FORCE_MOCK'] = '1'
 
 @pytest.fixture(autouse=True)
 def prohibit_live_models(monkeypatch):

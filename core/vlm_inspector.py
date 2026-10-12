@@ -23,8 +23,10 @@ from urllib import error as urlerror
 from urllib import request as urlrequest
 
 _BACKEND_DIR = Path(__file__).resolve().parents[1] / "backend"
-if str(_BACKEND_DIR) not in sys.path:
-    sys.path.insert(0, str(_BACKEND_DIR))
+_CORE_DIR = Path(__file__).resolve().parent
+for _p in [str(_BACKEND_DIR), str(_CORE_DIR)]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from domain import ProofExtraction, ProofType
 from ai.ai_stack import (
@@ -40,98 +42,279 @@ from ai.ai_stack import (
 VLM_FORCE_MOCK = os.getenv("VLM_FORCE_MOCK", "0").strip().casefold() in ("1", "true", "yes", "on")
 VLM_MOCK_FALLBACK_ALLOWED = os.getenv("VLM_ALLOW_MOCK_FALLBACK", "0").strip().casefold() in ("1", "true", "yes", "on")
 
-VLM_LEAVE_TYPE_PROFILES = {
+PERSONA_CONFIGS = {
     "SICK_MEDICAL": {
-        "persona": "Bác sĩ kiểm định hồ sơ y tế",
-        "json_variant": "medical_certificate",
-        "decision_tree": "patient_name -> medical_dates -> issuer -> signature -> integrity",
-        "required": "patient_name, diagnosis, issue_date, recommended_from_date, recommended_to_date, issuer",
+        "persona": "Bác sĩ kiểm định hồ sơ y tế (Medical Certificate Assessor)",
+        "schema_key": "SICK_MEDICAL",
+        "decision_tree": "doc_patient_name -> doc_diagnosis -> recommended_dates & days_granted_by_doctor -> issuer -> doctor_signature & red_stamp -> integrity",
+        "allowed_proof_types": "MEDICAL_LEAVE_CERTIFICATE, HOSPITAL_DISCHARGE, LAB_RESULT, OTHER",
+        "schema_prompt": """  1. proof_type: "MEDICAL_LEAVE_CERTIFICATE" | "HOSPITAL_DISCHARGE" | "LAB_RESULT" | "OTHER"
+  2. doc_patient_name: string | null  // Tên bệnh nhân ghi trên giấy
+  3. doc_diagnosis: string | null     // Chẩn đoán lâm sàng nguyên văn từ bác sĩ
+  4. days_granted_by_doctor: int | null // Số ngày bác sĩ chỉ định nghỉ hưởng BHXH
+  5. recommended_from_date: YYYY-MM-DD | null // Nghỉ từ ngày
+  6. recommended_to_date: YYYY-MM-DD | null   // Nghỉ đến ngày (BẮT BUỘC có nếu giấy ghi rõ)
+  7. issue_date: YYYY-MM-DD | null    // Ngày cấp giấy
+  8. issuer: string | null            // Bệnh viện / Phòng khám / Cơ sở y tế cấp
+  9. has_red_stamp: bool              // Có dấu mộc đỏ cơ sở y tế
+  10. has_doctor_signature: bool      // Có chữ ký bác sĩ điều trị
+  11. signature_present: bool         // Giống has_doctor_signature
+  12. digital_signature_present: bool | null
+  13. document_readability: "READABLE" | "PARTIAL" | "UNREADABLE"
+  14. is_tampered: bool | null
+  15. ai_edited: bool | null
+  16. correlation_issues: list[string]
+  17. escalation_reasons: list[string]
+  18. fields_detected: list[string]""",
     },
-    "MEDICAL_EMERGENCY": {
-        "persona": "Điều phối viên hồ sơ cấp cứu",
-        "json_variant": "emergency_record",
-        "decision_tree": "patient_name -> emergency_or_hospital_evidence -> issuer -> integrity",
-        "required": "patient_name, diagnosis_or_emergency_evidence, issuer, issue_date",
+    "EMERGENCY": {
+        "persona": "Điều phối viên hồ sơ cấp cứu (Emergency Admission Coordinator)",
+        "schema_key": "EMERGENCY",
+        "decision_tree": "doc_patient_name -> emergency_admission_evidence -> admission_date -> hospital_issuer -> integrity -> open_ended_status",
+        "allowed_proof_types": "EMERGENCY_ADMISSION, HOSPITAL_DISCHARGE, SURGERY_NOTICE, OTHER_MEDICAL",
+        "schema_prompt": """  1. proof_type: "EMERGENCY_ADMISSION" | "HOSPITAL_DISCHARGE" | "SURGERY_NOTICE" | "OTHER_MEDICAL"
+  2. doc_patient_name: string | null      // Tên người bệnh cấp cứu
+  3. emergency_diagnosis: string | null  // Lý do cấp cứu, chẩn đoán ban đầu / can thiệp khẩn
+  4. doc_diagnosis: string | null        // Giống emergency_diagnosis
+  5. admission_date: YYYY-MM-DD | null   // Ngày giờ tiếp nhận cấp cứu / vào viện
+  6. recommended_from_date: YYYY-MM-DD | null // Ngày bắt đầu cấp cứu (thường = admission_date)
+  7. discharge_date: YYYY-MM-DD | null   // Ngày xuất viện (ĐỂ null NẾU BỆNH NHÂN ĐANG CẤP CỨU / CHƯA XUẤT VIỆN)
+  8. recommended_to_date: YYYY-MM-DD | null   // Giống discharge_date (để null nếu chưa biết ngày ra viện)
+  9. is_open_ended: bool                 // true nếu chưa xác định ngày ra viện / ngày đi làm lại
+  10. requires_followup_proof: bool      // true nếu cần bổ sung giấy ra viện sau khi xuất viện
+  11. issuer: string | null              // Bệnh viện / Khoa cấp cứu / Trung tâm hồi sức
+  12. has_red_stamp: bool                // Dấu mộc đỏ bệnh viện
+  13. has_hospital_stamp: bool           // Giống has_red_stamp
+  14. has_doctor_signature: bool         // Chữ ký bác sĩ trực cấp cứu
+  15. signature_present: bool            // Có chữ ký không
+  16. digital_signature_present: bool | null
+  17. document_readability: "READABLE" | "PARTIAL" | "UNREADABLE"
+  18. is_tampered: bool | null
+  19. ai_edited: bool | null
+  20. correlation_issues: list[string]
+  21. escalation_reasons: list[string]
+  22. fields_detected: list[string]""",
     },
-    "SPECIAL_PAID": {
-        "persona": "Chuyên viên xác minh sự kiện gia đình",
-        "json_variant": "family_event",
-        "decision_tree": "event_type -> related_person -> event_date -> issuer -> integrity",
-        "required": "subject_name, event_reason, recommended_from_date, issuer, issue_date",
+    "WEDDING": {
+        "persona": "Chuyên viên xác minh hôn sự (Marriage & Wedding Adjudicator)",
+        "schema_key": "WEDDING",
+        "decision_tree": "event_type (SELF/CHILD) -> couple_names -> wedding_date -> issuer (UBND) -> red_stamp -> integrity",
+        "allowed_proof_types": "MARRIAGE_CERTIFICATE, WEDDING_INVITATION, OTHER",
+        "schema_prompt": """  1. proof_type: "MARRIAGE_CERTIFICATE" | "WEDDING_INVITATION" | "OTHER"
+  2. subject_name: string | null         // Tên cô dâu hoặc chú rể trên giấy
+  3. partner_name: string | null         // Tên người phối ngẫu (vợ/chồng)
+  4. doc_patient_name: string | null     // Giống subject_name
+  5. event_type: "SELF_MARRIAGE" | "CHILD_MARRIAGE" | null
+  6. wedding_date: YYYY-MM-DD | null     // Ngày cưới / ngày đăng ký kết hôn
+  7. recommended_from_date: YYYY-MM-DD | null // Ngày bắt đầu nghỉ cưới
+  8. recommended_to_date: YYYY-MM-DD | null   // Ngày kết thúc nghỉ cưới
+  9. issue_date: YYYY-MM-DD | null       // Ngày cấp giấy
+  10. issuer: string | null              // UBND phường/xã, cơ quan có thẩm quyền cấp
+  11. has_red_stamp: bool                // Dấu mộc đỏ UBND/cơ quan
+  12. signature_present: bool            // Chữ ký người có thẩm quyền
+  13. has_doctor_signature: bool         // false (giấy cưới không có bác sĩ)
+  14. document_readability: "READABLE" | "PARTIAL" | "UNREADABLE"
+  15. is_tampered: bool | null
+  16. ai_edited: bool | null
+  17. correlation_issues: list[string]
+  18. escalation_reasons: list[string]
+  19. fields_detected: list[string]""",
     },
-    "STATUTORY_UNPAID": {
-        "persona": "Chuyên viên xác minh quan hệ thân nhân theo luật",
-        "json_variant": "statutory_relationship",
-        "decision_tree": "event_type -> relationship -> evidence -> confidence -> manager_if_unclear",
-        "required": "subject_name, relationship, event_reason, issue_date, issuer",
+    "BEREAVEMENT": {
+        "persona": "Chuyên viên xác minh tang lễ (Bereavement & Death Certificate Assessor)",
+        "schema_key": "BEREAVEMENT",
+        "decision_tree": "deceased_name -> relationship (cha/mẹ/vợ/chồng/con) -> date_of_death -> issuer -> red_stamp -> integrity",
+        "allowed_proof_types": "DEATH_CERTIFICATE, FUNERAL_DECISION, OTHER",
+        "schema_prompt": """  1. proof_type: "DEATH_CERTIFICATE" | "FUNERAL_DECISION" | "OTHER"
+  2. deceased_name: string | null        // Tên người quá cố trên giấy chứng tử
+  3. doc_patient_name: string | null     // Giống deceased_name
+  4. relationship_label: string | null   // Quan hệ ghi trên giấy (cha/mẹ/vợ/chồng/con)
+  5. date_of_death: YYYY-MM-DD | null    // Ngày mất / từ trần
+  6. funeral_date: YYYY-MM-DD | null     // Ngày tổ chức tang lễ (nếu có)
+  7. recommended_from_date: YYYY-MM-DD | null // Ngày bắt đầu nghỉ tang
+  8. recommended_to_date: YYYY-MM-DD | null   // Ngày kết thúc nghỉ tang
+  9. issue_date: YYYY-MM-DD | null       // Ngày cấp giấy chứng tử
+  10. issuer: string | null              // UBND / Công an / Trạm y tế cấp
+  11. has_red_stamp: bool                // Dấu mộc đỏ cơ quan cấp
+  12. signature_present: bool            // Chữ ký người có thẩm quyền
+  13. has_doctor_signature: bool         // Chữ ký xác nhận y tế/công an
+  14. document_readability: "READABLE" | "PARTIAL" | "UNREADABLE"
+  15. is_tampered: bool | null
+  16. ai_edited: bool | null
+  17. correlation_issues: list[string]
+  18. escalation_reasons: list[string]
+  19. fields_detected: list[string]""",
+    },
+    "STATUTORY": {
+        "persona": "Chuyên viên xác minh quan hệ thân nhân theo Bộ luật Lao động (Statutory Relationship Adjudicator)",
+        "schema_key": "STATUTORY",
+        "decision_tree": "event_type -> subject_name -> relationship_to_employee -> evidence_confidence -> manager_escalation",
+        "allowed_proof_types": "DEATH_CERTIFICATE, MARRIAGE_CERTIFICATE, WEDDING_INVITATION, FUNERAL_DECISION, FAMILY_EVENT_LETTER, OTHER",
+        "schema_prompt": """  1. proof_type: "DEATH_CERTIFICATE" | "MARRIAGE_CERTIFICATE" | "WEDDING_INVITATION" | "FUNERAL_DECISION" | "FAMILY_EVENT_LETTER" | "OTHER"
+  2. subject_name: string | null             // Tên người thân liên quan
+  3. doc_patient_name: string | null         // Giống subject_name
+  4. relationship_to_employee: string | null // Quan hệ: ông, bà nội/ngoại, anh, chị, em ruột...
+  5. relationship_label: string | null       // Giống relationship_to_employee
+  6. event_type: "DEATH" | "MARRIAGE" | "OTHER" | null
+  7. event_date: YYYY-MM-DD | null           // Ngày diễn ra sự kiện
+  8. recommended_from_date: YYYY-MM-DD | null
+  9. recommended_to_date: YYYY-MM-DD | null
+  10. issue_date: YYYY-MM-DD | null
+  11. issuer: string | null
+  12. has_red_stamp: bool
+  13. signature_present: bool
+  14. evidence_confidence: "HIGH" | "MEDIUM" | "LOW" // Độ rõ ràng của quan hệ thân nhân trên giấy
+  15. needs_manager_review: bool              // true nếu quan hệ khó xác thực tự động
+  16. document_readability: "READABLE" | "PARTIAL" | "UNREADABLE"
+  17. is_tampered: bool | null
+  18. ai_edited: bool | null
+  19. correlation_issues: list[string]
+  20. escalation_reasons: list[string]
+  21. fields_detected: list[string]""",
     },
     "MATERNITY": {
-        "persona": "Chuyên viên hồ sơ thai sản BHXH",
-        "json_variant": "maternity_record",
-        "decision_tree": "maternity_phase -> mother_or_child -> dates -> issuer -> integrity",
-        "required": "subject_name, maternity_phase, recommended_from_date, recommended_to_date, issuer",
+        "persona": "Chuyên viên hồ sơ thai sản BHXH (Maternity Leave Officer)",
+        "schema_key": "MATERNITY",
+        "decision_tree": "maternity_phase -> mother_name -> expected_or_birth_date -> doctor_period -> issuer -> bhxh_code",
+        "allowed_proof_types": "MATERNITY_CERTIFICATE, HOSPITAL_DISCHARGE, LAB_RESULT, OTHER",
+        "schema_prompt": """  1. proof_type: "MATERNITY_CERTIFICATE" | "HOSPITAL_DISCHARGE" | "LAB_RESULT" | "OTHER"
+  2. subject_name: string | null         // Tên thai phụ / người mẹ
+  3. doc_patient_name: string | null     // Giống subject_name
+  4. maternity_phase: "PRENATAL" | "BIRTH" | "POSTNATAL" | "CHILD_CARE" | null
+  5. expected_due_date: YYYY-MM-DD | null// Ngày dự sinh
+  6. recommended_from_date: YYYY-MM-DD | null
+  7. recommended_to_date: YYYY-MM-DD | null
+  8. days_granted_by_doctor: int | null  // Số ngày nghỉ thai sản bác sĩ/viện cho
+  9. bhxh_code: string | null            // Mã số BHXH nếu có trên giấy
+  10. issue_date: YYYY-MM-DD | null
+  11. issuer: string | null              // Bệnh viện phụ sản / Trạm y tế
+  12. has_red_stamp: bool
+  13. has_doctor_signature: bool
+  14. signature_present: bool
+  15. document_readability: "READABLE" | "PARTIAL" | "UNREADABLE"
+  16. is_tampered: bool | null
+  17. ai_edited: bool | null
+  18. correlation_issues: list[string]
+  19. escalation_reasons: list[string]
+  20. fields_detected: list[string]""",
     },
     "WORK_ACCIDENT": {
-        "persona": "Chuyên viên hồ sơ tai nạn lao động",
-        "json_variant": "work_accident_record",
-        "decision_tree": "injury_event -> workplace_or_commute -> dates -> issuer -> integrity",
-        "required": "subject_name, injury_event, issue_date, issuer",
+        "persona": "Chuyên viên hồ sơ tai nạn lao động BHXH (Workplace Injury Officer)",
+        "schema_key": "WORK_ACCIDENT",
+        "decision_tree": "subject_name -> injury_description -> is_workplace_related -> dates -> issuer -> bhxh_stamp",
+        "allowed_proof_types": "ACCIDENT_CERTIFICATE, ACCIDENT_REPORT, INJURY_CERTIFICATE, HOSPITAL_DISCHARGE, OTHER",
+        "schema_prompt": """  1. proof_type: "ACCIDENT_CERTIFICATE" | "ACCIDENT_REPORT" | "INJURY_CERTIFICATE" | "HOSPITAL_DISCHARGE" | "OTHER"
+  2. subject_name: string | null         // Tên người bị nạn
+  3. doc_patient_name: string | null     // Giống subject_name
+  4. injury_description: string | null   // Mô tả tai nạn, vết thương, chẩn đoán thương tật
+  5. doc_diagnosis: string | null        // Giống injury_description
+  6. is_workplace_related: bool | null   // Tai nạn trong giờ làm / trên đường đi làm?
+  7. injury_date: YYYY-MM-DD | null      // Ngày xảy ra tai nạn
+  8. recommended_from_date: YYYY-MM-DD | null
+  9. recommended_to_date: YYYY-MM-DD | null
+  10. days_granted_by_doctor: int | null
+  11. issue_date: YYYY-MM-DD | null
+  12. issuer: string | null              // Ban ATLĐ / Bệnh viện điều trị / BHXH
+  13. has_red_stamp: bool
+  14. has_bhxh_stamp: bool | null        // Có dấu cơ quan BHXH
+  15. has_doctor_signature: bool
+  16. signature_present: bool
+  17. document_readability: "READABLE" | "PARTIAL" | "UNREADABLE"
+  18. is_tampered: bool | null
+  19. ai_edited: bool | null
+  20. correlation_issues: list[string]
+  21. escalation_reasons: list[string]
+  22. fields_detected: list[string]""",
+    },
+    "ADMINISTRATIVE": {
+        "persona": "Chuyên viên đối soát giấy tờ hành chính tổng hợp (General Administrative Officer)",
+        "schema_key": "ADMINISTRATIVE",
+        "decision_tree": "doc_type -> subject_name -> valid_period -> issuer -> integrity",
+        "allowed_proof_types": "VISA_OR_TRAVEL_DOC, IDENTITY_CARD, OTHER_ADMINISTRATIVE, OTHER",
+        "schema_prompt": """  1. proof_type: "VISA_OR_TRAVEL_DOC" | "IDENTITY_CARD" | "OTHER_ADMINISTRATIVE" | "OTHER"
+  2. subject_name: string | null         // Tên người trên giấy tờ
+  3. doc_patient_name: string | null     // Giống subject_name
+  4. document_purpose: string | null     // Mục đích giấy tờ (visa, du lịch, thủ tục...)
+  5. valid_from: YYYY-MM-DD | null       // Có hiệu lực từ ngày
+  6. valid_to: YYYY-MM-DD | null         // Hiệu lực đến ngày
+  7. recommended_from_date: YYYY-MM-DD | null
+  8. recommended_to_date: YYYY-MM-DD | null
+  9. issue_date: YYYY-MM-DD | null
+  10. issuer: string | null              // Cơ quan ban hành
+  11. has_red_stamp: bool
+  12. signature_present: bool
+  13. has_doctor_signature: bool
+  14. document_readability: "READABLE" | "PARTIAL" | "UNREADABLE"
+  15. is_tampered: bool | null
+  16. ai_edited: bool | null
+  17. correlation_issues: list[string]
+  18. escalation_reasons: list[string]
+  19. fields_detected: list[string]""",
     },
 }
 
 VLM_SYSTEM_PROMPT = """Bạn là chuyên gia kiểm định chứng từ nghỉ phép Nhân sự Việt Nam (VLM-Officer).
-Nhiệm vụ: đọc ảnh CHỨNG TỪ đính kèm của đơn nghỉ phép và trả về JSON THUẦN TÚY theo schema đã định nghĩa.
+Nhiệm vụ: đọc ảnh CHỨNG TỪ đính kèm của đơn nghỉ phép và trả về JSON THUẦN TÚY theo schema đã định nghĩa."""
 
-LOẠI CHỨNG TỪ CÓ THỂ GẶP (PHẢI NHẬN DIỆN ĐÚNG proof_type):
-  • Giấy giới thiệu khám bệnh / Giấy khám bệnh BHYT (phòng khám, bệnh viện tư, công lập, đa khoa, chuyên khoa)
-  • Giấy hẹn tái khám / Phiếu kết quả xét nghiệm / Chẩn đoán hình ảnh
-  • Giấy xuất viện / Quyết định xuất viện / Phiếu điều trị nội trú
-  • Giấy nghỉ thai sản / Giấy chứng nhận mang thai
-  • Giấy xác nhận tai nạn lao động / Bệnh nghề nghiệp (BHXH / Ủy ban ATLĐ)
-  • Giấy đăng ký kết hôn / Giấy mời đám cưới / Giấy báo hỷ sự
-  • Giấy chứng tử / Giấy báo tử / Giấy xác nhận tang lễ / Quả quyết định tang chế
-  • Giấy xác nhận sự kiện gia đình (kỷ niệm 50 năm ngày cưới, lễ 1 ngày, bữa tiệc...)
-  • Căn cước công dân (CCCD) / Chứng minh nhân dân (CMND) / Hộ chiếu
-  • Giấy phép công tác nước ngoài / Visa / Máy bay đi du lịch
-  • Ảnh chụp hợp đồng mua bán / Giấy tờ hành chính khác liên quan trực tiếp đến lý do nghỉ
-
-QUY TẮC BẮT BUỘC:
-  1. Chỉ ghi những gì THẤY được trên hình.  Không suy diễn, không đoán, không trùng lặp thông tin không có.
-  2. patient_name (nếu có - với các loại giấy có tên người thụ hưởng) phải nguyên văn như trên giấy, không sửa lỗi chính tả.
-  3. signature_present = chỉ True nếu thấy CHỮ KÝ CỦA NGƯỜI CÓ THẨM QUYỀN CẤP (bác sĩ, trưởng công an, chủ tịch UBND, cô dâu chú rể, người ký giấy chứng tử...).
-     signature_present = False nếu ảnh KHÔNG có chữ ký nào ĐƯỢC NHẬN DIỆN RÕ NÉT, dù người ký thật nhưng mờ / cắt xén.
-  4. has_red_stamp = chỉ True nếu thấy DẤU MỘC ĐỎ HÌNH TRÒN / HÌNH VUÔNG CÓ TÊN CƠ QUAN / ĐƠN VỊ / CHỨC DANH rõ nét (dấu đỏ của BHXH, bệnh viện, UBND, công ty, phòng khám...).
-  5. document_readability:
-       - READABLE    = ảnh đủ sáng, đầy đủ 4 góc, text + dấu + chữ ký đọc rõ
-       - PARTIAL     = ảnh hơi mờ / 1 góc bị cắt nhưng đọc được thông tin chính (tên, ngày, chẩn đoán...)
-       - UNREADABLE  = ảnh quá mờ, che khuất phần lớn, hoặc chữ/dấu/chữ ký KHÔNG THỂ đọc rõ hoặc xác minh
-  6. issuer = tên CƠ QUAN / ĐƠN VỊ / BỆNH VIỆN / PHÒNG KHÁM / CÔNG TY / NƠI CẤP ra giấy tờ (đọc nguyên văn trên dấu đỏ / tiêu đề).
-  7. issue_date = NGÀY, THÁNG, NĂM giấy tờ được ký / cấp (YYYY-MM-DD).
-  8. recommended_from_date / recommended_to_date:
-       - Với giấy bệnh: KHOẢNG NGÀY BÁC SĨ CHỈ ĐỊNH NGHỈ
-       - Với giấy cưới: NGÀY CƯỚI / NGÀY TỔ CHỨC
-       - Với giấy tử tang: NGÀY TANG LỄ / NGÀY LỄ TƯỞNG NIỆM
-       - Với giấy thai sản: NGÀY DỰ SINH / NGÀY NGHỈ SINH SẢN ĐỀ NGHỊ
-       - Với CCCD / giấy hành chính: khoảng ngày KHÔNG CÓ → cả 2 trường đều để null
-  9. Không được thêm text giải thích trước hay sau JSON.  Chỉ trả DUY NHẤT 1 { ... } object hợp lệ.
- 10. ai_edited = True nếu nghi vấn ảnh được chỉnh sửa bởi photoshop / AI (chữ không đều, chồng lấn pixel, text clone, dấu đỏ bị tái tạo...).
- 11. is_tampered = True nếu nghi vấn giấy tờ bị SỬA NỘI DUNG SAU KHI KÝ (xóa chữ, sửa ngày tháng, đổi tên, dán chữ lên ảnh...).
-12. Khi đối chiếu lý do và chẩn đoán, hiểu theo ngữ nghĩa y khoa thay vì bắt buộc trùng từng chữ:
-    "đau ruột thừa", "viêm ruột thừa", "phẫu thuật ruột thừa" và "cắt ruột thừa"
-    là cùng một nhóm bệnh. Không đánh dấu không khớp nếu tên nhân viên, khoảng ngày,
-    nơi cấp, dấu và chữ ký đều rõ/rút ra được; chẩn đoán chỉ là tín hiệu bổ trợ.
- 13. CẢNH BÁO CHỐNG BỊA ĐẶT (ANTI-HALLUCINATION):
-     - Nếu ảnh bị mờ, nhòe, mất nét, chữ không đọc rõ: BẮT BUỘC đặt document_readability = "UNREADABLE", và TẤT CẢ các trường trích xuất (doc_patient_name, doc_diagnosis, issuer, issue_date, recommended_from_date, recommended_to_date) BẮT BUỘC để null, fields_detected để [].
-     - TUYỆT ĐỐI KHÔNG tự bịa tên (như 'Nguyễn Văn A'), KHÔNG tự bịa bệnh viện/phòng khám (như 'Bệnh viện Đa khoa A'), KHÔNG tự bịa chẩn đoán (như 'Đau ruột thừa'), KHÔNG tự suy đoán ngày tháng.
-"""
+# Compatibility alias
+VLM_LEAVE_TYPE_PROFILES = {
+    k: {
+        "persona": v["persona"],
+        "json_variant": v["schema_key"],
+        "decision_tree": v["decision_tree"],
+        "required": v["decision_tree"].replace(" -> ", ", "),
+    }
+    for k, v in PERSONA_CONFIGS.items()
+}
 
 
-def _leave_type_prompt(leave_type: str) -> str:
-    profile = VLM_LEAVE_TYPE_PROFILES.get(leave_type, {"persona": "Chuyên viên đối soát chứng từ hành chính", "json_variant": "general_leave_proof", "decision_tree": "proof_type -> subject -> dates -> issuer -> integrity", "required": "subject_name, event_reason, issue_date, issuer"})
-    return (f"LOẠI NGHỈ: {leave_type}. Đóng vai {profile['persona']}. "
-            f"Biến thể JSON: {profile['json_variant']}. Trường bắt buộc ưu tiên: {profile['required']}. "
-            f"Thứ tự kiểm tra: {profile['decision_tree']}. "
-            "Nếu không đọc rõ quan hệ hoặc trường bắt buộc, ghi null/uncertain; không tự suy diễn.")
+def _resolve_persona_config(leave_type: str, reason_category: Optional[str] = None) -> Dict[str, Any]:
+    lt = str(leave_type or "").upper()
+    rc = str(reason_category or "").upper()
+
+    if lt == "SICK_MEDICAL":
+        return PERSONA_CONFIGS["SICK_MEDICAL"]
+    elif lt == "MEDICAL_EMERGENCY":
+        return PERSONA_CONFIGS["EMERGENCY"]
+    elif lt == "SPECIAL_PAID":
+        if any(w in rc for w in ("MARRIAGE", "WEDDING", "CUOI", "HY")):
+            return PERSONA_CONFIGS["WEDDING"]
+        elif any(w in rc for w in ("DEATH", "TANG", "MAT", "BEREAVEMENT")):
+            return PERSONA_CONFIGS["BEREAVEMENT"]
+        return PERSONA_CONFIGS["WEDDING"]
+    elif lt == "STATUTORY_UNPAID":
+        return PERSONA_CONFIGS["STATUTORY"]
+    elif lt == "MATERNITY":
+        return PERSONA_CONFIGS["MATERNITY"]
+    elif lt == "WORK_ACCIDENT":
+        return PERSONA_CONFIGS["WORK_ACCIDENT"]
+    else:
+        return PERSONA_CONFIGS["ADMINISTRATIVE"]
+
+
+def _leave_type_prompt(leave_type: str, reason_category: Optional[str] = None) -> str:
+    cfg = _resolve_persona_config(leave_type, reason_category)
+    variant_alias = {
+        "SICK_MEDICAL": "medical_certificate",
+        "EMERGENCY": "emergency_admission",
+        "WEDDING": "marriage_certificate",
+        "BEREAVEMENT": "death_certificate",
+        "STATUTORY": "statutory_relationship",
+        "MATERNITY": "maternity_certificate",
+        "WORK_ACCIDENT": "accident_certificate",
+        "ADMINISTRATIVE": "administrative_document",
+    }.get(cfg["schema_key"], "general_document")
+    persona_text = cfg["persona"]
+    if "STATUTORY" in cfg["schema_key"]:
+        persona_text = f"{cfg['persona']} / Chuyên viên xác minh quan hệ thân nhân theo luật"
+    return (
+        f"LOẠI NGHỈ: {leave_type} (Phân loại: {reason_category or 'CHUNG'}).\n"
+        f"🎭 ĐÓNG VAI: {persona_text}.\n"
+        f"Biến thể JSON: {variant_alias}.\n"
+        f"🌲 THỨ TỰ THẨM ĐỊNH (DECISION TREE): {cfg['decision_tree']}.\n"
+        f"📋 CÁC LOẠI CHỨNG TỪ PHÙ HỢP: {cfg['allowed_proof_types']}.\n"
+        f"Hãy tuân thủ nghiêm ngặt Decision Tree trên khi phân tích và trích xuất."
+    )
 
 
 class _PersonaRegistry:
@@ -520,10 +703,14 @@ def _score_correlation(
         else:
             score += 0.12
     else:
-        # Với giấy sự kiện gia đình: nếu không đọc được ngày thì không penalize nặng
+        # Với giấy sự kiện gia đình hoặc cấp cứu: nếu không đọc được ngày thì không penalize nặng
         if is_medical:
-            score -= 0.10
-            issues.append(f"VLM không đọc được khoảng ngày {date_label}.")
+            if leave_type.upper() == 'MEDICAL_EMERGENCY':
+                # Cấp cứu nhập viện khẩn: chưa xác định ngày ra viện (open-ended), không phạt
+                score += 0.05
+            else:
+                score -= 0.10
+                issues.append(f"VLM không đọc được khoảng ngày {date_label}.")
         # Non-medical: skip penalty (giấy cưới thường chỉ có 1 ngày, không range)
 
     # days coverage vs requested
@@ -549,6 +736,44 @@ def _score_correlation(
     return score, issues, days_granted_by_doctor
 
 
+def _normalize_proof_type(val: Any) -> ProofType:
+    if isinstance(val, ProofType):
+        return val
+    if not val:
+        return ProofType.NONE
+    s = str(val).strip().upper()
+    try:
+        return ProofType(s)
+    except ValueError:
+        pass
+    ALIAS_MAP = {
+        "ACCIDENT_CERTIFICATE": ProofType.ACCIDENT_CERTIFICATE,
+        "ACCIDENT": ProofType.ACCIDENT_REPORT,
+        "INJURY": ProofType.INJURY_CERTIFICATE,
+        "LAB_RESULT": ProofType.LAB_RESULT,
+        "MATERNITY_CERTIFICATE": ProofType.MATERNITY_CERTIFICATE,
+        "MATERNITY": ProofType.MATERNITY_CERTIFICATE,
+        "FUNERAL_DECISION": ProofType.FUNERAL_DECISION,
+        "FUNERAL": ProofType.FUNERAL_DECISION,
+        "FAMILY_EVENT_LETTER": ProofType.FAMILY_EVENT_LETTER,
+        "FAMILY_EVENT": ProofType.FAMILY_EVENT_LETTER,
+        "IDENTITY_CARD": ProofType.IDENTITY_CARD,
+        "VISA_OR_TRAVEL_DOC": ProofType.VISA_OR_TRAVEL_DOC,
+        "OTHER_ADMINISTRATIVE": ProofType.OTHER_ADMINISTRATIVE,
+        "WEDDING": ProofType.WEDDING_INVITATION,
+        "MARRIAGE": ProofType.MARRIAGE_CERTIFICATE,
+        "DEATH": ProofType.DEATH_CERTIFICATE,
+        "HOSPITAL": ProofType.HOSPITAL_DISCHARGE,
+        "MEDICAL": ProofType.MEDICAL_LEAVE_CERTIFICATE,
+    }
+    if s in ALIAS_MAP:
+        return ALIAS_MAP[s]
+    for k, target in ALIAS_MAP.items():
+        if k in s:
+            return target
+    return ProofType.OTHER
+
+
 def _build_proof_extraction(
     profile: Dict[str, Any],
     leave_type: str,
@@ -558,7 +783,8 @@ def _build_proof_extraction(
     workdays: int,
 ) -> ProofExtraction:
     extra = dict(profile.get("proof_extra") or {})
-    pt = extra.pop("proof_type", ProofType.NONE)
+    raw_pt = extra.pop("proof_type", ProofType.NONE)
+    pt = _normalize_proof_type(raw_pt)
 
     def _gf(*keys):
         for k in keys:
@@ -604,18 +830,62 @@ def _build_proof_extraction(
     if sig is None and profile.get("has_doctor_signature") is not None:
         sig = bool(profile.get("has_doctor_signature"))
 
-    p = ProofExtraction(
-        proof_type=pt,
-        issuer=_gf("issuer") if not is_unreadable else None,
-        patient_name=patient_name,
-        issue_date=issue_d,
-        recommended_from_date=rec_fr,
-        recommended_to_date=rec_to,
-        signature_present=sig if not is_unreadable else False,
-        digital_signature_present=_gf("digital_signature_present") if not is_unreadable else None,
-        document_readability=doc_readability,
-        fields_detected=list(_gf("fields_detected") or []) if not is_unreadable else [],
-    )
+    try:
+        p = ProofExtraction(
+            proof_type=pt,
+            issuer=_gf("issuer") if not is_unreadable else None,
+            patient_name=patient_name,
+            issue_date=issue_d,
+            recommended_from_date=rec_fr,
+            recommended_to_date=rec_to,
+            signature_present=sig if not is_unreadable else False,
+            digital_signature_present=_gf("digital_signature_present") if not is_unreadable else None,
+            document_readability=doc_readability,
+            fields_detected=list(_gf("fields_detected") or []) if not is_unreadable else [],
+            is_open_ended=_gf("is_open_ended") if not is_unreadable else None,
+            requires_followup_proof=_gf("requires_followup_proof") if not is_unreadable else None,
+            admission_date=_as_date(_gf("admission_date"), None) if not is_unreadable else None,
+            discharge_date=_as_date(_gf("discharge_date"), None) if not is_unreadable else None,
+            doc_diagnosis=_gf("doc_diagnosis") if not is_unreadable else None,
+            emergency_diagnosis=_gf("emergency_diagnosis") if not is_unreadable else None,
+            days_granted_by_doctor=_gf("days_granted_by_doctor") if not is_unreadable else None,
+            deceased_name=_gf("deceased_name") if not is_unreadable else None,
+            subject_name=_gf("subject_name") if not is_unreadable else None,
+            partner_name=_gf("partner_name") if not is_unreadable else None,
+            wedding_date=_as_date(_gf("wedding_date"), None) if not is_unreadable else None,
+            date_of_death=_as_date(_gf("date_of_death"), None) if not is_unreadable else None,
+            funeral_date=_as_date(_gf("funeral_date"), None) if not is_unreadable else None,
+            relationship_label=_gf("relationship_label") if not is_unreadable else None,
+            relationship_to_employee=_gf("relationship_to_employee") if not is_unreadable else None,
+            evidence_confidence=_gf("evidence_confidence") if not is_unreadable else None,
+            needs_manager_review=_gf("needs_manager_review") if not is_unreadable else None,
+            maternity_phase=_gf("maternity_phase") if not is_unreadable else None,
+            expected_due_date=_as_date(_gf("expected_due_date"), None) if not is_unreadable else None,
+            bhxh_code=_gf("bhxh_code") if not is_unreadable else None,
+            injury_description=_gf("injury_description") if not is_unreadable else None,
+            is_workplace_related=_gf("is_workplace_related") if not is_unreadable else None,
+            injury_date=_as_date(_gf("injury_date"), None) if not is_unreadable else None,
+            has_red_stamp=_gf("has_red_stamp") if not is_unreadable else None,
+            has_doctor_signature=_gf("has_doctor_signature") if not is_unreadable else None,
+            has_hospital_stamp=_gf("has_hospital_stamp") if not is_unreadable else None,
+            has_bhxh_stamp=_gf("has_bhxh_stamp") if not is_unreadable else None,
+            document_purpose=_gf("document_purpose") if not is_unreadable else None,
+            valid_from=_as_date(_gf("valid_from"), None) if not is_unreadable else None,
+            valid_to=_as_date(_gf("valid_to"), None) if not is_unreadable else None,
+        )
+    except Exception:
+        p = ProofExtraction(
+            proof_type=ProofType.OTHER,
+            issuer=_gf("issuer") if not is_unreadable else None,
+            patient_name=patient_name,
+            issue_date=issue_d,
+            recommended_from_date=rec_fr,
+            recommended_to_date=rec_to,
+            signature_present=sig if not is_unreadable else False,
+            digital_signature_present=_gf("digital_signature_present") if not is_unreadable else None,
+            document_readability=doc_readability,
+            fields_detected=list(_gf("fields_detected") or []) if not is_unreadable else [],
+        )
     return p
 
 
@@ -632,6 +902,7 @@ def inspect_document_with_vlm(
     document_readability_hint: Optional[str] = None,
     doc_flags: Optional[Dict[str, Any]] = None,
     allow_mock_fallback: Optional[bool] = None,
+    reason_category: Optional[str] = None,
 ) -> VLMInspectionOutput:
     """Entry point.  Chạy VLM thật (Ollama qwen2.5vl:7b) trên ảnh thực tế.
 
@@ -675,7 +946,9 @@ def inspect_document_with_vlm(
         mode_used = "ENV_FORCE_PERSONA_MOCK"
     # ---- Case 3: Thực thi VLM thật (mặc định tích hợp thật) ----
     else:
-        real_result, error_detail = _try_ollama_extract(attachment_path_or_type, leave_type=leave_type)
+        real_result, error_detail = _try_ollama_extract(
+            attachment_path_or_type, leave_type=leave_type, reason_category=reason_category
+        )
         if real_result:
             profile_raw = real_result
             if real_result.get("_blur_gate_triggered"):
@@ -793,6 +1066,14 @@ def inspect_document_with_vlm(
                 "to": final_dtd,
                 "days": final_days,
             },
+            "is_open_ended": proof_extraction.is_open_ended,
+            "requires_followup_proof": proof_extraction.requires_followup_proof,
+            "admission_date": proof_extraction.admission_date.isoformat() if proof_extraction.admission_date else None,
+            "discharge_date": proof_extraction.discharge_date.isoformat() if proof_extraction.discharge_date else None,
+            "deceased_name": proof_extraction.deceased_name,
+            "subject_name": proof_extraction.subject_name,
+            "relationship": proof_extraction.relationship_to_employee or proof_extraction.relationship_label,
+            "wedding_date": proof_extraction.wedding_date.isoformat() if proof_extraction.wedding_date else None,
         },
         "flags": {
             "has_red_stamp": profile_raw.get("has_red_stamp"),
@@ -955,10 +1236,10 @@ def _get_vlm_cache_dir() -> Path:
     return cache_dir
 
 
-def _read_vlm_cache(file_hash: str, leave_type: str = "") -> Optional[Dict[str, Any]]:
+def _read_vlm_cache(file_hash: str, leave_type: str = "", reason_category: str = "") -> Optional[Dict[str, Any]]:
     if not file_hash:
         return None
-    key = f"{file_hash}:{leave_type or ''}"
+    key = f"{file_hash}:{leave_type or ''}:{reason_category or ''}"
     if key in _VLM_CACHE_MEM:
         import copy
         return copy.deepcopy(_VLM_CACHE_MEM[key])
@@ -975,10 +1256,10 @@ def _read_vlm_cache(file_hash: str, leave_type: str = "") -> Optional[Dict[str, 
     return None
 
 
-def _write_vlm_cache(file_hash: str, leave_type: str, data: Dict[str, Any]) -> None:
+def _write_vlm_cache(file_hash: str, leave_type: str, data: Dict[str, Any], reason_category: str = "") -> None:
     if not file_hash or not data:
         return
-    key = f"{file_hash}:{leave_type or ''}"
+    key = f"{file_hash}:{leave_type or ''}:{reason_category or ''}"
     import copy
     _VLM_CACHE_MEM[key] = copy.deepcopy(data)
     try:
@@ -989,8 +1270,12 @@ def _write_vlm_cache(file_hash: str, leave_type: str, data: Dict[str, Any]) -> N
         pass
 
 
-def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str = '') -> tuple[Optional[Dict[str, Any]], Optional[str]]:
-    """Thực thi VLM thật qua Ollama.
+def _try_ollama_extract(
+    attachment_path_or_type: Optional[str],
+    leave_type: str = '',
+    reason_category: Optional[str] = None,
+) -> tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """Thực thi VLM thật qua Ollama với persona và JSON schema tương ứng decision tree.
 
     Returns:
         (normalized_dict, None)                nếu thành công
@@ -1039,13 +1324,12 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
     # 3.2. SHA-256 Inference Cache Check (<1ms return on repeat proof evaluations)
     file_hash = _compute_file_sha256(path)
     if file_hash:
-        cached_result = _read_vlm_cache(file_hash, leave_type)
+        cached_result = _read_vlm_cache(file_hash, leave_type, reason_category or "")
         if cached_result is not None:
             cached_result["_from_cache"] = True
             return cached_result, None
 
     # 3.5. CỔNG KIỂM SOÁT ĐỘ MỜ TẤT ĐỊNH (Deterministic Blur Gate - ~1ms)
-    # Chặn sớm ảnh quá mờ để loại trừ hoàn toàn ảo giác của VLM và tiết kiệm 3-4 giây xử lý GPU
     is_blurry, blur_score = detect_image_blur(path, threshold=50.0)
     if is_blurry:
         persona_role = _resolve_persona_by_proof_type(None)
@@ -1082,24 +1366,40 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
     except OSError as e:
         return None, f"Lỗi đọc file '{path}': {type(e).__name__}: {e}"
 
-    # 5. Gọi Ollama /api/generate
+    # 5. Gọi Ollama /api/generate với persona-specific prompt & schema
+    persona_cfg = _resolve_persona_config(leave_type, reason_category)
     _PROOF_TYPE_TAXONOMY = (
         "MAPPING proof_type ĐƯỢC PHÉP CHỌN 1 GIÁ TRỊ DUY NHẤT (enums tiếng Anh, dịch nghĩa tiếng Việt kèm):\n"
         "  NONE                       → không phải chứng từ (ảnh rác, screenshot không liên quan, trống)\n"
-        "  MEDICAL_LEAVE_CERTIFICATE  → Giấy khám bệnh / Giấy nghỉ bệnh / Giấy giới thiệu khám BHYT (thường có dấu đỏ bệnh viện/phòng khám + chữ ký bác sĩ)\n"
+        "  MEDICAL_LEAVE_CERTIFICATE  → Giấy khám bệnh / Giấy nghỉ bệnh / Giấy giới thiệu khám BHYT\n"
+        "  EMERGENCY_ADMISSION        → Phiếu cấp cứu / Phiếu tiếp nhận vào viện cấp cứu khẩn cấp\n"
         "  HOSPITAL_DISCHARGE         → Giấy xuất viện / Quyết định xuất viện / Phiếu điều trị nội trú\n"
-        "  LAB_RESULT                 → Phiếu xét nghiệm / Kết quả siêu âm / MRI / CT / chẩn đoán hình ảnh\n"
+        "  SURGERY_NOTICE             → Giấy chỉ định mổ / Giấy phẫu thuật cấp cứu\n"
+        "  LAB_RESULT                 → Phiếu xét nghiệm / Siêu âm / MRI / CT / chẩn đoán hình ảnh\n"
         "  MATERNITY_CERTIFICATE      → Giấy nghỉ thai sản / Giấy chứng nhận mang thai / Giấy sinh con\n"
-        "  ACCIDENT_CERTIFICATE       → Giấy xác nhận tai nạn lao động / Bệnh nghề nghiệp (có dấu BHXH / Ủy ban ATLĐ)\n"
-        "  MARRIAGE_CERTIFICATE       → Giấy đăng ký kết hôn / Giấy xác nhận đã kết hôn (UBND phường / quận)\n"
+        "  ACCIDENT_CERTIFICATE       → Giấy xác nhận tai nạn lao động / Bệnh nghề nghiệp (có dấu BHXH/ATLĐ)\n"
+        "  MARRIAGE_CERTIFICATE       → Giấy đăng ký kết hôn / Giấy xác nhận đã kết hôn (UBND cấp)\n"
         "  WEDDING_INVITATION         → Giấy mời đám cưới / Giấy báo hỷ sự\n"
-        "  DEATH_CERTIFICATE          → Giấy chứng tử (Công an / Trạm y tế) / Giấy báo tử\n"
-        "  FUNERAL_DECISION           → Quyết định tang chế / Giấy xác nhận tang lễ / Giấy báo dự lễ tang\n"
-        "  FAMILY_EVENT_LETTER        → Giấy xác nhận sự kiện gia đình (nghỉ đám hỏi, lễ giỗ tổ tiên, kỉ niệm ngày cưới...)\n"
-        "  IDENTITY_CARD              → CCCD / CMND cũ / Hộ chiếu (chỉ dùng khi đơn yêu cầu nghỉ thực hiện thủ tục hành chính liên quan đến giấy tờ)\n"
-        "  VISA_OR_TRAVEL_DOC         → Visa / Máy bay / Giấy phép công tác nước ngoài (hợp đồng du lịch / bồi dưỡng công tác)\n"
-        "  OTHER_ADMINISTRATIVE       → Giấy tờ hành chính khác (hợp đồng mua nhà, quyết định thưởng, giấy phép thi cử...)\n"
+        "  DEATH_CERTIFICATE          → Giấy chứng tử (Công an / Trạm y tế / UBND cấp)\n"
+        "  FUNERAL_DECISION           → Quyết định tang chế / Giấy xác nhận tang lễ\n"
+        "  FAMILY_EVENT_LETTER        → Giấy xác nhận sự kiện gia đình\n"
+        "  IDENTITY_CARD              → Căn cước công dân / Hộ chiếu\n"
+        "  VISA_OR_TRAVEL_DOC         → Visa / Vé máy bay / Giấy phép công tác nước ngoài\n"
+        "  OTHER_ADMINISTRATIVE       → Giấy tờ hành chính khác\n"
+        "  OTHER                      → Giấy tờ hợp lệ khác không thuộc các loại trên\n"
     )
+
+    prompt_content = (
+        f"{VLM_SYSTEM_PROMPT}\n\n"
+        f"{_leave_type_prompt(leave_type, reason_category)}\n\n"
+        f"{_PROOF_TYPE_TAXONOMY}\n\n"
+        f"SCHEMA JSON THEO PERSONA (trả JSON THUẦN TÚY, KHÔNG markdown, KHÔNG text giải thích, CHỈ 1 object duy nhất):\n"
+        f"{{\n{persona_cfg['schema_prompt']}\n}}\n\n"
+        "QUY TẮC BẮT BUỘC:\n"
+        f"  - Tuân thủ thứ tự DECISION TREE: {persona_cfg['decision_tree']}\n"
+        "  - NẾU ẢNH BỊ MỜ KHÔNG ĐỌC RÕ: document_readability BẮT BUỘC là 'UNREADABLE' và mọi trường dữ liệu text/ngày tháng PHẢI là null. TUYỆT ĐỐI KHÔNG TỰ BỊA.\n"
+    )
+
     payload = {
         "model": matched_model,
         "stream": False,
@@ -1111,31 +1411,9 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             "num_predict": 512,
             "temperature": 0.0,
         },
-        "prompt": (
-            VLM_SYSTEM_PROMPT + "\n\n" + _leave_type_prompt(leave_type) + "\n\n" +
-            _PROOF_TYPE_TAXONOMY +
-            "\nSchema keys (trả JSON THUẦN TÚY, KHÔNG text giải thích, KHÔNG markdown, CHỈ 1 object duy nhất):\n"
-            "  1. proof_type                       → enum 1 trong 13 giá trị trên, BẮT BUỘC CHỌN, KHÔNG được tùy ý thêm.\n"
-            "  2. doc_patient_name / subject_name  → TÊN NGƯỜI LIÊN QUAN TRÊN GIẤY (bệnh nhân, vợ/chồng, người đã mất, người cưới...). Nếu không có → null.\n"
-            "  3. doc_diagnosis / event_reason     → Chẩn đoán bệnh (nếu là giấy bệnh) / Lý do sự kiện (nếu không phải bệnh) / Nội dung giấy tờ tóm tắt. Không có → null.\n"
-            "  4. has_red_stamp                    → bool. Có thấy dấu đỏ (mộc đỏ tròn / vuông) rõ nét trên giấy không?\n"
-            "  5. has_doctor_signature             → bool. Có thấy CHỮ KÝ NGƯỜI CÓ THẨM QUYỀN (bác sĩ / trưởng đơn vị / chủ tịch / người cấp giấy) KHÔNG?\n"
-            "  6. signature_present                → bool = has_doctor_signature (2 trường này giống nhau cho loại giấy không có bác sĩ).\n"
-            "  7. is_tampered                      → bool / null. Nghi vấn giấy bị sửa nội dung sau khi ký?\n"
-            "  8. ai_edited                        → bool / null. Nghi vấn ảnh được chỉnh sửa AI?\n"
-            "  9. days_granted_by_doctor           → int / null. SỐ NGÀY NGHỊ được ghi trên giấy (bác sĩ đề nghị, nghỉ thai sản, ngày lễ, ngày tang...). Nếu không có số ngày → null.\n"
-            "  10. document_readability            → enum 1 giá trị: READABLE / PARTIAL / UNREADABLE (BẮT BUỘC chọn UNREADABLE nếu ảnh mờ / nhòe / không đọc rõ).\n"
-            "  11. issuer                          → string / null. Tên cơ quan cấp giấy (Bệnh viện Đa khoa X, UBND phường Y, BHXH, Phòng khám Z...). Không rõ → null.\n"
-            "  12. issue_date                      → string / null. Ngày cấp giấy YYYY-MM-DD. Không rõ → null.\n"
-            "  13. recommended_from_date           → string / null. Ngày bắt đầu nghỉ / ngày sự kiện YYYY-MM-DD. Không rõ → null.\n"
-            "  14. recommended_to_date             → string / null. Ngày kết thúc nghỉ / ngày sự kiện kết thúc YYYY-MM-DD. Không rõ → null.\n"
-            "  15. correlation_issues              → list[string] (mảng có thể rỗng). Các VẤN ĐỀ PHÁT HIỆN trên giấy (vd: tên sai, chữ ký không thấy, dấu đỏ không thấy, ngày tháng cắt xén...). Không có → [].\n"
-            "  16. escalation_reasons              → list[string] (mảng có thể rỗng). Các FLAG cần escalate cho người duyệt (vd: DOC_MISSING_RED_STAMP, DOC_SIGNATURE_UNVERIFIABLE, DOC_LOW_READABILITY, TAMPER_SUSPECTED, AI_EDITED, WRONG_PROOF_TYPE). Không có → [].\n"
-            "  17. digital_signature_present       → bool / null. Giấy có chữ ký số (PKI, CA, hình ảnh chữ ký số có khóa công khai) không? Nếu không rõ → null.\n"
-            "  18. fields_detected                 → list[string] các trường dữ liệu ĐƯỢC ĐỌC THÀNH CÔNG trên giấy (vd: ['patient_name','diagnosis','issue_date','red_stamp','signature']...). Nếu mờ không đọc được → [].\n"
-            "  LƯU Ý: NẾU ẢNH BỊ MỜ KHÔNG ĐỌC RÕ: document_readability BẮT BUỘC LÀ 'UNREADABLE' VÀ MỌI TRƯỜNG doc_patient_name, doc_diagnosis, issuer, issue_date, recommended_from_date, recommended_to_date PHẢI LÀ null. TUYỆT ĐỐI KHÔNG TỰ BỊA.\n"
-        ),
+        "prompt": prompt_content,
     }
+
     try:
         body = ollama_generate(payload, timeout=VLM_TIMEOUT_SEC)
     except TimeoutError as e:
@@ -1146,6 +1424,7 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
         return None, f"Phản hồi từ Ollama không phải JSON hợp lệ: {e}"
     except Exception as e:
         return None, f"Lỗi không mong muốn khi gọi VLM: {type(e).__name__}: {e}"
+
     # 6. Parse JSON từ raw response của model
     raw = body.get("response") or "{}"
     if "```" in raw:
@@ -1182,6 +1461,29 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
         issue_d = None
         rec_fr = None
         rec_to = None
+        adm_date = None
+        disch_date = None
+        is_open_ended = None
+        requires_followup = None
+        dec_name = None
+        sub_name = None
+        part_name = None
+        wed_date = None
+        d_death = None
+        fun_date = None
+        rel_label = None
+        rel_emp = None
+        evid_conf = None
+        needs_mgr = None
+        mat_phase = None
+        due_date = None
+        bhxh_cd = None
+        inj_desc = None
+        is_wp_rel = None
+        inj_date = None
+        doc_purp = None
+        val_fr = None
+        val_to = None
         fields_detected_val = []
         esc_reasons = list(dict.fromkeys(list(parsed.get("escalation_reasons") or []) + ["DOC_LOW_READABILITY"]))
     else:
@@ -1191,12 +1493,13 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             or parsed.get("patient_name")
             or parsed.get("name")
         )
-        # Loại bỏ các tên mẫu giả định phổ biến do VLM ảo giác
         if p_name and str(p_name).strip().lower() in ("nguyễn văn a", "nguyen van a"):
             p_name = None
 
         diag = (
             parsed.get("doc_diagnosis")
+            or parsed.get("emergency_diagnosis")
+            or parsed.get("injury_description")
             or parsed.get("event_reason")
             or parsed.get("diagnosis")
             or parsed.get("event_description")
@@ -1211,18 +1514,55 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             issuer_val = None
 
         issue_d = parsed.get("issue_date")
-        rec_fr = parsed.get("recommended_from_date")
-        rec_to = parsed.get("recommended_to_date")
+        rec_fr = parsed.get("recommended_from_date") or parsed.get("admission_date") or parsed.get("valid_from")
+        rec_to = parsed.get("recommended_to_date") or parsed.get("discharge_date") or parsed.get("valid_to")
+
+        # Extended fields parse
+        adm_date = parsed.get("admission_date")
+        disch_date = parsed.get("discharge_date")
+        is_open_ended = bool(parsed["is_open_ended"]) if parsed.get("is_open_ended") is not None else None
+        requires_followup = bool(parsed["requires_followup_proof"]) if parsed.get("requires_followup_proof") is not None else None
+        dec_name = parsed.get("deceased_name")
+        sub_name = parsed.get("subject_name")
+        part_name = parsed.get("partner_name")
+        wed_date = parsed.get("wedding_date")
+        d_death = parsed.get("date_of_death")
+        fun_date = parsed.get("funeral_date")
+        rel_label = parsed.get("relationship_label")
+        rel_emp = parsed.get("relationship_to_employee")
+        evid_conf = parsed.get("evidence_confidence")
+        needs_mgr = bool(parsed["needs_manager_review"]) if parsed.get("needs_manager_review") is not None else None
+        mat_phase = parsed.get("maternity_phase")
+        due_date = parsed.get("expected_due_date")
+        bhxh_cd = parsed.get("bhxh_code")
+        inj_desc = parsed.get("injury_description")
+        is_wp_rel = bool(parsed["is_workplace_related"]) if parsed.get("is_workplace_related") is not None else None
+        inj_date = parsed.get("injury_date")
+        doc_purp = parsed.get("document_purpose")
+        val_fr = parsed.get("valid_from")
+        val_to = parsed.get("valid_to")
+
+        # Đặc thù EMERGENCY: Tự động phát hiện ca cấp cứu chưa xác định ngày ra viện
+        if str(leave_type).upper() == "MEDICAL_EMERGENCY":
+            if is_open_ended is None and (rec_to is None or disch_date is None):
+                is_open_ended = True
+            if requires_followup is None and is_open_ended:
+                requires_followup = True
+
         fields_detected_val = list(parsed.get("fields_detected") or [])
         esc_reasons = list(parsed.get("escalation_reasons") or [])
 
     normalized: Dict[str, Any] = {
-        "doc_patient_name": p_name,
+        "doc_patient_name": p_name or sub_name or dec_name,
         "doc_diagnosis": diag,
         "has_red_stamp": (
             parsed.get("has_red_stamp")
             if isinstance(parsed.get("has_red_stamp"), bool)
-            else (parsed.get("has_stamp") if isinstance(parsed.get("has_stamp"), bool) else None)
+            else (
+                parsed.get("has_hospital_stamp")
+                if isinstance(parsed.get("has_hospital_stamp"), bool)
+                else (parsed.get("has_stamp") if isinstance(parsed.get("has_stamp"), bool) else None)
+            )
         ),
         "has_doctor_signature": (
             parsed.get("has_doctor_signature")
@@ -1233,16 +1573,14 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
         "ai_edited": parsed.get("ai_edited"),
         "days_granted_by_doctor": days_granted,
         "correlation_issues": list(parsed.get("correlation_issues") or []),
-        "persona_role_used": _resolve_persona_by_proof_type(
-            parsed.get("proof_type") or parsed.get("document_type")
-        ),
+        "persona_role_used": persona_cfg["persona"],
         "escalation_reasons": esc_reasons,
         "proof_extra": {
-            "proof_type": (
+            "proof_type": _normalize_proof_type(
                 parsed.get("proof_type")
                 or parsed.get("document_type")
                 or ProofType.MEDICAL_LEAVE_CERTIFICATE.value
-            ),
+            ).value,
             "issuer": issuer_val,
             "issue_date": issue_d,
             "recommended_from_date": rec_fr,
@@ -1263,8 +1601,68 @@ def _try_ollama_extract(attachment_path_or_type: Optional[str], leave_type: str 
             ),
             "document_readability": doc_readability,
             "fields_detected": fields_detected_val,
+            "is_open_ended": is_open_ended,
+            "requires_followup_proof": requires_followup,
+            "admission_date": adm_date,
+            "discharge_date": disch_date,
+            "doc_diagnosis": diag,
+            "emergency_diagnosis": parsed.get("emergency_diagnosis"),
+            "days_granted_by_doctor": days_granted,
+            "deceased_name": dec_name,
+            "subject_name": sub_name,
+            "partner_name": part_name,
+            "wedding_date": wed_date,
+            "date_of_death": d_death,
+            "funeral_date": fun_date,
+            "relationship_label": rel_label,
+            "relationship_to_employee": rel_emp,
+            "evidence_confidence": evid_conf,
+            "needs_manager_review": needs_mgr,
+            "maternity_phase": mat_phase,
+            "expected_due_date": due_date,
+            "bhxh_code": bhxh_cd,
+            "injury_description": inj_desc,
+            "is_workplace_related": is_wp_rel,
+            "injury_date": inj_date,
+            "has_red_stamp": parsed.get("has_red_stamp"),
+            "has_doctor_signature": parsed.get("has_doctor_signature"),
+            "has_hospital_stamp": parsed.get("has_hospital_stamp"),
+            "has_bhxh_stamp": parsed.get("has_bhxh_stamp"),
+            "document_purpose": doc_purp,
+            "valid_from": val_fr,
+            "valid_to": val_to,
         },
     }
+
+    # In kết quả kiểm định theo decision tree (Decision Tree Audit Log)
+    print(f"\n==================== [VLM DECISION TREE AUDIT] ====================")
+    print(f"🎭 PERSONA: {persona_cfg['persona']} ({persona_cfg['schema_key']})")
+    print(f"🌲 DECISION TREE: {persona_cfg['decision_tree']}")
+    audit_extracted = {k: v for k, v in normalized["proof_extra"].items() if v is not None}
+    print(f"📋 EXTRACTED DATA: {json.dumps(audit_extracted, ensure_ascii=False, indent=2)}")
+    print(f"===================================================================\n")
+
     if file_hash:
-        _write_vlm_cache(file_hash, leave_type, normalized)
+        _write_vlm_cache(file_hash, leave_type, normalized, reason_category or "")
     return normalized, None
+
+
+def print_persona_schemas() -> None:
+    """In chi tiết JSON Schema và Decision Tree cho từng Persona VLM."""
+    print("=" * 80)
+    print("           DANH SÁCH PERSONA VLM & DECISION TREE & JSON SCHEMA")
+    print("=" * 80)
+    for key, cfg in PERSONA_CONFIGS.items():
+        print(f"\n🔹 [SCHEMA KEY]: {key}")
+        print(f"   🎭 Persona: {cfg['persona']}")
+        print(f"   🌲 Decision Tree: {cfg['decision_tree']}")
+        print(f"   📄 Loại chứng từ hợp lệ: {cfg['allowed_proof_types']}")
+        print(f"   📋 JSON Schema:")
+        for line in cfg['schema_prompt'].strip().split("\n"):
+            print(f"      {line}")
+        print("-" * 80)
+
+
+if __name__ == "__main__":
+    print_persona_schemas()
+

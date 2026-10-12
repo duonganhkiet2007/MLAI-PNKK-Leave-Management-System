@@ -2162,15 +2162,23 @@ const TESTCASE_SPRINT1_METADATA = {
 let currentTestCaseFilter = "ALL";
 let testCaseSearchQuery = "";
 
+function setRepoFilter(filterVal) {
+  currentTestCaseFilter = filterVal || "ALL";
+  const filterPills = document.querySelectorAll("#testcase-filter-pills .repo-chip, #testcase-filter-pills button");
+  filterPills.forEach(btn => {
+    btn.classList.toggle("active", (btn.getAttribute("data-filter") || "ALL") === currentTestCaseFilter);
+  });
+  renderStaffTestCaseCard();
+}
+window.setRepoFilter = setRepoFilter;
+
 function initStaffTestCaseCard() {
-  // Filter pills
-  const filterPills = document.querySelectorAll("#testcase-filter-pills button");
+  // Filter pills / chips
+  const filterPills = document.querySelectorAll("#testcase-filter-pills .repo-chip, #testcase-filter-pills button");
   filterPills.forEach(btn => {
     btn.addEventListener("click", () => {
-      filterPills.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentTestCaseFilter = btn.getAttribute("data-filter") || "ALL";
-      renderStaffTestCaseCard();
+      const f = btn.getAttribute("data-filter") || "ALL";
+      setRepoFilter(f);
     });
   });
 
@@ -2332,6 +2340,26 @@ function renderStaffTestCaseCard() {
       : `${filteredCases.length} ca`;
     badgeCount.innerText = `${filteredCases.length} kịch bản · ${filterText}`;
   }
+
+  // Update chip count numbers for each outcome group
+  const allCases = (typeof STAFF_TEST_CASES !== "undefined" && Array.isArray(STAFF_TEST_CASES)) ? STAFF_TEST_CASES : [];
+  const countAll = allCases.length;
+  const countApprove = allCases.filter(t => getTestCaseOutcomeGroup(t) === "AUTO_APPROVE").length;
+  const countEscalate = allCases.filter(t => getTestCaseOutcomeGroup(t) === "ESCALATE").length;
+  const countCorrect = allCases.filter(t => getTestCaseOutcomeGroup(t) === "NEED_CORRECTION").length;
+  const countReject = allCases.filter(t => getTestCaseOutcomeGroup(t) === "AUTO_REJECT").length;
+
+  const elCountAll = document.getElementById("repo-count-ALL");
+  const elCountApprove = document.getElementById("repo-count-AUTO_APPROVE");
+  const elCountEscalate = document.getElementById("repo-count-ESCALATE");
+  const elCountCorrect = document.getElementById("repo-count-NEED_CORRECTION");
+  const elCountReject = document.getElementById("repo-count-AUTO_REJECT");
+
+  if (elCountAll) elCountAll.innerText = countAll;
+  if (elCountApprove) elCountApprove.innerText = countApprove;
+  if (elCountEscalate) elCountEscalate.innerText = countEscalate;
+  if (elCountCorrect) elCountCorrect.innerText = countCorrect;
+  if (elCountReject) elCountReject.innerText = countReject;
 
   // Handle empty state
   if (filteredCases.length === 0) {
@@ -3285,8 +3313,6 @@ function switchManagerTab(tabId) {
     loadAIStackStatus();
   } else if (tabId === "tab-mgr-queue") {
     renderManagerQueue();
-  } else if (tabId === "tab-mgr-auto-logs") {
-    renderAutoApprovedLogs();
   } else if (tabId === "tab-mgr-all-requests") {
     renderManagerAllRequests();
   } else if (tabId === "tab-mgr-policy") {
@@ -5078,8 +5104,19 @@ async function loadAllRequests(silent = false, force = false) {
   }
 }
 
+// Đơn chờ duyệt mà người đang đăng nhập có quyền xử lý (backend tính can_act theo vai trò).
+// Mọi bộ đếm "chờ xử lý" và hàng đợi Quản lý đều dùng chung điều kiện này để luôn khớp nhau.
+function isActionablePending(r) {
+  return r.status === "PENDING_ESCALATION" && r.can_act === true;
+}
+
+// Đơn đang chờ một cấp khác xử lý: người hiện tại chỉ được xem, không được thao tác.
+function isPendingOnOthers(r) {
+  return r.status === "PENDING_ESCALATION" && !r.can_act && r.employee_id !== currentEmployeeId;
+}
+
 function updateBadgesAndCounters() {
-  const pendingRequests = activeRequests.filter(r => r.status === "PENDING_ESCALATION" || r.decision === "ESCALATE_TO_HUMAN");
+  const pendingRequests = activeRequests.filter(isActionablePending);
   const myRequests = activeRequests.filter(r => r.employee_id === currentEmployeeId);
   const pendingHandovers = activeRequests.filter(r => r.status === "PENDING_HANDOVER" && r.handover_person_id === currentEmployeeId);
 
@@ -6164,32 +6201,14 @@ async function openRequestDetailModal(requestId) {
   const title = document.getElementById("modal-req-detail-title");
   const sub = document.getElementById("modal-req-detail-sub");
   const body = document.getElementById("modal-req-detail-body");
-  const btnAudit = document.getElementById("btn-req-detail-view-audit");
+  const headBadges = document.getElementById("modal-req-detail-badges");
 
   if (!modal || !body) return;
 
-  if (title) {
-    title.innerHTML = req.employee_name
-      ? `CHI TIẾT ĐƠN NGHỈ PHÉP · ${escapeHtml(req.employee_name.toUpperCase())}`
-      : 'CHI TIẾT ĐƠN NGHỈ PHÉP';
-  }
-
+  if (title) title.textContent = 'CHI TIẾT ĐƠN NGHỈ PHÉP';
   if (sub) {
-    const deptInfo = req.department ? ` · Phòng ban: <strong class="text-dark">${escapeHtml(req.department)}</strong>` : '';
-    const empInfo = req.employee_name ? ` · Nhân viên: <strong class="text-dark">${escapeHtml(req.employee_name)}${req.employee_id ? ` (${escapeHtml(req.employee_id)})` : ''}</strong>` : '';
-    sub.innerHTML = `Mã đơn: <strong class="text-dark">${escapeHtml(req.id)}</strong>${empInfo}${deptInfo}`;
-  }
-
-  if (btnAudit) {
-    if (String(req.id).startsWith("TC-")) {
-      btnAudit.style.display = "none";
-    } else {
-      btnAudit.style.display = "";
-      btnAudit.onclick = () => {
-        closeRequestDetailModal();
-        viewAuditTrail(req.id);
-      };
-    }
+    sub.innerHTML = '';
+    sub.style.display = 'none';
   }
 
   const btnFillModal = document.getElementById("btn-req-detail-fill-form");
@@ -6219,27 +6238,22 @@ async function openRequestDetailModal(requestId) {
   const handoverDisplayName = handoverEmp ? `${handoverEmp.name} (${handoverEmp.department || 'Đồng nghiệp'})` : (req.handover_person_name || req.handover_person_id || "Không yêu cầu");
 
   const hasAttachment = !!(req.proof_id || req.proof_file);
-  const attachLabel = hasAttachment ? (req.proof_file || req.proof_id || 'Chứng từ đính kèm') : 'Không có';
 
   // Đánh giá AI / Quản lý
   const isAuto = req.decision === "AUTO_APPROVE";
   const isOverride = (req.human_resolution === "APPROVE_OVERRIDE" || req.decision === "APPROVED_BY_HUMAN_OVERRIDE");
   const isRejected = req.status === "REJECTED";
 
-  let boxType = "ai-box-warning";
   let boxLabel = "Lý do chuyển tiếp:";
   let rawText = req.human_readable_explanation || req.actionable_question || "Đang xử lý theo quy chế.";
 
   if (isAuto) {
-    boxType = "ai-box-success";
     boxLabel = "Đánh giá hệ thống:";
     rawText = "Đơn đầy đủ điều kiện và được phê duyệt tự động.";
   } else if (isOverride) {
-    boxType = "ai-box-primary";
     boxLabel = "Ý kiến Quản lý:";
     rawText = req.human_feedback_text || "Đã xem xét và phê duyệt ngoại lệ.";
   } else if (isRejected) {
-    boxType = "ai-box-danger";
     boxLabel = "Lý do từ chối:";
     rawText = req.human_feedback_text || req.human_readable_explanation || "Không đáp ứng quy chuẩn.";
   }
@@ -6261,130 +6275,194 @@ async function openRequestDetailModal(requestId) {
     doctor_recommended_range: (_vlmDocBase.doctor_recommended_range || {})
   };
   const _vlmFlags = _vlm.flags || {};
-  const _vlmCorr = _vlm.correlation_analysis || {};
-  const _vlmMode = _vlm.inspection_mode || "";
   const _vlmErr = _vlm.vlm_error || "";
   const _hasVlm = hasAttachment && !!(req.vlm_analysis_json && Object.keys(req.vlm_analysis_json).length);
 
-  function _boolBadge(val, trueL, falseL) {
-    if (val === true)  return '<span style="background:#dcfce7;color:#166534;padding:2px 9px;border-radius:5px;font-size:0.78rem;font-weight:600;">' + trueL + '</span>';
-    if (val === false) return '<span style="background:#fee2e2;color:#991b1b;padding:2px 9px;border-radius:5px;font-size:0.78rem;font-weight:600;">' + falseL + '</span>';
-    return '<span style="background:#f1f5f9;color:#64748b;padding:2px 9px;border-radius:5px;font-size:0.78rem;">\u2014 Ch\u01b0a x\u00e1c \u0111\u1ecbnh</span>';
-  }
-  function _nv(v, fallback) {
-    return v ? '<span style="font-weight:600;color:#0f172a;">' + escapeHtml(String(v)) + '</span>' : '<span style="color:#94a3b8;">\u2014 ' + fallback + '</span>';
-  }
+  // ── Icons (Lucide-style stroke SVG, đồng bộ với icon trong app) ───────────
+  const _ICONS = {
+    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    tag: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>',
+    clipboard: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/>',
+    scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="8" x2="13" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="15" y2="16"/>',
+    listChecks: '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><line x1="13" y1="6" x2="21" y2="6"/><line x1="13" y1="12" x2="21" y2="12"/><line x1="13" y1="18" x2="21" y2="18"/>',
+    alert: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    checkCircle: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+    help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+    eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+    activity: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+    user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+    chevron: '<polyline points="6 9 12 15 18 9"/>',
+  };
+  const _icon = (name, size) => '<svg class="rd-icon" width="' + (size || 16) + '" height="' + (size || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + _ICONS[name] + '</svg>';
 
-  let _vlmModeBadge = '';
-  if (_vlmMode === 'OLLAMA_REAL_QWEN25_VL_3B' || _vlmMode.startsWith('OLLAMA_REAL')) _vlmModeBadge = '<span class="ai-engine-badge">AI Engine</span>';
-  else if (_vlmMode.includes('UNAVAILABLE') || _vlmMode.includes('ERROR')) _vlmModeBadge = '<span style="background:#fee2e2;color:#991b1b;font-size:0.72rem;padding:2px 8px;border-radius:4px;font-weight:600;">VLM L\u1ed7i / Ch\u01b0a c\u00f3 model</span>';
-  else if (_vlmMode) _vlmModeBadge = '<span style="background:#f1f5f9;color:#475569;font-size:0.72rem;padding:2px 8px;border-radius:4px;">' + escapeHtml(_vlmMode) + '</span>';
-
-  let _vlmSection = '';
-  if (_hasVlm) {
-    const _dr = _vlmDoc.doctor_recommended_range || {};
-
-    _vlmSection = '<div class="col-12" style="margin-top:4px;">'
-      + '<div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#ffffff;">'
-      + '<div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);padding:10px 16px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
-      + '<div style="display:flex;align-items:center;gap:8px;"><span style="font-weight:700;color:#0f172a;font-size:0.9rem;">Th\u00f4ng tin tr\u00edch xu\u1ea5t t\u1eeb ch\u1ee9ng t\u1eeb (AI Engine)</span>' + _vlmModeBadge + '</div>'
-      + (_vlmErr ? '<span style="background:#fee2e2;color:#991b1b;font-size:0.72rem;padding:2px 8px;border-radius:4px;" title="' + escapeHtml(_vlmErr) + '">' + escapeHtml(_vlmErr.substring(0,75)) + (_vlmErr.length>75?'\u2026':'') + '</span>' : '')
+  // ── Render helpers ────────────────────────────────────────────────────────
+  const _txt = (v, fallback) => v ? escapeHtml(String(v)) : '<span class="rd-muted">' + fallback + '</span>';
+  // Bấm vào tiêu đề khung để thu gọn / mở rộng (toggleRdCard)
+  const _card = (icon, title, inner, aside, flush) => '<section class="rd-card">'
+    + '<header class="rd-card-head" role="button" tabindex="0" aria-expanded="true" title="Bấm để thu gọn / mở rộng"'
+    + ' onclick="toggleRdCard(this)" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleRdCard(this);}">'
+    + '<div class="rd-card-title"><span class="rd-icon-box">' + _icon(icon) + '</span><span>' + title + '</span></div>'
+    + '<div class="rd-card-aside">' + (aside || '') + '<span class="rd-card-chevron">' + _icon('chevron', 18) + '</span></div>'
+    + '</header>'
+    + '<div class="rd-card-body' + (flush ? ' is-flush' : '') + '">' + inner + '</div>'
+    + '</section>';
+  // Ô dạng form "Tạo đơn nghỉ phép": nhãn ở trên, giá trị trong ô viền
+  const _ff = (label, value, opts) => {
+    opts = opts || {};
+    return '<div class="' + (opts.wide ? 'col-12' : 'col-md-6') + '">'
+      + '<div class="rd-form-label">' + label + '</div>'
+      + '<div class="rd-form-field' + (opts.warn ? ' is-warn' : '') + (opts.multiline ? ' is-multiline' : '') + '">'
+      + '<span class="rd-form-value">' + value + '</span>'
+      + (opts.icon ? '<span class="rd-field-icon">' + _icon(opts.icon) + '</span>' : '')
+      + (opts.action || '')
       + '</div>'
-      + '<div style="padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;">'
-      + '<div><div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:2px;">T\u00ean tr\u00ean ch\u1ee9ng t\u1eeb</div><div style="font-size:0.86rem;">' + _nv(_vlmDoc.patient_name, 'Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c') + '</div></div>'
-      + '<div><div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:2px;">N\u01a1i c\u1ea5p gi\u1ea5y</div><div style="font-size:0.86rem;">' + _nv(_vlmDoc.issuer, 'Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c') + '</div></div>'
-      + '<div style="grid-column:span 2;"><div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Ch\u1ea9n \u0111o\u00e1n / L\u00fd do gi\u1ea5y</div><div style="font-size:0.86rem;">' + _nv(_vlmDoc.diagnosis, 'Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c') + '</div></div>'
-      + '<div><div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Ng\u00e0y c\u1ea5p</div><div style="font-size:0.86rem;">' + _nv(_vlmDoc.issue_date, 'Kh\u00f4ng c\u00f3') + '</div></div>'
-      + '<div><div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:2px;">Kho\u1ea3ng ng\u00e0y b\u00e1c s\u0129 ch\u1ec9 \u0111\u1ecbnh</div><div style="font-size:0.86rem;">' + (_dr.from && _dr.to ? '<span style="font-weight:600;color:#0f172a;">' + escapeHtml(_dr.from) + ' \u2192 ' + escapeHtml(_dr.to) + '</span>' + (_dr.days !== null && _dr.days !== undefined ? ' <span style="color:#2563eb;font-size:0.8rem;">(' + _dr.days + ' ng\u00e0y)</span>' : '') : '<span style="color:#94a3b8;">\u2014 Kh\u00f4ng \u0111\u1ecdc \u0111\u01b0\u1ee3c</span>') + '</div></div>'
-      + '</div>'
-      + '<div style="padding:0 16px 10px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;">'
-      + (_vlmFlags.has_red_stamp !== undefined && _vlmFlags.has_red_stamp !== null ? _boolBadge(_vlmFlags.has_red_stamp, 'Có dấu đỏ', 'Thiếu dấu đỏ') : '')
-      + (_vlmFlags.has_doctor_signature !== undefined && _vlmFlags.has_doctor_signature !== null ? _boolBadge(_vlmFlags.has_doctor_signature, 'Có chữ ký', 'Thiếu chữ ký') : '')
-      + (_vlmFlags.signature_present_on_scan !== undefined && _vlmFlags.signature_present_on_scan !== null && _vlmFlags.has_doctor_signature === undefined ? _boolBadge(_vlmFlags.signature_present_on_scan, 'Có chữ ký', 'Thiếu chữ ký') : '')
-      + (_vlmFlags.document_readability ? '<span style="background:#f1f5f9;color:#475569;padding:2px 9px;border-radius:5px;font-size:0.78rem;">Độ rõ: ' + escapeHtml(_vlmFlags.document_readability) + '</span>' : '')
-      + '</div>'
-      + '</div></div>';
-  }
+      + (opts.warn ? '<div class="rd-field-warn">' + _icon('alert', 14) + '<span>' + opts.warn + '</span></div>' : '')
+      + '</div>';
+  };
+  const _pill = (tone, label, icon) => '<span class="rd-pill rd-pill-' + tone + '">' + (icon ? _icon(icon, 13) : '') + label + '</span>';
 
-  // ── LLM Summary & Synthesis data (Core Reasoning) ──────────────────────────
+  // ── Dữ liệu theo đối tượng xem (Staff / Manager) ─────────────────────────
   const _llm = req.llm_summary_json || {};
-  const _hasLlm = !!(req.llm_summary_json);
-  let _llmSection = '';
-  if (_hasLlm) {
-    const _isManagerAudience = currentMode === 'manager';
-    const _rawDecision = req.decision || (req.result_json && req.result_json.decision) || _llm.decision || '';
-    const _decisionForAudience = String(_rawDecision).toUpperCase();
-    const _isStaffCorrection = _decisionForAudience === 'NEED_CORRECTION';
-    const _isAutoRejected = _decisionForAudience === 'AUTO_REJECT';
-    const _isAutoApproved = _decisionForAudience === 'AUTO_APPROVE';
-    const _isNoLeave = ['NO_LEAVE_REQUIRED', 'NO_LEAVE', 'NO_LEAVE_NEEDED'].includes(_decisionForAudience);
-    const _legacyStaffErrors = ['NEED_CORRECTION', 'AUTO_REJECT'].includes(_decisionForAudience)
-      ? (_llm.staff_errors_vn || _llm.info_missing_vn || [])
-      : [];
-    const _audienceSummary = _isManagerAudience
-      ? (_llm.manager_summary || {suspicions_vn: _llm.info_missing_vn || [], risk_level_vn: '—'})
-      : (_llm.staff_summary || {errors_vn: _legacyStaffErrors});
-    const _whyEsc = _isManagerAudience ? (_llm.why_escalated || '') : '';
-    const _tier = _llm.correlation_tier_vn || '';
-    const _aq = _isManagerAudience ? (_llm.actionable_question || '') : '';
-    const _managerSummary = _isManagerAudience
-      ? (_llm.summary_natural_vn || _llm.manager_summary?.summary_natural_vn || '')
-      : '';
-    const _pvn = _isManagerAudience ? (_llm.applied_policy_clauses_vn || []) : [];
-    const _qvn = _isManagerAudience ? (_llm.quick_action_options_vn || []) : [];
-    const _warns = _isManagerAudience ? (_llm.warnings || []) : [];
-    const _riskLevel = _audienceSummary.risk_level_vn || _llm.manager_risk_level_vn || '';
-    const _tierC = _tier === 'RẤT KHỚP' ? '#059669' : _tier === 'KHỚP' ? '#2563eb' : _tier === 'CHƯA KHỚP' ? '#d97706' : _tier === 'KHÔNG KHỚP' ? '#dc2626' : '#059669';
+  const _isManagerAudience = currentMode === 'manager';
+  const _riskLevel = _isManagerAudience
+    ? ((_llm.manager_summary && _llm.manager_summary.risk_level_vn) || _llm.manager_risk_level_vn || '')
+    : '';
+  const _whyEsc = _isManagerAudience ? (_llm.why_escalated || '') : '';
+  const _aq = _isManagerAudience ? (_llm.actionable_question || '') : '';
+  const _pvn = _isManagerAudience ? (_llm.applied_policy_clauses_vn || []) : [];
+  const _warns = _isManagerAudience ? (_llm.warnings || []) : [];
+
+  // ── Checklist theo cây quyết định ─────────────────────────────────────────
+  let _passedNodes = [];
+  let _reviewNodes = [];
+  if (req.llm_summary_json) {
     const _treeNodes = Array.isArray(req.decision_tree_checklist) ? req.decision_tree_checklist : [];
-    const _hiddenTreeStages = new Set(['FINAL_DECISION', 'LLM_SUMMARY']);
+    const _hiddenTreeStages = new Set(['FINAL_DECISION', 'LLM_SUMMARY', 'AUTHORITY']);
     const _displayTreeNodes = _treeNodes.filter(function(node) {
       if (_hiddenTreeStages.has(node.stage)) return false;
-      if (String(req.decision || '').toUpperCase() === 'AUTO_APPROVE' && ['PROOF_VERIFICATION', 'AUTHORITY'].includes(node.stage)) return false;
-      if (node.stage === 'AUTHORITY' && ['NONE', 'EMPLOYEE'].includes(String(req.target_role || 'NONE').toUpperCase())) return false;
-      if (node.stage === 'AUTHORITY') return false;
+      if (String(req.decision || '').toUpperCase() === 'AUTO_APPROVE' && node.stage === 'PROOF_VERIFICATION') return false;
       // NOTICE & TEAM_QUOTA: Chỉ hiển thị trên giao diện Quản lý (Manager)
       if (!_isManagerAudience && (node.stage === 'NOTICE' || node.stage === 'TEAM_QUOTA')) return false;
       return true;
     }).reduce(function(acc, node) {
-      if (node.stage === 'VLM_INTEGRITY' && _treeNodes.some(function(other) { return other.stage === 'PROOF'; })) {
+      // Gộp VLM_INTEGRITY vào node PROOF để không lặp hai dòng "Chứng từ"
+      if (node.stage === 'VLM_INTEGRITY') {
         const proofNode = acc.find(function(item) { return item.stage === 'PROOF'; });
         if (proofNode) {
-          const noteParts = [String(proofNode.note || ''), String(node.note || '')].filter(Boolean);
-          proofNode.note = noteParts.join(' • ');
-          if (node.status === 'FAIL' || proofNode.status === 'FAIL') {
-            proofNode.status = 'FAIL';
-            proofNode.passed = false;
-          } else if (node.status !== 'PASS' || proofNode.status !== 'PASS') {
-            proofNode.status = (node.status !== 'PASS') ? node.status : proofNode.status;
-            proofNode.passed = false;
-          }
+          proofNode.note = [String(proofNode.note || ''), String(node.note || '')].filter(Boolean).join(' • ');
+          if (node.status !== 'PASS') proofNode.status = node.status;
           return acc;
         }
       }
-      acc.push(node);
+      acc.push(Object.assign({}, node));
       return acc;
     }, []);
-    const _passedNodes = _displayTreeNodes.filter(function(node) { return node.status === 'PASS'; });
-    const _reviewNodes = _displayTreeNodes.filter(function(node) { return node.status !== 'PASS' && node.status !== 'NOT_RUN'; });
-    const _finalOutcome = req.is_passed === true ? 'ĐẠT' : (req.is_passed === false ? 'KHÔNG ĐẠT' : 'CHƯA XÁC ĐỊNH');
-    const _finalOutcomeColor = req.is_passed === true ? '#059669' : (req.is_passed === false ? '#dc2626' : '#64748b');
+    _passedNodes = _displayTreeNodes.filter(function(node) { return node.status === 'PASS'; });
+    _reviewNodes = _displayTreeNodes.filter(function(node) { return node.status !== 'PASS' && node.status !== 'NOT_RUN'; });
+  }
+  const _totalChecks = _passedNodes.length + _reviewNodes.length;
+  const _reviewStages = new Set(_reviewNodes.map(function(n) { return n.stage; }));
 
-    function _renderTreeNode(node, isReview) {
-      const shortTitles = {
-        VALIDATION: 'Thông tin nhân sự',
-        BALANCE: 'Số dư phép',
-        PROOF: 'Chứng từ',
-        VLM_INTEGRITY: 'Chứng từ',
-        VLM_PATIENT: 'Tên trên chứng từ',
-        VLM_DATE_COVERAGE: 'Khoảng ngày nghỉ',
-        VLM_CORRELATION: 'Độ khớp nội dung',
-        PROOF_VERIFICATION: 'Xác minh chứng từ',
-        AUTHORITY: 'Thẩm quyền duyệt',
-        NOTICE: 'Thời hạn báo trước',
-        TEAM_QUOTA: 'Tỷ lệ nghỉ trong phòng ban',
-      };
-      const color = isReview ? '#b91c1c' : '#065f46';
-      const title = shortTitles[node.stage] || node.title_vi || node.stage || 'Kiểm tra hồ sơ';
+  // Tiêu chí không đạt → ô chứng từ tương ứng được đánh dấu
+  const _fieldWarnText = {
+    VLM_PATIENT: 'Tên trên giấy chưa khớp với nhân viên làm đơn',
+    VLM_DATE_COVERAGE: 'Khoảng ngày chỉ định chưa bao phủ ngày xin nghỉ',
+    VLM_CORRELATION: 'Chẩn đoán chưa khớp hoàn toàn với lý do nghỉ',
+  };
+  const _warnFor = (stage) => _reviewStages.has(stage) ? _fieldWarnText[stage] : '';
+  const _docMismatch = Object.keys(_fieldWarnText).filter(function(st) { return _reviewStages.has(st); }).length;
+
+  // ── Trạng thái & rủi ro: hiển thị trên thanh tiêu đề modal ───────────────
+  const _days = req.requested_working_days ?? req.workdays ?? 0;
+  const _fromTxt = formatSimpleDate(req.from_date);
+  const _toTxt = formatSimpleDate(req.to_date);
+  const _riskText = _riskLevel ? _riskLevel.charAt(0).toUpperCase() + _riskLevel.slice(1).toLowerCase() : '';
+  const _riskUpper = _riskLevel.toUpperCase();
+  const _riskTone = (_riskUpper.includes('THẤP') || _riskUpper.includes('LOW')) ? 'ok'
+    : ((_riskUpper.includes('CAO') || _riskUpper.includes('HIGH')) ? 'bad' : 'warn');
+  if (headBadges) {
+    headBadges.innerHTML = getStatusBadgeHtml(req)
+      + (_riskText ? '<span class="rd-pill rd-pill-' + _riskTone + '">' + _icon('activity', 13) + 'Rủi ro: ' + escapeHtml(_riskText) + '</span>' : '');
+  }
+
+  // Kết luận + câu hỏi cho quản lý: đặt ở đầu khung "Kết quả kiểm tra"
+  const _verdict = '<div class="rd-verdict">'
+    + '<p class="rd-verdict-text"><strong>' + escapeHtml(boxLabel) + '</strong> ' + escapeHtml(cleanReason)
+    + ((_whyEsc && _whyEsc !== cleanReason && !isAuto && !/^Không escalate/i.test(_whyEsc)) ? ' ' + escapeHtml(_whyEsc) : '')
+    + '</p>'
+    + (_aq ? '<div class="rd-question">' + _icon('help', 20) + '<div><div class="rd-question-label">Câu hỏi cần quản lý trả lời</div><div class="rd-question-text">' + escapeHtml(_aq) + '</div></div></div>' : '')
+    + '</div>';
+
+  // ── 2. Thông tin đơn ─────────────────────────────────────────────────────
+  const _proofKey = req.proof_file || req.proof_id;
+  const _viewProofBtn = !hasAttachment ? '' : (
+    (req.proof_file || String(req.id).startsWith('TC-'))
+      ? `<button type="button" class="btn btn-sm btn-outline-primary rd-field-action" onclick="openImageLightbox('assets/proofs/${_proofKey}', '${_proofKey}')">${_icon('eye', 14)}Xem ảnh gốc</button>`
+      : `<button type="button" class="btn btn-sm btn-outline-primary rd-field-action" onclick="openAttachmentModal('${req.id}', '${req.attachment_type}', '${req.employee_name}')">${_icon('eye', 14)}Xem ảnh gốc</button>`
+  );
+  const _infoCard = _card('clipboard', 'Thông tin đơn', '<div class="row g-3">'
+    + _ff('Loại nghỉ phép', escapeHtml(getLeaveTypeLabel(req.leave_type)))
+    + _ff('Người nhận bàn giao', escapeHtml(handoverDisplayName), { icon: 'user' })
+    + _ff('Từ ngày', escapeHtml(_fromTxt), { icon: 'calendar' })
+    + _ff('Đến ngày', escapeHtml(_toTxt), { icon: 'calendar' })
+    + '<div class="col-12"><div class="rd-form-status"><span class="rd-status-left">' + _icon('clock') + '<span>Thời lượng vắng mặt:</span><strong>' + _days + ' ngày làm việc</strong></span></div></div>'
+    + _ff('Lý do nghỉ', _txt(req.reason, 'Không có mô tả'), { wide: true, multiline: true })
+    + _ff('Chứng từ', '<span class="rd-inline">' + _icon('file') + (hasAttachment ? 'Có chứng từ đính kèm' : '<span class="rd-muted">Không có chứng từ đính kèm</span>') + '</span>', { wide: true, action: _viewProofBtn })
+    + '</div>');
+
+  // ── 3. Thông tin trích xuất từ chứng từ (VLM) ───────────────────────────
+  let _vlmCard = '';
+  if (_hasVlm) {
+    const _dr = _vlmDoc.doctor_recommended_range || {};
+    const _readability = { READABLE: 'Rõ nét', UNREADABLE: 'Không đọc được', PARTIAL: 'Mờ một phần' }[_vlmFlags.document_readability] || _vlmFlags.document_readability;
+    const _rangeHtml = (_dr.from && _dr.to)
+      ? escapeHtml(formatSimpleDate(_dr.from)) + ' → ' + escapeHtml(formatSimpleDate(_dr.to)) + (_dr.days !== null && _dr.days !== undefined ? ' (' + _dr.days + ' ngày)' : '')
+      : '<span class="rd-muted">Không đọc được</span>';
+    const _flagPill = (val, yes, no) => val === true ? _pill('ok', yes) : (val === false ? _pill('bad', no) : '');
+    const _docPills = _flagPill(_vlmFlags.has_red_stamp, 'Có dấu đỏ', 'Thiếu dấu đỏ')
+      + _flagPill(_vlmFlags.has_doctor_signature ?? _vlmFlags.signature_present_on_scan, 'Có chữ ký', 'Thiếu chữ ký')
+      + (_readability ? _pill(_vlmFlags.document_readability === 'READABLE' ? 'ok' : 'bad', escapeHtml(_readability)) : '');
+    const _aside = !_totalChecks ? ''
+      : (_docMismatch ? _pill('warn', _docMismatch + ' điểm chưa khớp', 'alert') : _pill('ok', 'Khớp với đơn', 'checkCircle'));
+
+    _vlmCard = _card('scan', 'Thông tin trích xuất từ chứng từ', '<div class="row g-3">'
+      + _ff('Tên trên giấy', _txt(_vlmDoc.patient_name, 'Không đọc được'), { warn: _warnFor('VLM_PATIENT') })
+      + _ff('Nơi cấp', _txt(_vlmDoc.issuer, 'Không đọc được'))
+      + _ff('Ngày cấp', _vlmDoc.issue_date ? escapeHtml(formatSimpleDate(_vlmDoc.issue_date)) : '<span class="rd-muted">Không có</span>', { icon: 'calendar' })
+      + _ff('Bác sĩ chỉ định', _rangeHtml, { icon: 'calendar', warn: _warnFor('VLM_DATE_COVERAGE') })
+      + _ff('Chẩn đoán', _txt(_vlmDoc.diagnosis, 'Không đọc được'), { wide: true, warn: _warnFor('VLM_CORRELATION') })
+      + (_docPills ? '<div class="col-12"><div class="rd-form-status"><span class="rd-status-left">' + _icon('shield') + '<span>Tình trạng chứng từ:</span></span><span class="rd-pills">' + _docPills + '</span></div></div>' : '')
+      + (_vlmErr ? _ff('Lỗi đọc chứng từ', '<span class="rd-bad">' + escapeHtml(_vlmErr) + '</span>', { wide: true }) : '')
+      + '</div>', _aside);
+  }
+
+  // ── 4. Kết quả kiểm tra ──────────────────────────────────────────────────
+  let _checkCard = '';
+  {
+    const shortTitles = {
+      VALIDATION: 'Thông tin nhân sự',
+      BALANCE: 'Số dư phép',
+      PROOF: 'Chứng từ',
+      VLM_INTEGRITY: 'Chứng từ',
+      VLM_PATIENT: 'Tên trên chứng từ',
+      VLM_DATE_COVERAGE: 'Khoảng ngày nghỉ',
+      VLM_CORRELATION: 'Độ khớp nội dung',
+      PROOF_VERIFICATION: 'Xác minh chứng từ',
+      NOTICE: 'Thời hạn báo trước',
+      TEAM_QUOTA: 'Tỷ lệ nghỉ trong phòng ban',
+    };
+    // Tiêu chí đạt mà chi tiết đã có ở các khung phía trên → ghi ngắn gọn thay vì lặp lại
+    const _passSummary = {
+      VALIDATION: 'Thông tin nhân sự và ngày nghỉ hợp lệ',
+      PROOF: 'Chứng từ đầy đủ, khớp với đơn',
+      VLM_INTEGRITY: 'Chứng từ đầy đủ, khớp với đơn',
+    };
+
+    function _nodeNoteItems(node, isReview) {
       const compactNote = String(node.note || '')
         .replaceAll('MEDICAL_LEAVE_CERTIFICATE', 'Giấy chứng nhận nghỉ ốm')
         .replaceAll('HOSPITAL_DISCHARGE', 'Giấy ra viện')
@@ -6393,268 +6471,58 @@ async function openRequestDetailModal(requestId) {
         .replaceAll('Thẩm quyền duyệt', '')
         .replaceAll('Điều kiện duyệt', '')
         .replace(/\s*\([A-Z0-9_]{3,}\)/g, '')
-        .replace(/\s*•\s*/g, ' • ')
-        .replace(/\s*·\s*/g, ' • ')
-        .replace(/\s*;\s*/g, ' • ')
+        .replace(/\s*[•·;]\s*/g, ' • ')
         .replace(/\s+/g, ' ')
         .trim();
-      const noteItems = compactNote ? compactNote.split(' • ').map(function(item) {
-        const clean = item.trim();
+      if (!compactNote) return [];
+      return compactNote.split(' • ').map(function(item) {
+        const clean = item.trim().replace(/\.+$/, '');
         if (!clean) return '';
         if (!isReview && /error_code|uncertainty_category|DIRECT_MANAGER|DEPARTMENT_HEAD|CEO|HR|AUTHORITY|thẩm quyền|cần.*duyệt|cần.*xem xét|xác minh chứng từ|chưa đọc được|không đọc được|không có|Trường còn thiếu|N\/A|undefined|null|unknown/i.test(clean)) return '';
         if (isReview && /^(error_code|uncertainty_category|DIRECT_MANAGER|DEPARTMENT_HEAD|CEO|HR|AUTHORITY|thẩm quyền|N\/A|undefined|null|unknown)$/i.test(clean)) return '';
-        return '<div style="font-size:0.74rem;color:#64748b;margin:2px 0 2px 20px;line-height:1.4;">• ' + escapeHtml(clean) + '</div>';
-      }).filter(Boolean).join('') : '';
-      return '<div style="font-size:0.82rem;color:' + color + ';padding:3px 0;line-height:1.45;">'
-        + '<span style="margin-right:6px;font-weight:700;">•</span>'
-        + '<strong>' + escapeHtml(title) + '</strong>'
-        + noteItems
-        + '</div>';
+        return escapeHtml(clean);
+      }).filter(Boolean);
     }
 
-    // Chỉ hiển thị lỗi khi Decision Tree thực sự yêu cầu sửa hoặc từ chối.
-    let _infoSuf = _isManagerAudience || (!_isStaffCorrection && !_isAutoRejected)
-      ? [] : (_audienceSummary.errors_vn || _legacyStaffErrors);
-    let _infoMis = _isManagerAudience
-      ? (_audienceSummary.suspicions_vn || _llm.manager_suspicions_vn || [])
-      : (_llm.info_missing_vn || []);
-
-    if (!_isManagerAudience && _isStaffCorrection && _infoSuf.length === 0 && hasAttachment) {
-      if (_vlmFlags && _vlmFlags.has_red_stamp === false) _infoSuf.push('Thiếu dấu mộc đỏ bệnh viện/phòng khám');
-      if (_vlmFlags && _vlmFlags.has_doctor_signature === false) _infoSuf.push('Thiếu chữ ký bác sĩ / người cấp giấy');
-      if (_vlmDoc && !_vlmDoc.patient_name) _infoSuf.push('Chưa đọc được tên trên chứng từ');
+    function _checkRow(node, isReview) {
+      const title = shortTitles[node.stage] || node.title_vi || node.stage || 'Kiểm tra hồ sơ';
+      const items = (!isReview && _passSummary[node.stage]) ? [_passSummary[node.stage]] : _nodeNoteItems(node, isReview);
+      return '<tr class="' + (isReview ? 'is-fail' : '') + '">'
+        + '<td class="rd-check-name">' + escapeHtml(title) + '</td>'
+        + '<td class="rd-check-result ' + (isReview ? 'rd-bad' : 'rd-good') + '">' + (isReview ? 'Cần xem xét' : 'Đạt') + '</td>'
+        + '<td>' + (items.length ? items.join('<br>') : '<span class="rd-muted">—</span>') + '</td>'
+        + '</tr>';
     }
 
-    const _staffPanelTitle = _isAutoApproved ? 'Kết quả đối soát'
-      : _isNoLeave ? 'Kết quả ngày nghỉ'
-      : _isStaffCorrection || _isAutoRejected ? 'Thông tin cần xử lý'
-      : 'Kết quả thẩm định AI';
-    const _timings = _llm.timings || {};
-    const _timingBadge = (_timings.rule_engine_ms !== undefined && _timings.template_ms !== undefined)
-      ? '<span style="font-size:0.72rem;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;padding:2px 8px;border-radius:4px;font-weight:500;" title="Rule Engine: ' + _timings.rule_engine_ms + 'ms, Template: ' + _timings.template_ms + 'ms">' + (_timings.total_eval_ms || Math.round((_timings.rule_engine_ms + _timings.template_ms)*10)/10) + 'ms</span>'
+    const _rows = _reviewNodes.map(function(n) { return _checkRow(n, true); })
+      .concat(_passedNodes.map(function(n) { return _checkRow(n, false); }));
+    const _footnotes = (_pvn.length ? '<div class="rd-footnote">' + _icon('book', 15) + '<span><strong>Căn cứ:</strong> ' + _pvn.map(function(p) { return escapeHtml(String(p)); }).join('; ') + '</span></div>' : '')
+      + (_warns.length ? '<div class="rd-footnote">' + _icon('alert', 15) + '<span><strong>Lưu ý:</strong> ' + _warns.map(function(w) { return escapeHtml(String(w)); }).join('; ') + '</span></div>' : '');
+    const _aside = _totalChecks
+      ? _pill(_reviewNodes.length ? 'bad' : 'ok', _passedNodes.length + '/' + _totalChecks + ' đạt')
       : '';
 
-    // Risk level styling in Enterprise palette
-    const _riskUpper = String(_riskLevel || '').toUpperCase();
-    const _isRiskLow = _riskUpper.includes('THẤP') || _riskUpper.includes('LOW');
-    const _isRiskHigh = _riskUpper.includes('CAO') || _riskUpper.includes('HIGH');
-    const _isRiskMedium = _riskUpper.includes('TRUNG BÌNH') || _riskUpper.includes('MEDIUM');
-    const _riskColor = _isRiskLow ? '#059669' : (_isRiskHigh ? '#dc2626' : (_isRiskMedium ? '#d97706' : '#2563eb'));
-    const _riskBg = _isRiskLow ? '#ecfdf5' : (_isRiskHigh ? '#fef2f2' : (_isRiskMedium ? '#fffbeb' : '#eff6ff'));
-    const _riskBorder = _isRiskLow ? '#a7f3d0' : (_isRiskHigh ? '#fecaca' : (_isRiskMedium ? '#fde68a' : '#bfdbfe'));
-
-    // Format manager summary bullet points cleanly with generous spacing
-    let _formattedManagerSummary = '';
-    if (_managerSummary) {
-      const lines = _managerSummary.split('\n');
-      _formattedManagerSummary = lines.map(function(line) {
-        const trimmed = line.trim();
-        if (!trimmed) return '';
-        if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
-          const content = trimmed.substring(1).trim();
-          const colonIdx = content.indexOf(':');
-          if (colonIdx > 0 && colonIdx < 35) {
-            const prefix = content.substring(0, colonIdx);
-            const rest = content.substring(colonIdx + 1);
-            return '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:9px;line-height:1.6;">'
-              + '<span style="color:#2563eb;font-weight:700;font-size:0.95rem;line-height:1.35;">•</span>'
-              + '<div><strong style="color:#0f172a;font-weight:600;">' + escapeHtml(prefix) + ':</strong><span style="color:#334155;margin-left:4px;">' + escapeHtml(rest) + '</span></div>'
-              + '</div>';
-          }
-          return '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:9px;line-height:1.6;">'
-            + '<span style="color:#2563eb;font-weight:700;font-size:0.95rem;line-height:1.35;">•</span>'
-            + '<div style="color:#334155;">' + escapeHtml(content) + '</div>'
-            + '</div>';
-        }
-        return '<div style="color:#334155;margin-bottom:9px;line-height:1.6;">' + escapeHtml(trimmed) + '</div>';
-      }).join('');
-    }
-
-    // Header badge
-    const _decisionText = _isAutoApproved ? 'Tự động duyệt (Hợp lệ)' : (_isAutoRejected ? 'Từ chối tự động' : (_isStaffCorrection ? 'Cần điều chỉnh' : (_tier || 'Thẩm định AI')));
-    const _decisionClass = _isAutoApproved ? 'background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;' : (_isAutoRejected ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;' : 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;');
-
-    _llmSection = '<!-- PHÂN ĐOẠN: KẾT QUẢ THẨM ĐỊNH AI -->'
-      + '<div class="col-12" style="margin-top:26px;margin-bottom:4px;">'
-      + '<div style="display:flex;align-items:center;gap:12px;">'
-      + '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;">'
-      + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
-      + '<circle cx="12" cy="12" r="10"></circle>'
-      + '<polyline points="12 6 12 12 16 14"></polyline>'
-      + '</svg>'
-      + 'Đánh giá & Thẩm định từ AI'
-      + '</div>'
-      + '<div style="flex:1;height:1px;background:#e2e8f0;"></div>'
-      + '</div>'
-      + '</div>'
-
-      + '<div class="col-12">'
-      + '<div class="ai-ocean-panel">'
-      // 1. Header (Crisp Off-white with Royal Blue Icon & Badges)
-      + '<div class="ai-ocean-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">'
-      + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-      + '<span style="font-weight:700;color:#0f172a;font-size:0.92rem;letter-spacing:-0.01em;">' + (_isManagerAudience ? 'Nhận định nghi vấn cho Manager' : _staffPanelTitle) + '</span>'
-      + '<span class="ai-engine-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg> AI Engine</span>'
-      + _timingBadge
-      + '</div>'
-      + '</div>'
-
-      // 2. Status & Overview Row (Mức rủi ro & Kết luận cuối cùng)
-      + '<div style="padding:11px 20px;border-bottom:1px solid #f1f5f9;background:#ffffff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">'
-      + '<div style="display:flex;align-items:center;gap:8px;">'
-      + '<span style="font-size:0.74rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Mức rủi ro:</span>'
-      + '<span style="font-size:0.78rem;font-weight:700;color:' + _riskColor + ';background:' + _riskBg + ';border:1px solid ' + _riskBorder + ';padding:2px 10px;border-radius:999px;">' + escapeHtml(_riskLevel || 'THẤP') + '</span>'
-      + '</div>'
-      + '<div style="display:flex;align-items:center;gap:8px;">'
-      + '<span style="font-size:0.74rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Kết luận cuối cùng:</span>'
-      + '<span style="' + _decisionClass + 'display:inline-block;padding:3px 14px;border-radius:999px;font-size:0.78rem;font-weight:800;letter-spacing:0.03em;">' + escapeHtml(_decisionText) + '</span>'
-      + '</div>'
-      + '</div>'
-
-      // 3. Tóm tắt thẩm định ngắn
-      + (_managerSummary ? '<div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;background:#ffffff;">'
-          + '<div style="display:flex;align-items:center;gap:7px;font-size:0.74rem;color:#334155;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">'
-          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>'
-          + 'Tóm tắt thẩm định'
-          + '</div>'
-          + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:8px;padding:14px 18px;font-size:0.86rem;">'
-          + (_formattedManagerSummary || escapeHtml(_managerSummary))
-          + '</div>'
-          + '</div>' : '')
-      
-      // 4. Checklist theo cây quyết định (ĐẠT & KHÔNG ĐẠT)
-      + '<div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;background:#f8fafc;display:grid;grid-template-columns:' + (_reviewNodes.length ? 'repeat(auto-fit,minmax(250px,1fr))' : '1fr') + ';gap:16px;">'
-      + '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,23,42,0.02);">'
-      + '<div style="display:flex;align-items:center;gap:6px;font-size:0.73rem;color:#059669;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;">'
-      + '<span style="display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;background:#ecfdf5;color:#059669;font-size:11px;font-weight:900;">✓</span>'
-      + 'Tiêu chí đạt'
-      + '</div>'
-      + (_passedNodes.length ? _passedNodes.map(function(node){ return _renderTreeNode(node, false); }).join('') : '<div style="font-size:0.81rem;color:#64748b;">' + (_finalOutcome === 'ĐẠT' ? 'Không có tiêu chí đạt nào được ghi nhận trong checklist, nhưng kết luận cuối cùng là ĐẠT.' : 'Chưa có tiêu chí đạt.') + '</div>')
-      + '</div>'
-      + (_reviewNodes.length ? '<div style="background:#ffffff;border:1px solid #fecaca;border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,23,42,0.02);">'
-          + '<div style="display:flex;align-items:center;gap:6px;font-size:0.73rem;color:#dc2626;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;">'
-          + '<span style="display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;background:#fef2f2;color:#dc2626;font-size:11px;font-weight:900;">✕</span>'
-          + 'Cần xử lý'
-          + '</div>'
-          + _reviewNodes.map(function(node){ return _renderTreeNode(node, true); }).join('')
-          + '</div>' : (!_finalOutcome.includes('CHƯA XÁC ĐỊNH') ? '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;"><div style="font-size:0.73rem;color:#059669;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Không có tiêu chí vi phạm</div><div style="font-size:0.81rem;color:#64748b;">Hồ sơ đạt đầy đủ các tiêu chí theo quy định.</div></div>' : ''))
-      + '</div>'
-
-      // 5. Khối Xử lý / Hướng dẫn hành động
-      + ((_aq || _whyEsc || _qvn.length > 0) ? '<div style="padding:16px 20px;background:#ffffff;border-top:1px solid #f1f5f9;">'
-          + '<div style="display:flex;align-items:center;gap:6px;font-size:0.74rem;color:#334155;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">'
-          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
-          + 'Hướng dẫn xử lý'
-          + '</div>'
-          + (_whyEsc ? '<div style="font-size:0.82rem;color:#475569;margin-bottom:10px;"><span style="font-weight:700;color:#0f172a;">Lý do:</span> ' + escapeHtml(_whyEsc) + '</div>' : '')
-          + (_aq ? '<div style="font-size:0.88rem;color:#1e40af;font-weight:600;padding:12px 16px;background:#f0f7ff;border:1px solid #bfdbfe;border-left:3px solid #2563eb;border-radius:8px;margin-bottom:10px;line-height:1.55;">' + escapeHtml(_aq) + '</div>' : '')
-          + (_qvn.length > 0 ? '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;"><span style="font-size:0.75rem;color:#64748b;font-weight:600;">Gợi ý:</span>' + _qvn.map(function(q){ return '<span style="background:#f8fafc;border:1px solid #cbd5e1;color:#334155;font-size:0.76rem;padding:3px 12px;border-radius:6px;font-weight:500;">' + escapeHtml(String(q)) + '</span>'; }).join('') + '</div>' : '')
-          + '</div>' : '')
-
-      // 6. Chính sách áp dụng & Cảnh báo
-      + ((_pvn.length > 0 || _warns.length > 0) ? '<div style="padding:11px 20px;border-top:1px solid #f1f5f9;font-size:0.78rem;color:#64748b;display:flex;flex-wrap:wrap;gap:14px;background:#f8fafc;">'
-          + (_pvn.length > 0 ? '<div><span style="font-weight:700;color:#2563eb;">Chính sách:</span> ' + _pvn.map(function(p){ return escapeHtml(String(p)); }).join('; ') + '</div>' : '')
-          + (_warns.length > 0 ? '<div><span style="font-weight:700;color:#dc2626;">Cảnh báo:</span> ' + _warns.map(function(w){ return escapeHtml(String(w)); }).join('; ') + '</div>' : '')
-          + '</div>' : '')
-      + '</div></div>';
+    _checkCard = _card('listChecks', 'Kết quả kiểm tra',
+      _verdict
+      + (_rows.length
+        ? '<table class="rd-grid"><thead><tr><th style="width:24%">Tiêu chí</th><th style="width:14%">Kết quả</th><th>Chi tiết</th></tr></thead><tbody>' + _rows.join('') + '</tbody></table>'
+        : '')
+      + (_footnotes ? '<div class="rd-footnotes">' + _footnotes + '</div>' : ''), _aside, true);
   }
 
-  body.innerHTML = `
-    <div class="row g-3">
-      <div class="col-6">
-        <label class="form-label text-secondary small fw-semibold mb-1">Lo\u1ea1i ngh\u1ec9 ph\u00e9p</label>
-        <div class="modal-readonly-field">
-          <span class="text-dark fw-semibold">${getLeaveTypeLabel(req.leave_type)}</span>
-        </div>
-      </div>
-
-      <div class="col-6">
-        <label class="form-label text-secondary small fw-semibold mb-1">Ng\u01b0\u1eddi nh\u1eadn b\u00e0n giao</label>
-        <div class="modal-readonly-field">
-          <span class="text-dark">${handoverDisplayName}</span>
-        </div>
-      </div>
-
-      <div class="col-6">
-        <label class="form-label text-secondary small fw-semibold mb-1">T\u1eeb ng\u00e0y</label>
-        <div class="modal-readonly-field">
-          <span class="text-dark">${formatSimpleDate(req.from_date)}</span>
-        </div>
-      </div>
-
-      <div class="col-6">
-        <label class="form-label text-secondary small fw-semibold mb-1">\u0110\u1ebfn ng\u00e0y</label>
-        <div class="modal-readonly-field">
-          <span class="text-dark">${formatSimpleDate(req.to_date)}</span>
-        </div>
-      </div>
-
-      <div class="col-12">
-        <div class="leave-duration-card d-flex align-items-center justify-content-between">
-          <div class="d-flex align-items-center gap-2">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            <span class="text-secondary small">Th\u1eddi l\u01b0\u1ee3ng v\u1eafng m\u1eb7t:</span>
-            <span class="fw-bold text-dark">${req.requested_working_days ?? req.workdays ?? 0} ng\u00e0y l\u00e0m vi\u1ec7c</span>
-          </div>
-          <div>
-            ${getStatusBadgeHtml(req)}
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12">
-        <label class="form-label text-secondary small fw-semibold mb-1">L\u00fd do ngh\u1ec9</label>
-        <div class="modal-readonly-textarea">${req.reason || 'Kh\u00f4ng c\u00f3 m\u00f4 t\u1ea3 chi ti\u1ebft'}</div>
-      </div>
-
-      <div class="col-12">
-        <label class="form-label text-secondary small fw-semibold mb-1">Ch\u1ee9ng t\u1eeb x\u00e1c minh</label>
-        <div class="modal-attached-file d-flex align-items-center justify-content-between">
-          <div class="d-flex align-items-center gap-2">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            <div>
-              <div class="fw-semibold text-dark small">${attachLabel}</div>
-              <div class="text-secondary" style="font-size: 0.75rem;">${hasAttachment ? 'T\u00e0i li\u1ec7u \u0111\u00ednh k\u00e8m h\u1ed3 s\u01a1' : 'Kh\u00f4ng c\u00f3 ch\u1ee9ng t\u1eeb \u0111\u00ednh k\u00e8m'}</div>
-            </div>
-          </div>
-          ${hasAttachment ? (
-            (req.proof_file || String(req.id).startsWith('TC-'))
-              ? `<button type="button" class="btn btn-sm btn-outline-primary px-3" onclick="openImageLightbox('assets/proofs/${req.proof_file || req.proof_id}', '${req.proof_file || req.proof_id}')" style="font-size: 0.8rem; font-weight: 500;">
-                  Xem ảnh gốc
-                </button>`
-              : `<button type="button" class="btn btn-sm btn-outline-primary px-3" onclick="openAttachmentModal('${req.id}', '${req.attachment_type}', '${req.employee_name}')" style="font-size: 0.8rem; font-weight: 500;">
-                  Xem ảnh gốc
-                </button>`
-          ) : ''}
-        </div>
-      </div>
-
-      ${_vlmSection}
-      ${_llmSection}
-
-      <!-- K\u1ebft qu\u1ea3 \u0111\u00e1nh gi\u00e1 AI / Qu\u1ea3n l\u00fd -->
-      <div class="col-12">
-        <label class="form-label text-secondary small fw-semibold mb-1">K\u1ebft qu\u1ea3 \u0111\u00e1nh gi\u00e1 & X\u1eed l\u00fd</label>
-        <div class="req-ai-box ${boxType} m-0">
-          <span class="req-ai-label">${boxLabel}</span>
-          <span class="req-ai-text">${cleanReason}</span>
-        </div>
-      </div>
-    </div>
-  `;
+  body.innerHTML = '<div class="rd-body">' + _infoCard + _vlmCard + _checkCard + '</div>';
 
   modal.style.display = "flex";
   modal.classList.add("active");
 }
+
+function toggleRdCard(head) {
+  const card = head.closest('.rd-card');
+  if (!card) return;
+  const collapsed = card.classList.toggle('is-collapsed');
+  head.setAttribute('aria-expanded', String(!collapsed));
+}
+window.toggleRdCard = toggleRdCard;
 
 function closeRequestDetailModal() {
   const modal = document.getElementById("modal-request-detail");
@@ -6696,7 +6564,7 @@ async function cancelMyRequest(requestId) {
 /* ========================================================================= */
 function renderManagerOverviewKPIs() {
   const autoToday = activeRequests.filter(r => r.decision === "AUTO_APPROVE").length;
-  const pendingCount = activeRequests.filter(r => r.status === "PENDING_ESCALATION" || r.decision === "ESCALATE_TO_HUMAN" || r.status === "WAITING_EMPLOYEE").length;
+  const pendingCount = activeRequests.filter(isActionablePending).length;
   const overrideCount = activeRequests.filter(r => r.decision === "APPROVED_BY_HUMAN_OVERRIDE" || r.decision === "REVOKED_BY_ADMIN").length;
   const totalCompleted = activeRequests.filter(r => r.status === "COMPLETED" || r.decision === "AUTO_APPROVE").length;
 
@@ -6732,10 +6600,27 @@ function renderManagerOverviewKPIs() {
 function renderManagerQueue() {
   const container = document.getElementById('mgr-escalation-inbox-list');
   if (!container) return;
-  const pending = activeRequests.filter(r => r.status === 'PENDING_ESCALATION' && r.can_act);
+  const pending = activeRequests.filter(isActionablePending);
+  const waitingOthers = activeRequests.filter(isPendingOnOthers);
+
+  // Danh sách chỉ xem: đơn đã chuyển sang cấp khác, quản lý hiện tại không có quyền thao tác
+  const waitingOthersHtml = !waitingOthers.length ? '' : `
+    <div class="mgr-waiting-others">
+      <div class="mgr-waiting-others-title">Đang chờ cấp khác xử lý (${waitingOthers.length})</div>
+      <div class="mgr-waiting-others-sub">Bạn chỉ có quyền xem các đơn này.</div>
+      ${waitingOthers.map(r => `
+        <div class="mgr-waiting-row">
+          <div class="mgr-waiting-info">
+            <b>${escapeHtml(r.employee_name || '')}</b>
+            <span class="text-secondary">· ${escapeHtml(formatSimpleDate(r.from_date))} → ${escapeHtml(formatSimpleDate(r.to_date))}</span>
+          </div>
+          <span class="mgr-waiting-role">Chờ: ${escapeHtml(getRoleLabel(r.target_role))}</span>
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="openRequestDetailModal('${r.id}')">Chi tiết</button>
+        </div>`).join('')}
+    </div>`;
 
   if (!pending.length) {
-    container.innerHTML = `
+    container.innerHTML = waitingOthersHtml + `
       <div class="text-center py-5" style="color: #64748b;">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" class="mb-2" style="opacity: 0.6;">
           <circle cx="12" cy="12" r="10"></circle>
@@ -6873,7 +6758,7 @@ function renderManagerQueue() {
         </div>
       </div>
     `;
-  }).join('');
+  }).join('') + waitingOthersHtml;
 }
 
 
@@ -6929,110 +6814,93 @@ async function submitManagerDecision(id, actionType) {
 /* ========================================================================= */
 /* 8. NHẬT KÝ AI TỰ DUYỆT & OVERRIDE (QUYỀN KIỂM SOÁT TỐI CAO)               */
 /* ========================================================================= */
-function renderAutoApprovedLogs() {
-  const tbody = document.getElementById("auto-approved-logs-body");
-  if (!tbody) return;
+// ─── Unified Records State ───────────────────────────────────────────────────
+let mgrRecordsFilter = "ALL";
 
-  const autoRequests = activeRequests.filter(r => r.decision === "AUTO_APPROVE");
-  if (autoRequests.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4">Chưa có đơn nào được AI tự động duyệt trong phiên làm việc này.</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = autoRequests.map(req => {
-    return `
-      <tr>
-        <td><b>${escapeHtml(req.employee_name)}</b></td>
-        <td><span class="badge bg-secondary-lt">${escapeHtml(req.department)}</span></td>
-        <td>${escapeHtml(req.from_date)} → ${escapeHtml(req.to_date)}</td>
-        <td><b>${req.requested_working_days ?? req.workdays ?? 0} ngày</b></td>
-        <td>
-          <button class="btn btn-sm btn-outline-primary px-2.5 py-1" onclick="openRequestDetailModal('${req.id}')" title="Xem chi tiết đơn nghỉ phép">
-            Chi tiết
-          </button>
-        </td>
-        <td>
-          <button class="btn btn-sm btn-outline-danger px-2.5 py-1" onclick="revokeAiApproval('${req.id}')" title="Thu hồi quyết định tự động của AI và hoàn trả quỹ phép">
-            Hủy Lệnh AI
-          </button>
-        </td>
-      </tr>
-    `;
-  }).join("");
-
-  const btnRefreshLogs = document.getElementById("btn-refresh-mgr-logs");
-  if (btnRefreshLogs && !btnRefreshLogs.hasAttribute("data-bound")) {
-    btnRefreshLogs.setAttribute("data-bound", "true");
-    btnRefreshLogs.addEventListener("click", () => {
-      loadAllRequests();
-      showToast("Đã làm mới nhật ký AI!", "info");
-    });
-  }
+function setMgrRecordsFilter(filter) {
+  mgrRecordsFilter = filter;
+  const select = document.getElementById("mgr-records-filter");
+  if (select && select.value !== filter) select.value = filter;
+  renderManagerAllRequests();
 }
+window.setMgrRecordsFilter = setMgrRecordsFilter;
 
-async function revokeAiApproval(requestId) {
-  const reason = prompt("Nhập lý do thu hồi quyết định tự duyệt của AI:", "Phát hiện xung đột lịch trực hệ thống");
-  if (reason === null) return;
-
-  try {
-    const res = await apiFetch(`${API_BASE}/api/leave/${requestId}/revoke`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason: reason || "Quản lý hủy quyết định tự duyệt của AI" })
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      showToast(`Đã ghi nhận thu hồi đơn [${requestId}].`, "success");
-      await loadAllRequests();
-      await loadEmployees();
-    } else {
-      showToast(data.detail || "Không thể hủy quyết định!", "error");
-    }
-  } catch (err) {
-    console.error("Revoke error:", err);
-    showToast("Lỗi khi kết nối server để hủy quyết định!", "error");
-  }
+// Auto-approved logs is now part of the unified view — stub kept for any lingering call sites
+function renderAutoApprovedLogs() {
+  renderManagerAllRequests();
 }
 
 function renderManagerAllRequests() {
-  const tbody = document.getElementById("mgr-all-requests-body");
-  if (!tbody) return;
+  const container = document.getElementById("mgr-all-requests-body");
+  if (!container) return;
 
-  const filterVal = document.getElementById("mgr-filter-status")?.value || "ALL";
-  let list = activeRequests;
-  if (filterVal !== "ALL") {
-    if (filterVal === "CANCELLED") {
-      list = list.filter(r => r.status === "CANCELLED" || r.human_resolution === "REVOKED");
-    } else {
-      list = list.filter(r => r.status === filterVal || r.decision === filterVal);
-    }
+  // Bind status filter once
+  const filterSelect = document.getElementById("mgr-records-filter");
+  if (filterSelect && !filterSelect.hasAttribute("data-bound")) {
+    filterSelect.setAttribute("data-bound", "true");
+    filterSelect.addEventListener("change", (e) => setMgrRecordsFilter(e.target.value));
   }
 
+  // ─── Filter by status ─────────────────────────────────────────────────────
+  let list = activeRequests;
+  if (mgrRecordsFilter === "AUTO_APPROVE") {
+    list = list.filter(r => r.decision === "AUTO_APPROVE");
+  } else if (mgrRecordsFilter === "PENDING_ESCALATION") {
+    list = list.filter(r => r.status === "PENDING_ESCALATION");
+  } else if (mgrRecordsFilter === "COMPLETED") {
+    list = list.filter(r => r.status === "COMPLETED" && r.decision !== "AUTO_APPROVE");
+  } else if (mgrRecordsFilter === "REJECTED") {
+    list = list.filter(r => r.decision === "AUTO_REJECT" || r.status === "REJECTED");
+  }
+
+  // ─── Empty state ──────────────────────────────────────────────────────────
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4">Không tìm thấy hồ sơ đơn nào.</td></tr>`;
+    container.innerHTML = `
+      <tr><td colspan="6" class="mgr-records-empty">
+        <div style="font-size:2rem;margin-bottom:8px;">📂</div>
+        <div class="fw-bold" style="font-size:0.95rem;color:#334155;">Không có hồ sơ nào phù hợp</div>
+        <div style="font-size:0.82rem;color:#94a3b8;margin-top:4px;">Thử chọn trạng thái khác trong bộ lọc.</div>
+      </td></tr>
+    `;
     return;
   }
 
-  tbody.innerHTML = list.map(req => `
-    <tr>
-      <td><b>${escapeHtml(req.employee_name)}</b></td>
-      <td><span class="badge bg-secondary-lt">${escapeHtml(req.department)}</span></td>
-      <td>${escapeHtml(req.from_date)} → ${escapeHtml(req.to_date)}</td>
-      <td><b>${req.requested_working_days ?? req.workdays ?? 0} ngày</b></td>
-      <td>${getStatusBadgeHtml(req)}</td>
-      <td>
-        <button class="btn btn-sm btn-outline-primary px-2.5 py-1" onclick="openRequestDetailModal('${req.id}')" title="Xem chi tiết đơn nghỉ phép">
-          Chi tiết
-        </button>
-      </td>
-    </tr>
-  `).join("");
+  // ─── Render table rows ────────────────────────────────────────────────────
+  // Status shown as an outline pill with the same shape as the "Chi tiết" button
+  const getDecisionTag = (req) => {
+    const pill = (variant, label) => `<span class="btn btn-sm btn-outline-${variant} mgr-status-pill">${label}</span>`;
+    if (req.decision === "AUTO_APPROVE") return pill("success", "AI Tự duyệt");
+    if (req.decision === "AUTO_REJECT") return pill("danger", "AI Từ chối");
+    if (req.decision === "ESCALATE" || req.status === "PENDING_ESCALATION") return pill("warning", "Chờ duyệt");
+    if (req.status === "COMPLETED") return pill("teal", "Đã duyệt");
+    if (req.human_resolution === "REVOKED") return pill("orange", "Thu hồi");
+    if (req.status === "REJECTED") return pill("danger", "Từ chối");
+    return pill("secondary", escapeHtml(req.status || "—"));
+  };
 
-  const mgrFilter = document.getElementById("mgr-filter-status");
-  if (mgrFilter && !mgrFilter.hasAttribute("data-bound")) {
-    mgrFilter.setAttribute("data-bound", "true");
-    mgrFilter.addEventListener("change", renderManagerAllRequests);
-  }
+  const revokeBtn = (req) => req.decision === "AUTO_APPROVE"
+    ? `<button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); revokeAiApproval('${req.id}')" title="Thu hồi quyết định AI">Hủy Lệnh AI</button>`
+    : `<span class="text-secondary">—</span>`;
+
+  container.innerHTML = list.map(req => {
+    const days = req.requested_working_days ?? req.workdays ?? 0;
+    return `
+      <tr class="mgr-records-row" onclick="openRequestDetailModal('${req.id}')">
+        <td><b>${escapeHtml(req.employee_name)}</b></td>
+        <td class="text-nowrap">${escapeHtml(req.from_date)} → ${escapeHtml(req.to_date)}</td>
+        <td class="text-nowrap"><b>${days} ngày</b></td>
+        <td>${getDecisionTag(req)}</td>
+        <td><button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openRequestDetailModal('${req.id}')" title="Xem chi tiết">Chi tiết</button></td>
+        <td>${revokeBtn(req)}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+const mgrFilter = document.getElementById("mgr-filter-status");
+if (mgrFilter && !mgrFilter.hasAttribute("data-bound")) {
+  mgrFilter.setAttribute("data-bound", "true");
+  mgrFilter.addEventListener("change", renderManagerAllRequests);
 }
 
 /* ========================================================================= */

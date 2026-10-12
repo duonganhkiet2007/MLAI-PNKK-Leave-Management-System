@@ -1,7 +1,7 @@
 """Canonical facts. Employee/LLM input never includes trusted HR or policy state."""
 from datetime import date, datetime
 from enum import Enum
-from typing import Literal
+from typing import Literal, Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 import re
 import unicodedata
@@ -131,6 +131,16 @@ class ProofType(str, Enum):
     WEDDING_INVITATION = 'WEDDING_INVITATION'
     DEATH_CERTIFICATE = 'DEATH_CERTIFICATE'
     ACCIDENT_REPORT = 'ACCIDENT_REPORT'
+    ACCIDENT_CERTIFICATE = 'ACCIDENT_CERTIFICATE'
+    LAB_RESULT = 'LAB_RESULT'
+    MATERNITY_CERTIFICATE = 'MATERNITY_CERTIFICATE'
+    FUNERAL_DECISION = 'FUNERAL_DECISION'
+    FAMILY_EVENT_LETTER = 'FAMILY_EVENT_LETTER'
+    IDENTITY_CARD = 'IDENTITY_CARD'
+    VISA_OR_TRAVEL_DOC = 'VISA_OR_TRAVEL_DOC'
+    OTHER_ADMINISTRATIVE = 'OTHER_ADMINISTRATIVE'
+    EMERGENCY_ADMISSION = 'EMERGENCY_ADMISSION'
+    SURGERY_NOTICE = 'SURGERY_NOTICE'
     OTHER = 'OTHER'
     NONE = 'NONE'
 
@@ -146,6 +156,81 @@ class ProofExtraction(BaseModel):
     digital_signature_present: bool | None = None
     document_readability: Literal['READABLE', 'UNREADABLE', 'ILLEGIBLE', 'PARTIAL', 'UNKNOWN'] = 'UNKNOWN'
     fields_detected: list[str] = Field(default_factory=list)
+
+    # Extended fields for persona-specific extraction
+    is_open_ended: bool | None = None
+    requires_followup_proof: bool | None = None
+    admission_date: date | None = None
+    discharge_date: date | None = None
+    doc_diagnosis: str | None = None
+    emergency_diagnosis: str | None = None
+    days_granted_by_doctor: int | None = None
+    deceased_name: str | None = None
+    subject_name: str | None = None
+    partner_name: str | None = None
+    wedding_date: date | None = None
+    date_of_death: date | None = None
+    funeral_date: date | None = None
+    relationship_label: str | None = None
+    relationship_to_employee: str | None = None
+    evidence_confidence: str | None = None
+    needs_manager_review: bool | None = None
+    maternity_phase: str | None = None
+    expected_due_date: date | None = None
+    bhxh_code: str | None = None
+    injury_description: str | None = None
+    is_workplace_related: bool | None = None
+    injury_date: date | None = None
+    has_red_stamp: bool | None = None
+    has_doctor_signature: bool | None = None
+    has_hospital_stamp: bool | None = None
+    has_bhxh_stamp: bool | None = None
+    document_purpose: str | None = None
+    valid_from: date | None = None
+    valid_to: date | None = None
+
+    @field_validator('proof_type', mode='before')
+    @classmethod
+    def coerce_proof_type(cls, v: Any) -> Any:
+        if isinstance(v, ProofType):
+            return v
+        if not v:
+            return ProofType.NONE
+        s = str(v).strip().upper()
+        try:
+            return ProofType(s)
+        except ValueError:
+            pass
+        ALIAS_MAP = {
+            "EMERGENCY_ADMISSION": ProofType.EMERGENCY_ADMISSION,
+            "EMERGENCY": ProofType.EMERGENCY_ADMISSION,
+            "SURGERY_NOTICE": ProofType.SURGERY_NOTICE,
+            "SURGERY": ProofType.SURGERY_NOTICE,
+            "ACCIDENT_CERTIFICATE": ProofType.ACCIDENT_CERTIFICATE,
+            "ACCIDENT": ProofType.ACCIDENT_REPORT,
+            "INJURY": ProofType.INJURY_CERTIFICATE,
+            "LAB_RESULT": ProofType.LAB_RESULT,
+            "MATERNITY_CERTIFICATE": ProofType.MATERNITY_CERTIFICATE,
+            "MATERNITY": ProofType.MATERNITY_CERTIFICATE,
+            "FUNERAL_DECISION": ProofType.FUNERAL_DECISION,
+            "FUNERAL": ProofType.FUNERAL_DECISION,
+            "FAMILY_EVENT_LETTER": ProofType.FAMILY_EVENT_LETTER,
+            "FAMILY_EVENT": ProofType.FAMILY_EVENT_LETTER,
+            "IDENTITY_CARD": ProofType.IDENTITY_CARD,
+            "VISA_OR_TRAVEL_DOC": ProofType.VISA_OR_TRAVEL_DOC,
+            "OTHER_ADMINISTRATIVE": ProofType.OTHER_ADMINISTRATIVE,
+            "WEDDING": ProofType.WEDDING_INVITATION,
+            "MARRIAGE": ProofType.MARRIAGE_CERTIFICATE,
+            "DEATH": ProofType.DEATH_CERTIFICATE,
+            "HOSPITAL": ProofType.HOSPITAL_DISCHARGE,
+            "MEDICAL": ProofType.MEDICAL_LEAVE_CERTIFICATE,
+        }
+        if s in ALIAS_MAP:
+            return ALIAS_MAP[s]
+        for k, target in ALIAS_MAP.items():
+            if k in s:
+                return target
+        return ProofType.OTHER
 
 class VerifiedProof(ProofExtraction):
     """Only server-side HR verification may construct a trusted verification result."""

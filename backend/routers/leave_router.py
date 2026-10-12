@@ -157,8 +157,10 @@ def verify_proof(proof_id,payload: ProofVerificationInput,actor_id=Depends(actor
         linked=[db._parse_leave_row(dict(r)) for r in conn.execute('SELECT * FROM leave_requests WHERE proof_id=?',(proof_id,))]
         if any(r['status']=='COMPLETED' for r in linked): raise st.Conflict('Chứng từ đã dùng cho đơn hoàn tất; cần hồ sơ thay thế.')
         proof=VerifiedProof(**payload.model_dump(),verified_by=actor_id)
-        fields=proof.model_dump(mode='json');fields.pop('fields_detected')
+        fields=proof.model_dump(mode='json');fields.pop('fields_detected', None)
         fields['facts_json']=proof.model_dump_json()
+        existing_cols = {r[1] for r in conn.execute('PRAGMA table_info(proof_documents)').fetchall()}
+        fields = {k: v for k, v in fields.items() if k in existing_cols}
         conn.execute('UPDATE proof_documents SET '+','.join(k+'=?' for k in fields)+' WHERE id=?',list(fields.values())+[proof_id])
         st.audit(conn,'PROOF-'+proof_id,'HR_VERIFY',actor_id+': '+payload.verification_notes)
         updated=[]

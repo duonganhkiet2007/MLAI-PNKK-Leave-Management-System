@@ -569,6 +569,67 @@ def get_vlm_status():
 def get_ai_stack_status():
     return {'llm':get_llm_status(),'vlm':get_vlm_status(),'system':{'backend':'ok','db':'ok','version':'3.0.0'}}
 
+@router.post('/vlm-restart')
+def restart_vlm_endpoint():
+    import threading
+    import storage as st
+    from services.inspection_service import GLOBAL_INSPECTION_SERVICE
+    from ai.ai_stack import (
+        OLLAMA_BASE, VLM_TARGET_MODEL, VLM_TIMEOUT_SEC, OLLAMA_KEEP_ALIVE,
+        has_model, ollama_generate, ollama_tags
+    )
+
+    recovered = 0
+    try:
+        with st.transaction() as conn:
+            rows = conn.execute(
+                "SELECT id, proof_id FROM proof_inspection_jobs WHERE status='FAILED'"
+            ).fetchall()
+            for r in rows:
+                conn.execute(
+                    "UPDATE proof_inspection_jobs SET status='PENDING', retry_count=0, error_message=NULL WHERE id=?",
+                    (r["id"],)
+                )
+                conn.execute(
+                    "UPDATE proof_documents SET inspection_status='PENDING', vlm_error=NULL WHERE id=?",
+                    (r["proof_id"],)
+                )
+                recovered += 1
+    except Exception:
+        pass
+
+    GLOBAL_INSPECTION_SERVICE.start_worker()
+    if hasattr(GLOBAL_INSPECTION_SERVICE, "_wake_event"):
+        GLOBAL_INSPECTION_SERVICE._wake_event.set()
+
+    def _do_warmup():
+        reachable, names, err = ollama_tags()
+        if reachable and has_model(names, VLM_TARGET_MODEL):
+            try:
+                png_1x1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+                ollama_generate(
+                    {
+                        "model": VLM_TARGET_MODEL,
+                        "format": "json",
+                        "images": [png_1x1],
+                        "prompt": 'Trả JSON: {"ok": true, "proof_type": "NONE"}',
+                        "keep_alive": OLLAMA_KEEP_ALIVE,
+                        "options": {"num_predict": 16, "temperature": 0.0},
+                    },
+                    timeout=VLM_TIMEOUT_SEC,
+                )
+            except Exception:
+                pass
+
+    threading.Thread(target=_do_warmup, daemon=True).start()
+
+    return {
+        "success": True,
+        "message": f"Đã khởi động lại VLM và khôi phục {recovered} tác vụ chứng từ.",
+        "recovered_jobs": recovered,
+        "vlm_status": get_vlm_status(),
+    }
+
 class LeaveAllocationInput(BaseModel):
     model_config=ConfigDict(extra='forbid')
     target_type: str
@@ -645,4 +706,16 @@ def get_server_logs(lines: int = 100):
 @router.get('/kill-tmux')
 def retired_process_controls():
     raise HTTPException(410,'Điều khiển/xóa tiến trình không thuộc API phê duyệt nghỉ phép.')
+
+
+@router.get('/persona-schemas')
+def get_persona_schemas():
+    """Trả về chi tiết toàn bộ Persona VLM, JSON Schema và Decision Tree theo từng loại chứng từ."""
+    from vlm_inspector import PERSONA_CONFIGS
+    return {
+        'success': True,
+        'total': len(PERSONA_CONFIGS),
+        'schemas': PERSONA_CONFIGS,
+    }
+
 

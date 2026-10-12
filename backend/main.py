@@ -17,6 +17,7 @@ import os
 import sys
 import time
 import threading
+import subprocess
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -116,6 +117,15 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         GLOBAL_INSPECTION_SERVICE.stop_worker()
+        print(f"🛑 [BACKEND SHUTDOWN] Đang giải phóng model {VLM_TARGET_MODEL} khỏi GPU VRAM...")
+        try:
+            res = subprocess.run(["ollama", "stop", VLM_TARGET_MODEL], capture_output=True, text=True, timeout=10)
+            if res.returncode == 0:
+                print(f"✅ [BACKEND SHUTDOWN] Đã giải phóng {VLM_TARGET_MODEL} khỏi GPU.")
+            else:
+                print(f"⚠️ [BACKEND SHUTDOWN] ollama stop (code {res.returncode}): {res.stderr.strip()}")
+        except Exception as e:
+            print(f"⚠️ [BACKEND SHUTDOWN] Lỗi khi giải phóng model: {e}")
 
 
 

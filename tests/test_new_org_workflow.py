@@ -588,10 +588,13 @@ def test_tc_vlm_05_digital_signature_valid_without_red_stamp():
     assert res.target_role == R.DIRECT_MANAGER
     assert res.error_code == E.DURATION_OVER_AI_LIMIT
 
-def test_tc_vlm_06_blur_gate_early_exit_no_hallucination():
+def test_tc_vlm_06_blur_gate_early_exit_no_hallucination(monkeypatch):
     """TC-VLM-06: Blur gate phát hiện ảnh mờ trong ~1ms, gắn UNREADABLE và không bịa dữ liệu."""
     from vlm_inspector import inspect_document_with_vlm, detect_image_blur
     import os
+    import vlm_inspector
+    # conftest bật VLM_FORCE_MOCK; blur gate chỉ chạy trên luồng thật (và thoát sớm, không gọi Ollama).
+    monkeypatch.setattr(vlm_inspector, "VLM_FORCE_MOCK", False)
 
     blur_img = "tests/assets/proofs/proof_blurry_illegible.png"
     assert os.path.exists(blur_img), f"File {blur_img} must exist"

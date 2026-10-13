@@ -244,6 +244,7 @@ def test_child_marriage_analysis_uses_event_not_medical_fields(client,isolated_d
     analysis=response.json()
     nodes={node['stage']:node for node in analysis['decision_tree_checklist']}
 
+    assert '(Không trừ)' in nodes['BALANCE']['note']
     assert nodes['VLM_DATE_COVERAGE']['status']=='FAIL'
     assert 'Ngày cưới trên giấy' in nodes['VLM_DATE_COVERAGE']['note']
     assert 'Bác sĩ chỉ định' not in nodes['VLM_DATE_COVERAGE']['note']

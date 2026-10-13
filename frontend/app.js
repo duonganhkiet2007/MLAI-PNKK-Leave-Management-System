@@ -2467,9 +2467,6 @@ function renderStaffTestCaseCard() {
           : grp.key === 'NEED_CORRECTION' ? 'row-correct'
           : 'row-reject';
 
-        const errorCode = tc.expected?.error_code || tc.expected?.note || '';
-        const shortNote = errorCode ? escapeHtml(errorCode).slice(0, 60) : escapeHtml(tc.desc || tc.payload.reason || '').slice(0, 60);
-
         rowsHtml += `
           <div class="repo-compact-row ${stripeClass}" onclick="openRepoCaseDetail('${escapeHtml(tc.id)}')">
             <!-- Tag kết quả — góc trái -->
@@ -2478,7 +2475,6 @@ function renderStaffTestCaseCard() {
             <!-- Khối thông tin 2 dòng -->
             <div class="repo-row-info">
               <div class="repo-row-line1">
-                <span class="repo-case-id">${escapeHtml(tc.id)}</span>
                 <b class="repo-row-emp-name">${escapeHtml(empName)}</b>
                 <span class="repo-row-dept">${escapeHtml(dept.replace('Marketing & Operations', 'Mkt & Ops'))}</span>
               </div>
@@ -2486,8 +2482,6 @@ function renderStaffTestCaseCard() {
                 <span class="repo-row-leave-type">${escapeHtml(leaveLabel)}</span>
                 <span class="repo-row-sep">·</span>
                 <span class="repo-row-days">${days}d</span>
-                <span class="repo-row-sep">·</span>
-                <span class="repo-row-desc" title="${shortNote}">${shortNote}</span>
               </div>
             </div>
 

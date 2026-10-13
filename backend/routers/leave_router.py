@@ -333,7 +333,8 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         lt_code = str(req.get('canonical_leave_type') or req.get('leave_type') or '')
         b_pass = (lt_code != 'ANNUAL') or (remaining_leave_days is None or remaining_leave_days >= req_days)
         b_status = "PASS" if b_pass else "FAIL"
-        b_note = f"Số ngày phép còn lại: {rem:.1f} ngày • Số ngày xin nghỉ: {req_days:.1f} ngày."
+        balance_note_suffix = "" if shows_balance else " (Không trừ)"
+        b_note = f"Số ngày phép còn lại: {rem:.1f} ngày{balance_note_suffix} • Số ngày xin nghỉ: {req_days:.1f} ngày."
         add_node(2,"BALANCE",b_status, b_pass, b_note,
                                title_vi="Kiểm tra số dư phép năm (Quota)",
                        severity="SUCCESS" if b_pass else "CRITICAL",

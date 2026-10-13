@@ -68,8 +68,12 @@ def test_llm_vlm_cannot_produce_trusted_fields():
         with pytest.raises(ValidationError): RequestFacts(**{field:'AUTO_APPROVE'})
         with pytest.raises(ValidationError): HumanFeedbackResolution(action='MODIFY_CONDITIONAL',updated_fields={field:10})
 
-def test_vlm_unavailable_does_not_invent_valid_proof():
+def test_vlm_unavailable_does_not_invent_valid_proof(monkeypatch):
+    import vlm_inspector
     from vlm_inspector import inspect_document_with_vlm
+    # conftest bật VLM_FORCE_MOCK cho cả bộ test; test này kiểm tra đúng luồng thật khi VLM không xử lý được file.
+    monkeypatch.setattr(vlm_inspector, 'VLM_FORCE_MOCK', False)
+    monkeypatch.setattr(vlm_inspector, 'VLM_MOCK_FALLBACK_ALLOWED', False)
     r=inspect_document_with_vlm('Sick','Person','Sick','file.jpg')
     assert r.patient_name is None and r.signature_present is None and r.proof_type=='NONE'
 

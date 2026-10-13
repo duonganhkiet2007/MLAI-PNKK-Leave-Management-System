@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/static/vendor/tabler/tabler.min.css">
   
   <!-- Custom Styling & Refinements -->
-  <link rel="stylesheet" href="styles.css?v=20261012_v61">
+  <link rel="stylesheet" href="styles.css?v=20261012_v62">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e40af'/><text x='16' y='22' font-family='sans-serif' font-size='16' font-weight='bold' fill='white' text-anchor='middle'>HR</text></svg>">
 </head>
 <body>
@@ -618,15 +618,10 @@
                     </div>
 
                     <div class="col-6">
-                      <label for="staff-handover-select" class="form-label">Người nhận bàn giao <span class="text-muted" style="font-weight: normal; font-size: 0.85em;">(bắt buộc nếu nghỉ từ 3 ngày làm việc)</span></label>
+                      <label for="staff-handover-select" class="form-label">Người nhận bàn giao</label>
                       <select id="staff-handover-select" class="form-select">
                         <option value="">-- Chọn người bàn giao --</option>
                       </select>
-                      <label class="form-check mt-2 mb-0" for="staff-no-handover">
-                        <input type="checkbox" id="staff-no-handover" class="form-check-input"
-                          onchange="document.getElementById('staff-handover-select').disabled=this.checked; if(this.checked) document.getElementById('staff-handover-select').value='';">
-                        <span class="form-check-label small">Không có công việc phát sinh cần bàn giao <span class="text-muted">(quản lý sẽ thấy cảnh báo khi duyệt)</span></span>
-                      </label>
                     </div>
 
                     <div class="col-6">
@@ -1258,6 +1253,6 @@
   <script src="/static/vendor/tabler/tabler.min.js" defer></script>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20261012_v61"></script>
+  <script src="app.js?v=20261012_v62"></script>
 </body>
 </html>

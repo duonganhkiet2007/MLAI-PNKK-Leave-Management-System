@@ -1,6 +1,7 @@
 """Isolated, non-persisting Verify harness. No production DB or LLM dependencies."""
 import json
 import os
+from contextlib import contextmanager
 import time
 import uuid
 from pathlib import Path
@@ -229,6 +230,37 @@ SPRINT1_BENCHMARK_CASES = [
     }
 ]
 
+@contextmanager
+def _isolated_benchmark_db():
+    """Chạy kịch bản chuẩn trên DB tạm (sao từ DB thật, xóa đơn, số dư/thử việc gốc từ employees.json):
+    kết quả Verify không phụ thuộc đơn, số dư hay ngày phép được cấp thêm trên hệ thống đang chạy."""
+    import shutil, sqlite3, tempfile
+    tmpdir = tempfile.mkdtemp(prefix='mlai-bench-')
+    path = os.path.join(tmpdir, 'bench.db')
+    src = sqlite3.connect(db.DB_PATH)
+    dst = sqlite3.connect(path)
+    try:
+        src.backup(dst)
+        for table in ('leave_requests', 'approval_steps', 'leave_bookings', 'leave_transactions', 'audit_logs', 'proof_inspection_jobs'):
+            try: dst.execute(f'DELETE FROM {table}')
+            except sqlite3.OperationalError: pass
+        if os.path.exists(db.EMPLOYEES_JSON_PATH):
+            with open(db.EMPLOYEES_JSON_PATH, encoding='utf-8') as f:
+                for emp in json.load(f):
+                    dst.execute('UPDATE employees SET remaining_leave_days=? WHERE employee_id=?',
+                                (float(emp.get('remaining_leave_days', 12.0)), emp.get('employee_id')))
+        dst.commit()
+        db.sync_employment_fields(dst, overwrite=True)
+    finally:
+        src.close(); dst.close()
+    token = db.DB_PATH_OVERRIDE.set(path)
+    try:
+        yield
+    finally:
+        db.DB_PATH_OVERRIDE.reset(token)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def _ensure_proof_doc(case: dict):
     proof_file = case.get('proof_file')
     if not proof_file:
@@ -276,11 +308,11 @@ def _run_single_case(c: dict, orch: LeaveOrchestratorService = None):
     if sub_at:
         try:
             dt = datetime.fromisoformat(sub_at)
-            orch = LeaveOrchestratorService(clock=lambda: dt)
+            orch = LeaveOrchestratorService(clock=lambda: dt, register_global=False)
         except Exception:
-            orch = orch or LeaveOrchestratorService()
+            orch = orch or LeaveOrchestratorService(register_global=False)
     elif orch is None:
-        orch = LeaveOrchestratorService()
+        orch = LeaveOrchestratorService(register_global=False)
 
     facts_data = {
         'leave_type': c['leave_type'],
@@ -366,7 +398,8 @@ def run_single_sprint1_benchmark_case(case_id: str):
     matched = next((c for c in SPRINT1_BENCHMARK_CASES if c['id'] == case_id), None)
     if not matched:
         return {'success': False, 'message': f'Không tìm thấy test case {case_id}'}
-    detail = _run_single_case(matched)
+    with _isolated_benchmark_db():
+        detail = _run_single_case(matched)
     return {'success': True, 'data': detail}
 
 @router.get('/case-detail/{case_id}')
@@ -398,8 +431,9 @@ def get_benchmark_case_detail(case_id: str):
 def run_sprint1_benchmark():
     begin = time.perf_counter()
     details = []
-    for c in SPRINT1_BENCHMARK_CASES:
-        details.append(_run_single_case(c))
+    with _isolated_benchmark_db():
+        for c in SPRINT1_BENCHMARK_CASES:
+            details.append(_run_single_case(c))
 
     elapsed = time.perf_counter() - begin
     auto_count = sum(d['actual_decision'] in ('AUTO_APPROVE', 'AUTO_REJECT', 'NO_LEAVE_REQUIRED') for d in details)

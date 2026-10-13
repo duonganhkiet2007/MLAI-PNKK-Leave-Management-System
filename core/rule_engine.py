@@ -132,6 +132,27 @@ class LeaveRuleEngine:
         if q.leave_type in PROOF_REQUIRED:
             p = q.proof
             pt = p.proof_type.value if hasattr(p.proof_type,'value') else str(p.proof_type)
+            reason_category = getattr(q.reason_category, 'value', q.reason_category)
+            couple_names = [p.subject_name, p.partner_name]
+            self_marriage_auto_eligible = (
+                q.leave_type == 'SPECIAL_PAID'
+                and reason_category == 'SELF_MARRIAGE'
+                and p.proof_verification_status in {'UNVERIFIED', 'VERIFIED'}
+                and pt == 'MARRIAGE_CERTIFICATE'
+                and str(p.event_type or '').upper() == 'SELF_MARRIAGE'
+                and all(couple_names)
+                and any(names_approximately_match(q.employee_name, name) for name in couple_names if name)
+                and p.wedding_date is not None
+                and start <= p.wedding_date <= end
+                and bool(p.issuer)
+                and bool(p.issue_date)
+                and p.document_readability == 'READABLE'
+                and p.has_red_stamp is True
+                and p.signature_present is True
+                and p.is_tampered is not True
+                and p.ai_edited is not True
+                and p.needs_manager_review is not True
+            )
             if pt == 'NONE': return correction(E.PROOF_MISSING,'[Thiếu chứng từ bắt buộc] Chế độ nghỉ này bắt buộc phải có giấy tờ xác minh theo quy chế công ty. Vui lòng tải lên ảnh chụp hoặc file PDF chứng từ hợp lệ (giấy khám bệnh, giấy ra viện, giấy kết hôn...).','PROOF-01')
             unreadable = p.document_readability in {'ILLEGIBLE', 'UNREADABLE'}
             if unreadable:
@@ -160,7 +181,7 @@ class LeaveRuleEngine:
                     bool(p.patient_name) and bool(p.recommended_from_date) and bool(p.recommended_to_date) and
                     (bool(p.signature_present) or bool(p.digital_signature_present))
                 )
-                if not short_medical_valid:
+                if not short_medical_valid and not self_marriage_auto_eligible:
                     return finish(D.ESCALATE,E.PROOF_REVIEW_REQUIRED,'[Chứng từ cần HR đối chiếu] Hệ thống đã tiếp nhận chứng từ của bạn. Đơn chuyển tới Phòng Nhân sự (HR) để đối soát các thông tin chuyên môn trước khi duyệt.',C.OUT_OF_POLICY,R.HR,'PROOF-01',[R.HR])
             allowed = MEDICAL_PROOFS if q.leave_type in MEDICAL else (
                 {'MARRIAGE_CERTIFICATE'} if (hasattr(q.reason_category,'value') and q.reason_category.value == 'SELF_MARRIAGE') else
@@ -249,7 +270,12 @@ class LeaveRuleEngine:
         if q.leave_type in MEDICAL:
             # policy_rules.md §3.1: 1 ngày → AI nếu chứng từ hợp lệ; 2–5 ngày → Lead Team; trên 5 ngày → CEO.
             roles = [R.CEO] if n > 5 else [R.DIRECT_MANAGER] if n >= 2 else []
-        if q.leave_type in {'SPECIAL_PAID', 'STATUTORY_UNPAID'}:
+        if q.leave_type == 'SPECIAL_PAID':
+            if self_marriage_auto_eligible and not quota_dates:
+                roles = []
+            else:
+                roles = [R.DIRECT_MANAGER]
+        if q.leave_type == 'STATUTORY_UNPAID':
             roles = [R.DIRECT_MANAGER]
         if operational and not roles: roles = [R.DIRECT_MANAGER]
         remaining = [r for r in roles if r not in q.granted_roles]
@@ -280,5 +306,8 @@ class LeaveRuleEngine:
                 msg = f'[Vượt hạn mức tự duyệt của AI] Đơn xin nghỉ {n} ngày hợp lệ về số dư nhưng vượt trần tự duyệt 2 ngày của AI; chuyển tới {target_name} phê duyệt.'
             return finish(D.ESCALATE, code, msg, C.AUTHORITY_ESCALATION, target, 'AUTH-01', roles)
         trace('AUTHORITY')
-        msg = f'[Tự động duyệt thành công] Đơn nghỉ {n} ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép.'
+        if should_deduct_annual_balance(q.leave_type):
+            msg = f'[Tự động duyệt thành công] Đơn nghỉ {n} ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép.'
+        else:
+            msg = f'[Tự động duyệt thành công] Đơn nghỉ {n} ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt, không trừ quỹ phép năm.'
         return finish(D.AUTO_APPROVE, message=msg, clause='AUTH-01', roles=roles)

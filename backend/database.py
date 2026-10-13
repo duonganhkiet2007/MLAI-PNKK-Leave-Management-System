@@ -49,9 +49,14 @@ def _is_network_filesystem(path: str) -> bool:
     return result
 
 
+# Cho phép một luồng xử lý (vd nút Verify) dùng DB riêng mà không đổi DB_PATH toàn cục của server.
+import contextvars
+DB_PATH_OVERRIDE: contextvars.ContextVar = contextvars.ContextVar("leave_db_path_override", default=None)
+
+
 def get_db_connection() -> sqlite3.Connection:
     """Tạo kết nối tới SQLite DB với row_factory dạng dict-like; bật WAL khi DB nằm trên ổ cục bộ."""
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=60)
+    conn = sqlite3.connect(DB_PATH_OVERRIDE.get() or DB_PATH, check_same_thread=False, timeout=60)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     try:

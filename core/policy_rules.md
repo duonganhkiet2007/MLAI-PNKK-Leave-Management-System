@@ -50,7 +50,8 @@
 | Nghỉ ốm | 2–5 ngày | Lead Team | Không | BHXH |
 | Nghỉ ốm | Trên 5 ngày | CEO theo quy định BHXH | Không | BHXH |
 | Nghỉ thai sản | Theo quy định pháp luật | CEO theo thẩm quyền | Không trừ phép năm | BHXH |
-| Nghỉ việc riêng hưởng lương | Bất kỳ thời lượng nào | Lead Team hoặc CEO theo thẩm quyền | Có | Doanh nghiệp |
+| Kết hôn bản thân | Tối đa 3 ngày làm việc, đủ chứng cứ tự động | Hệ thống/AI; trường hợp không đủ điều kiện thì Lead Team | Có | Doanh nghiệp |
+| Nghỉ việc riêng hưởng lương khác | Bất kỳ thời lượng nào | Lead Team hoặc CEO theo thẩm quyền | Có | Doanh nghiệp |
 | Nghỉ không lương | Bất kỳ thời lượng nào | Lead Team hoặc CEO theo thẩm quyền | Không | Không có |
 
 ### 3.2. Giải thích từng trường hợp
@@ -68,6 +69,7 @@
 | Nghỉ phép năm từ 20 ngày trở lên | Không | Có thể xem xét đầu vào | Bắt buộc phê duyệt cuối | `rule_engine.py` dùng `CEO` cho `ANNUAL` khi `n >= 20`; cần xác nhận cuối cùng |
 | Nghỉ ốm 1 ngày hợp lệ | Có nếu có chứng từ hợp lệ | Không bắt buộc nếu đủ chứng từ | Không bắt buộc | Không trừ phép năm; phải có chứng từ hợp lệ và phù hợp với đơn |
 | Nghỉ ốm 2–5 ngày | Không | Có | Không bắt buộc | Chuyển tới `DIRECT_MANAGER` / Lead Team; không trừ phép năm |
+| Kết hôn bản thân tối đa 3 ngày, giấy chứng nhận đủ điều kiện | Có | Chỉ nếu chứng từ thiếu / không khớp / có cảnh báo | Không bắt buộc | Cặp đôi và ngày cưới phải khớp; giấy rõ, đúng loại, có nơi/ngày cấp, dấu và chữ ký; không có cờ nghi vấn |
 | Nghỉ việc riêng hưởng lương | Không | Có | Không bắt buộc ở hầu hết trường hợp | Yêu cầu chứng từ, sự kiện hợp pháp và xác nhận theo thẩm quyền |
 | Nghỉ không lương | Không | Có | Có thể yêu cầu khi dài hạn | Không trừ phép năm; cần lý do rõ ràng và phê duyệt quản lý / cấp cao |
 
@@ -75,8 +77,9 @@
 Hệ thống tuân thủ nghiêm ngặt 3 kiểu dừng xử lý độc lập để đảm bảo ranh giới con người (Human-in-the-loop) và ngăn chặn việc đoán mò:
 
 1. **Kiểu dừng 1 - `AUTO_APPROVE` (Tự Động Duyệt):**
-   - Đơn thỏa mãn 100% các tiêu chuẩn chính sách: đủ ngày phép, không trùng lặp, báo trước đúng hạn, tỷ lệ vắng mặt < 30%, chứng từ y tế đã xác minh hợp lệ và thời lượng nằm trong ngưỡng cho phép tự động của AI (≤ 2 ngày phép năm, 1 ngày nghỉ ốm).
-   - Hệ thống tự động phê duyệt và trừ số dư quỹ phép ngay lập tức (nếu là phép năm).
+   - Đơn thỏa mãn 100% các tiêu chuẩn chính sách: đủ ngày phép, không trùng lặp, báo trước đúng hạn, tỷ lệ vắng mặt < 30%, chứng từ y tế hợp lệ và thời lượng trong ngưỡng tự động (≤ 2 ngày phép năm, 1 ngày nghỉ ốm).
+   - Nghỉ kết hôn bản thân tối đa 3 ngày làm việc có thể tự duyệt khi giấy chứng nhận kết hôn đọc được, có nơi/ngày cấp, dấu và chữ ký; tên nhân viên khớp một bên trong cặp đôi; ngày cưới nằm trong khoảng xin nghỉ; không có dấu hiệu chỉnh sửa hoặc yêu cầu quản lý xem xét. Thiếu hoặc mâu thuẫn dữ liệu thì chuyển Lead Team.
+   - Hệ thống tự động phê duyệt và trừ số dư quỹ phép nếu là phép năm; nghỉ chế độ không trừ số dư phép năm.
 
 2. **Kiểu dừng 2 - `NEED_CORRECTION` / `AUTO_REJECT` (Yêu Cầu Nhân Viên Bổ Sung / Từ Chối):**
    - Trường hợp đơn vi phạm các điều kiện hình thức hoặc dữ liệu tiên quyết mà nhân viên có thể tự khắc phục: thiếu ngày, ngày kết thúc trước ngày bắt đầu, thiếu chứng từ, thiếu người bàn giao khi nghỉ ≥ 3 ngày, hoặc vượt quá quỹ phép năm hiện có.

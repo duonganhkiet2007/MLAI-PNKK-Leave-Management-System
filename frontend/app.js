@@ -84,7 +84,8 @@ function formatApiError(detail) {
 
 async function apiFetch(url, options = {}, _retried = false) {
   const headers = new Headers(options.headers || {});
-  const currentActor = currentMode === 'manager' ? currentManagerRoleId : currentEmployeeId;
+  const {actorId, ...fetchOptions} = options;
+  const currentActor = actorId || ((currentMode === 'manager') ? currentManagerRoleId : currentEmployeeId);
   if (currentActor) {
     headers.set('X-Actor-ID', currentActor);
     const token = await getActorToken(currentActor);
@@ -92,7 +93,7 @@ async function apiFetch(url, options = {}, _retried = false) {
       headers.set('Authorization', `Bearer ${token}`);
     }
   }
-  const res = await fetch(url, {...options, headers});
+  const res = await fetch(url, {...fetchOptions, headers});
   // Token hết hạn hoặc server đã đổi khóa ký: bỏ token cũ, xin token mới và thử lại một lần
   if (res.status === 401 && currentActor && !_retried) {
     delete authTokenCache[currentActor];
@@ -509,6 +510,7 @@ function initModeSwitcher() {
       renderAutoApprovedLogs();
       renderManagerAllRequests();
       populateManagerDeptFilter();
+      if (document.getElementById("tab-mgr-employees")?.classList.contains("active")) showEmployeeManagement();
       renderWeeklyCalendar();
       updateBadgesAndCounters();
     });
@@ -718,14 +720,14 @@ async function refreshCurrentEmployeeBalance() {
 
 async function loadEmployees() {
   try {
-    let res = await apiFetch(`${API_BASE}/api/verify/employees`);
+    let res = await apiFetch(`${API_BASE}/api/verify/employees`, {actorId: currentManagerRoleId});
     if (!res.ok) {
-      res = await apiFetch(`${API_BASE}/api/meta/employees`);
+      res = await apiFetch(`${API_BASE}/api/meta/employees`, {actorId: currentManagerRoleId});
     }
     if (res.ok) {
       const data = await res.json();
-      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-        employeesCache = data.data;
+      if (data.success && Array.isArray(data.data)) {
+        employeesCache = data.data.filter(employee => employee.status === 'ACTIVE');
       }
     }
   } catch (err) {
@@ -790,7 +792,7 @@ function populateEmployeeDropdowns() {
   updateStaffDropdown(currentDept);
 
   if (allocEmpSelect) {
-    allocEmpSelect.innerHTML = employeesCache.map(emp => `
+    allocEmpSelect.innerHTML = employeesCache.filter(emp => emp.status === 'ACTIVE').map(emp => `
       <option value="${emp.employee_id}">${emp.name} - ${emp.employee_id} (${emp.department})</option>
     `).join("");
   }
@@ -828,7 +830,7 @@ function updateHandoverOptions() {
 }
 
 function getCurrentEmployee() {
-  return employeesCache.find(e => e.employee_id === currentEmployeeId) || employeesCache[0] || null;
+  return employeesCache.find(e => e.employee_id === currentEmployeeId && e.status === 'ACTIVE') || employeesCache.find(e => e.status === 'ACTIVE') || null;
 }
 
 function renderStaffDashboard() {
@@ -2207,24 +2209,13 @@ let testCaseSearchQuery = "";
 
 function setRepoFilter(filterVal) {
   currentTestCaseFilter = filterVal || "ALL";
-  const filterPills = document.querySelectorAll("#testcase-filter-pills .repo-chip, #testcase-filter-pills button");
-  filterPills.forEach(btn => {
-    btn.classList.toggle("active", (btn.getAttribute("data-filter") || "ALL") === currentTestCaseFilter);
-  });
+  const select = document.getElementById("repo-status-filter");
+  if (select && select.value !== currentTestCaseFilter) select.value = currentTestCaseFilter;
   renderStaffTestCaseCard();
 }
 window.setRepoFilter = setRepoFilter;
 
 function initStaffTestCaseCard() {
-  // Filter pills / chips
-  const filterPills = document.querySelectorAll("#testcase-filter-pills .repo-chip, #testcase-filter-pills button");
-  filterPills.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const f = btn.getAttribute("data-filter") || "ALL";
-      setRepoFilter(f);
-    });
-  });
-
   // Search input
   const searchInput = document.getElementById("testcase-search-input");
   if (searchInput) {
@@ -2236,23 +2227,6 @@ function initStaffTestCaseCard() {
 
   renderStaffTestCaseCard();
 }
-
-let currentRepoViewMode = 'cards'; // 'cards' | 'table'
-
-function setRepoViewMode(mode) {
-  currentRepoViewMode = mode;
-  const btnCards = document.getElementById("btn-repo-view-cards");
-  const btnTable = document.getElementById("btn-repo-view-table");
-  const containerCards = document.getElementById("repo-outcome-groups-container");
-  const containerTable = document.getElementById("repo-cases-overview");
-
-  if (btnCards) btnCards.classList.toggle("active", mode === "cards");
-  if (btnTable) btnTable.classList.toggle("active", mode === "table");
-
-  if (containerCards) containerCards.classList.toggle("d-none", mode !== "cards");
-  if (containerTable) containerTable.classList.toggle("d-none", mode !== "table");
-}
-window.setRepoViewMode = setRepoViewMode;
 
 function getTestCaseOutcomeGroup(tc) {
   const dec = (tc.expected && tc.expected.decision ? tc.expected.decision : "").toUpperCase();
@@ -2328,20 +2302,30 @@ async function fillTestScenarioToForm(caseId) {
 }
 window.fillTestScenarioToForm = fillTestScenarioToForm;
 
-let repoGroupCollapsedState = {};
-
-function toggleRepoGroup(groupKey) {
-  repoGroupCollapsedState[groupKey] = !repoGroupCollapsedState[groupKey];
-  const el = document.getElementById(`repo-group-${groupKey}`);
-  if (el) {
-    el.classList.toggle("collapsed", repoGroupCollapsedState[groupKey]);
-  }
-}
-window.toggleRepoGroup = toggleRepoGroup;
-
 function renderStaffTestCaseCard() {
-  const containerCards = document.getElementById("repo-outcome-groups-container");
   const tbody = document.getElementById("repo-overview-tbody");
+  const summary = document.getElementById("repo-summary-strip");
+  const outcomeCounts = REPO_OUTCOME_GROUPS_CONFIG.reduce((counts, group) => {
+    counts[group.key] = 0;
+    return counts;
+  }, {});
+
+  STAFF_TEST_CASES.forEach(tc => {
+    const outcome = getTestCaseOutcomeGroup(tc);
+    if (Object.prototype.hasOwnProperty.call(outcomeCounts, outcome)) outcomeCounts[outcome] += 1;
+  });
+
+  if (summary) {
+    summary.innerHTML = REPO_OUTCOME_GROUPS_CONFIG.map(group => `
+      <div class="repo-summary-item" data-outcome="${group.key}">
+        <span class="repo-summary-count">${outcomeCounts[group.key]}</span>
+        <span class="repo-summary-label">${escapeHtml(group.tagLabel)}</span>
+      </div>
+    `).join("");
+  }
+
+  const subtitle = document.getElementById("repo-case-subtitle");
+  if (subtitle) subtitle.textContent = `${STAFF_TEST_CASES.length} kịch bản toàn công ty · ${REPO_OUTCOME_GROUPS_CONFIG.length} nhóm chính`;
 
   // 1. Filter by outcome group or legacy category
   let filteredCases = STAFF_TEST_CASES;
@@ -2376,48 +2360,19 @@ function renderStaffTestCaseCard() {
     });
   }
 
-  const badgeCount = document.getElementById("badge-testcase-count");
-  if (badgeCount) {
-    const filterText = (currentTestCaseFilter === "ALL" && !testCaseSearchQuery)
-      ? "toàn công ty (38 ca)"
-      : `${filteredCases.length} ca`;
-    badgeCount.innerText = `${filteredCases.length} kịch bản · ${filterText}`;
-  }
-
-  // Update chip count numbers for each outcome group
-  const allCases = (typeof STAFF_TEST_CASES !== "undefined" && Array.isArray(STAFF_TEST_CASES)) ? STAFF_TEST_CASES : [];
-  const countAll = allCases.length;
-  const countApprove = allCases.filter(t => getTestCaseOutcomeGroup(t) === "AUTO_APPROVE").length;
-  const countEscalate = allCases.filter(t => getTestCaseOutcomeGroup(t) === "ESCALATE").length;
-  const countCorrect = allCases.filter(t => getTestCaseOutcomeGroup(t) === "NEED_CORRECTION").length;
-  const countReject = allCases.filter(t => getTestCaseOutcomeGroup(t) === "AUTO_REJECT").length;
-
-  const elCountAll = document.getElementById("repo-count-ALL");
-  const elCountApprove = document.getElementById("repo-count-AUTO_APPROVE");
-  const elCountEscalate = document.getElementById("repo-count-ESCALATE");
-  const elCountCorrect = document.getElementById("repo-count-NEED_CORRECTION");
-  const elCountReject = document.getElementById("repo-count-AUTO_REJECT");
-
-  if (elCountAll) elCountAll.innerText = countAll;
-  if (elCountApprove) elCountApprove.innerText = countApprove;
-  if (elCountEscalate) elCountEscalate.innerText = countEscalate;
-  if (elCountCorrect) elCountCorrect.innerText = countCorrect;
-  if (elCountReject) elCountReject.innerText = countReject;
+  // Kịch bản cùng trạng thái đứng cạnh nhau, theo thứ tự nhóm trong REPO_OUTCOME_GROUPS_CONFIG
+  const groupOrder = REPO_OUTCOME_GROUPS_CONFIG.map(g => g.key);
+  filteredCases = filteredCases
+    .map((tc, i) => ({ tc, i, g: groupOrder.indexOf(getTestCaseOutcomeGroup(tc)) }))
+    .sort((x, y) => (x.g - y.g) || (x.i - y.i))
+    .map(x => x.tc);
 
   // Handle empty state
   if (filteredCases.length === 0) {
-    const emptyHtml = `
-      <div class="text-center py-5 bg-white rounded border" style="border-color: #e2e8f0 !important;">
-        <div style="font-size: 2.2rem; margin-bottom: 8px;">🔍</div>
-        <div class="fw-bold text-dark" style="font-size: 0.95rem;">Không tìm thấy kịch bản nào phù hợp</div>
-        <div class="text-muted" style="font-size: 0.82rem; margin-top: 4px;">Vui lòng thử từ khóa khác hoặc bấm chọn "Tất cả" kịch bản.</div>
-      </div>
-    `;
-    if (containerCards) containerCards.innerHTML = emptyHtml;
     if (tbody) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="6" class="text-center py-4 text-muted" style="font-size: 0.88rem;">
+          <td colspan="5" class="text-center py-4 text-muted" style="font-size: 0.88rem;">
             Không tìm thấy kịch bản nào phù hợp với bộ lọc hoặc từ khóa tìm kiếm.
           </td>
         </tr>
@@ -2426,153 +2381,29 @@ function renderStaffTestCaseCard() {
     return;
   }
 
-  // --- RENDER DẠNG CÁC Ô DÀI 2-3 DÒNG THEO NHÓM KÉO XỔ ACCORDION ---
-  if (containerCards) {
-    let groupsHtml = "";
-
-    REPO_OUTCOME_GROUPS_CONFIG.forEach(grp => {
-      const groupCases = filteredCases.filter(t => getTestCaseOutcomeGroup(t) === grp.key);
-      if (groupCases.length === 0) return;
-
-      const isCollapsed = !!repoGroupCollapsedState[grp.key];
-
-      let rowsHtml = "";
-      groupCases.forEach(tc => {
-        const empName = EMP_NAME_MAP[tc.primaryEmpId] || tc.primaryEmpId;
-        const empObj = employeesCache.find(e => e.employee_id === tc.primaryEmpId);
-        const dept = empObj ? empObj.department : "Engineering";
-        const meta = TESTCASE_SPRINT1_METADATA[tc.id] || {};
-
-        // Calculate duration in days
-        let days = 1;
-        if (tc.payload.requested_working_days) {
-          days = tc.payload.requested_working_days;
-        } else if (tc.payload.from_date && tc.payload.to_date) {
-          const d1 = new Date(tc.payload.from_date);
-          const d2 = new Date(tc.payload.to_date);
-          const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
-          days = diff > 0 ? diff : 1;
-        }
-
-        const dateRange = `${tc.payload.from_date} &rarr; ${tc.payload.to_date}`;
-        const leaveLabel = meta.leaveTypeFriendly || tc.payload.leave_type || "Nghỉ phép";
-        const targetRole = (tc.expected && tc.expected.target_role) ? tc.expected.target_role : "";
-        const roleBadge = targetRole && targetRole !== "NONE" ? ` &rarr; <b>${escapeHtml(targetRole)}</b>` : "";
-        const noteText = (tc.expected && (tc.expected.note || tc.expected.error_code)) ? escapeHtml(tc.expected.note || tc.expected.error_code) : "";
-        const shortDesc = escapeHtml(tc.desc || tc.title || tc.payload.reason || "");
-
-        // Determine accent stripe class
-        const stripeClass = grp.key === 'AUTO_APPROVE' ? 'row-approve'
-          : grp.key === 'ESCALATE' ? 'row-escalate'
-          : grp.key === 'NEED_CORRECTION' ? 'row-correct'
-          : 'row-reject';
-
-        rowsHtml += `
-          <div class="repo-compact-row ${stripeClass}" onclick="openRepoCaseDetail('${escapeHtml(tc.id)}')">
-            <!-- Tag kết quả — góc trái -->
-            <span class="benchmark-tag ${grp.tagClass}">${escapeHtml(grp.tagLabel)}</span>
-
-            <!-- Khối thông tin 2 dòng -->
-            <div class="repo-row-info">
-              <div class="repo-row-line1">
-                <b class="repo-row-emp-name">${escapeHtml(empName)}</b>
-                <span class="repo-row-dept">${escapeHtml(dept.replace('Marketing & Operations', 'Mkt & Ops'))}</span>
-              </div>
-              <div class="repo-row-line2">
-                <span class="repo-row-leave-type">${escapeHtml(leaveLabel)}</span>
-                <span class="repo-row-sep">·</span>
-                <span class="repo-row-days">${days}d</span>
-              </div>
-            </div>
-
-            <!-- Nút hành động -->
-            <div class="repo-row-actions">
-              <button type="button" class="repo-btn-sm-detail" onclick="event.stopPropagation(); openRepoCaseDetail('${escapeHtml(tc.id)}')" title="Xem chi tiết phân tích">Chi tiết</button>
-              <button type="button" class="repo-btn-sm-fill" onclick="event.stopPropagation(); fillTestScenarioToForm('${escapeHtml(tc.id)}')" title="Nạp thử kịch bản">Nạp thử</button>
-            </div>
-          </div>
-        `;
-      });
-
-      groupsHtml += `
-        <div class="repo-outcome-group ${isCollapsed ? 'collapsed' : ''}" id="repo-group-${grp.key}">
-          <div class="repo-outcome-header ${grp.headerClass}" onclick="toggleRepoGroup('${grp.key}')" title="Nhấn để đóng/mở danh sách kịch bản">
-            <div class="d-flex align-items-center gap-2">
-              ${grp.icon}
-              <div>
-                <h4 class="repo-outcome-title">
-                  <span>${escapeHtml(grp.title)}</span>
-                </h4>
-                <div class="repo-outcome-desc">${escapeHtml(grp.desc)}</div>
-              </div>
-            </div>
-            <div class="d-flex align-items-center gap-2.5">
-              <span class="badge" style="background: ${grp.badgeBg}; color: #ffffff; font-weight: 700; padding: 4px 11px; border-radius: 6px; font-size: 0.76rem;">
-                ${groupCases.length} kịch bản
-              </span>
-              <svg class="repo-outcome-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </div>
-          </div>
-          <div class="repo-compact-list">
-            ${rowsHtml}
-          </div>
-        </div>
-      `;
-    });
-
-    containerCards.innerHTML = groupsHtml;
-  }
-
-  // --- RENDER DẠNG BẢNG (CHO KHI BẬT VIEW TABLE) ---
+  // --- RENDER DẠNG BẢNG ---
   if (tbody) {
     let tableHtml = "";
     filteredCases.forEach((tc) => {
       const empName = EMP_NAME_MAP[tc.primaryEmpId] || tc.primaryEmpId;
-      const empObj = employeesCache.find(e => e.employee_id === tc.primaryEmpId);
-      const dept = empObj ? empObj.department : "Engineering";
+      const meta = TESTCASE_SPRINT1_METADATA[tc.id] || {};
+      const leaveLabel = meta.leaveTypeFriendly || tc.payload.leave_type || "Nghỉ phép";
       const outcomeGroup = getTestCaseOutcomeGroup(tc);
       const grpConfig = REPO_OUTCOME_GROUPS_CONFIG.find(g => g.key === outcomeGroup) || REPO_OUTCOME_GROUPS_CONFIG[0];
-
-      let days = 1;
-      if (tc.payload.requested_working_days) {
-        days = tc.payload.requested_working_days;
-      } else if (tc.payload.from_date && tc.payload.to_date) {
-        const d1 = new Date(tc.payload.from_date);
-        const d2 = new Date(tc.payload.to_date);
-        const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
-        days = diff > 0 ? diff : 1;
-      }
-
-      const dateRange = `${tc.payload.from_date} &rarr; ${tc.payload.to_date}`;
+      const id = escapeHtml(tc.id);
 
       tableHtml += `
-        <tr id="repo-row-${escapeHtml(tc.id)}">
-          <td style="padding: 12px 16px;">
-            <b class="text-dark">${escapeHtml(empName)}</b>
+        <tr id="repo-row-${id}">
+          <td style="padding: 12px 16px;"><b class="text-dark">${escapeHtml(empName)}</b></td>
+          <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">${escapeHtml(leaveLabel)}</td>
+          <td style="padding: 12px 16px;" class="text-center">
+            <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openRepoCaseDetail('${id}')" title="Xem chi tiết kịch bản">Chi tiết</button>
           </td>
           <td style="padding: 12px 16px;">
-            <span class="badge bg-secondary-lt fw-semibold">${escapeHtml(dept)}</span>
+            <span class="benchmark-tag ${grpConfig.tagClass}" id="repo-status-${id}">${escapeHtml(grpConfig.tagLabel)}</span>
           </td>
-          <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">
-            ${dateRange}
-          </td>
-          <td style="padding: 12px 16px;">
-            <b class="text-dark">${days} ngày</b>
-          </td>
-          <td style="padding: 12px 16px;">
-            <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold me-1" onclick="openRepoCaseDetail('${escapeHtml(tc.id)}')" title="Xem chi tiết kịch bản">
-              Chi tiết
-            </button>
-            <button type="button" class="btn btn-sm btn-primary px-2 py-1 fw-semibold" onclick="fillTestScenarioToForm('${escapeHtml(tc.id)}')" title="Nạp nhanh vào form">
-              Nạp
-            </button>
-          </td>
-          <td style="padding: 12px 16px;">
-            <span class="benchmark-tag ${grpConfig.tagClass}" id="repo-status-${escapeHtml(tc.id)}">
-              ${escapeHtml(grpConfig.tagLabel)}
-            </span>
+          <td style="padding: 12px 16px;" class="text-center">
+            <button type="button" class="btn btn-sm btn-primary px-3 py-1 fw-semibold" onclick="fillTestScenarioToForm('${id}')" title="Nạp kịch bản vào form nộp đơn">Nạp</button>
           </td>
         </tr>
       `;
@@ -2582,13 +2413,16 @@ function renderStaffTestCaseCard() {
 }
 
 async function openRepoCaseDetail(caseId) {
-  // If exists in BENCHMARK_CASES_DATA, delegate to openBenchmarkCaseDetail
+  // 5 kịch bản Sprint 1: ưu tiên kết quả chạy thật (nếu có), cùng một modal chi tiết đơn
   if (typeof BENCHMARK_CASES_DATA !== "undefined" && BENCHMARK_CASES_DATA[caseId]) {
     await openBenchmarkCaseDetail(caseId);
-    setupRepoDetailFillButton(caseId);
     return;
   }
+  await openRepoMockDetail(caseId);
+}
 
+// Modal chi tiết đơn dựng từ dữ liệu kịch bản (kết quả kỳ vọng), dùng khi chưa có kết quả chạy thật
+async function openRepoMockDetail(caseId) {
   const tc = STAFF_TEST_CASES.find(t => t.id === caseId);
   if (!tc) return;
 
@@ -2634,6 +2468,7 @@ async function openRepoCaseDetail(caseId) {
     human_readable_explanation: tc.desc,
     actionable_question: meta.actionableQuestion || tc.desc,
     proof_file_name: proofInfo ? proofInfo.file : (tc.payload.proof?.file_name || null),
+    proof_file: proofInfo ? proofInfo.file : null,
     proof_file_type: proofInfo ? proofInfo.type : null,
     llm_summary_json: {
       decision: tc.expected.decision,
@@ -2828,9 +2663,9 @@ function initSprint1Benchmark() {
         if (progressBar) progressBar.style.width = `${endPct}%`;
         if (progressPercent) progressPercent.innerText = `${endPct}%`;
 
-        const decisionBadgeClass = actualDecision === "AUTO_APPROVE" ? "bg-success text-white" :
-          (actualDecision === "AUTO_REJECT" ? "bg-danger text-white" :
-          (actualDecision === "ESCALATE" ? "bg-primary text-white" : "bg-warning text-dark"));
+        const decisionTagClass = actualDecision === "AUTO_APPROVE" ? "s1-tag-ok" :
+          (actualDecision === "AUTO_REJECT" ? "s1-tag-bad" :
+          (actualDecision === "ESCALATE" ? "s1-tag-info" : "s1-tag-warn"));
 
         // Cập nhật trạng thái trực tiếp trên bảng 5 kịch bản
         const statusEl = document.getElementById(`sprint1-status-${item.id}`);
@@ -2839,78 +2674,32 @@ function initSprint1Benchmark() {
             (actualDecision === "AUTO_REJECT" ? "Từ chối tự động" :
             (actualDecision === "NEED_CORRECTION" ? "Cần sửa đơn" :
             (actualDecision === "ESCALATE" ? "Chờ người có thẩm quyền" : actualDecision)));
-          statusEl.className = `badge ${decisionBadgeClass} fw-bold`;
+          // Cùng bộ màu nhạt với trạng thái ban đầu của bảng (không dùng nền đậm của Bootstrap)
+          const tagClass = actualDecision === "AUTO_APPROVE" || actualDecision === "NO_LEAVE_REQUIRED" ? "benchmark-tag-approve"
+            : actualDecision === "AUTO_REJECT" ? "benchmark-tag-reject"
+            : actualDecision === "ESCALATE" ? "benchmark-tag-escalate" : "benchmark-tag-correct";
+          statusEl.className = `benchmark-tag ${tagClass}`;
           statusEl.style.fontSize = "0.74rem";
           statusEl.style.padding = "4px 9px";
           statusEl.innerText = decisionText;
         }
 
-        const detailRowId = `sprint1-detail-${item.id}`;
-        const proofUrl = item.proofFile ? `assets/proofs/${item.proofFile}` : null;
-        const proofFileName = item.proofFile || null;
-        const actionableQ = escapeHtml(backendDetail.actionable_question || item.actionableQuestion);
-        const plainReason = escapeHtml(backendDetail.plain_reason || '');
-        const dateRange = escapeHtml(item.dates || (backendDetail.from_date ? `${backendDetail.from_date} → ${backendDetail.to_date}` : '—'));
-        const realReqId = backendDetail.request_id || `REQ-${item.id}`;
-        const latencySec = backendDetail.latency_seconds ? `${backendDetail.latency_seconds}s` : '';
-
-        // Proof link HTML — clickable to open image lightbox
-        const proofLinkHtml = proofUrl
-          ? `<div style="margin-top:3px;">
-               <a href="javascript:void(0)" onclick="openImageLightbox('${proofUrl}','${escapeHtml(proofFileName)}')"
-                  style="font-size:0.72rem; color:#7c3aed; text-decoration:none; display:inline-flex; align-items:center; gap:3px;"
-                  title="Bấm để xem ảnh chứng từ">
-                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-                 ${escapeHtml(proofFileName)}
-               </a>
-             </div>`
-          : '';
-
-        // Nút "Cổng Quản lý" đã bị xóa khỏi màn kiểm định (chỉ là màn đọc kết quả)
-        const escalateBtnHtml = '';
-
         const canViewDetail = hasVerifiedResult;
-        const resultLabel = hasVerifiedResult ? (isPassed ? 'ĐẠT' : 'KHÔNG ĐẠT') : 'CHƯA XÁC NHẬN';
-        const resultBadgeClass = hasVerifiedResult ? (isPassed ? 'bg-success text-white' : 'bg-danger text-white') : 'bg-secondary text-white';
 
         const tr = document.createElement("tr");
         tr.style.animation = "fadeIn 0.3s ease-in-out";
         tr.innerHTML = `
+          <td><span class="fw-bold" style="font-size: 0.84rem;">${item.id}</span></td>
           <td>
-            <div class="fw-bold" style="font-size: 0.85rem;">${item.id}</div>
-            <div class="small text-muted">${escapeHtml(item.name)} (${item.empId})</div>
-            <div class="small text-muted" style="font-size:0.7rem; color:#94a3b8;">${escapeHtml(item.dept)}</div>
-            <div style="font-size:0.68rem; color:#64748b; margin-top:2px;">ID: <code>${escapeHtml(realReqId)}</code></div>
+            <span class="badge ${item.groupBadgeClass}" style="font-size: 0.72rem; font-weight: 700; padding: 4px 7px;">${escapeHtml(item.groupLabel)}</span>
           </td>
-          <td>
-            <span class="badge ${item.groupBadgeClass}" style="font-size: 0.72rem; font-weight: 700; padding: 4px 7px;">
-              ${escapeHtml(item.groupLabel)}
-            </span>
-            <div class="small text-muted mt-1">${escapeHtml(item.type)}</div>
-            ${proofLinkHtml}
-          </td>
-          <td>
-            <span class="badge bg-blue-lt fw-bold" style="font-size: 0.74rem;">${item.expectedDecision}</span>
-          </td>
-          <td>
-            <span class="badge ${decisionBadgeClass} fw-bold" style="font-size: 0.74rem;">${actualDecision}</span>
-            ${latencySec ? `<div style="font-size:0.68rem; color:#64748b; margin-top:3px;">${latencySec}</div>` : ''}
-          </td>
-          <td style="font-size: 0.81rem; line-height: 1.4; color: #1e293b; max-width: 260px;">
-            <div class="fw-semibold text-dark" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="${actionableQ}">${actionableQ}</div>
-            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">
-              ${canViewDetail ? `<button type="button" onclick="openBenchmarkCaseDetail('${item.id}')"
-                style="font-size:0.7rem; background:none; border:1px solid #cbd5e1; border-radius:4px; padding:2px 7px; color:#475569; cursor:pointer; display:inline-flex; align-items:center; gap:3px;">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                Xem chi tiết
-              </button>` : '<span class="small text-muted">Chưa verify</span>'}
-              ${escalateBtnHtml}
-            </div>
+          <td><span class="s1-tag s1-tag-neutral">${item.expectedDecision}</span></td>
+          <td><span class="s1-tag ${decisionTagClass}">${actualDecision}</span></td>
+          <td class="text-center">
+            <span class="s1-tag ${hasVerifiedResult ? (isPassed ? 's1-tag-ok' : 's1-tag-bad') : 's1-tag-neutral'}">${hasVerifiedResult ? (isPassed ? 'Đạt' : 'Không đạt') : 'Chưa xác nhận'}</span>
           </td>
           <td class="text-center">
-            <span class="badge ${resultBadgeClass} fw-bold" style="font-size: 0.75rem; padding: 4px 8px;">
-              ${hasVerifiedResult ? (isPassed ? '✓ ĐẠT' : '✗ KHÔNG ĐẠT') : '• CHƯA XÁC NHẬN'}
-            </span>
+            ${canViewDetail ? `<button type="button" class="btn btn-sm btn-outline-primary" onclick="openBenchmarkCaseDetail('${item.id}')">Chi tiết</button>` : '<span class="small text-muted">—</span>'}
           </td>
         `;
         if (resultsTbody) resultsTbody.appendChild(tr);
@@ -2943,7 +2732,7 @@ function initSprint1Benchmark() {
 
       if (kpiGrid) kpiGrid.classList.remove("d-none");
 
-      if (progressLabel) progressLabel.innerText = "✓ Hoàn thành kiểm thử 5/5 kịch bản chuẩn Sprint 1 bằng mô hình AI thật!";
+      if (progressLabel) progressLabel.innerText = "✓ Hoàn thành kiểm thử";
       if (progressBar) {
         progressBar.classList.remove("progress-bar-animated");
         progressBar.classList.remove("bg-warning");
@@ -3183,6 +2972,14 @@ function scenarioSubmittedAtFor(payload) {
 
 async function fillStaffTestCaseIntoForm(tc) {
   if (!tc) return;
+  if (tc.primaryEmpId && !employeesCache.some(e => e.employee_id === tc.primaryEmpId && e.status === 'ACTIVE')) {
+    showToast('Nhân viên của kịch bản đã ngừng hoạt động. Kịch bản vẫn được giữ trong mục Test.', 'warning');
+    return;
+  }
+  if (tc.payload.handover_person_id && !employeesCache.some(e => e.employee_id === tc.payload.handover_person_id && e.status === 'ACTIVE')) {
+    showToast('Người nhận bàn giao của kịch bản đã ngừng hoạt động. Vui lòng chọn người đang hoạt động.', 'warning');
+    return;
+  }
   activeTestScenario = {
     id: tc.id,
     leave_type: tc.payload.leave_type,
@@ -3302,6 +3099,7 @@ function initStaffTabs() {
 }
 
 function switchStaffTab(tabId) {
+  if (typeof hideEmployeeManagement === 'function') hideEmployeeManagement();
   if (currentMode !== "staff") {
     currentMode = "staff";
     const btnTest = document.getElementById("btn-mode-test");
@@ -3378,8 +3176,9 @@ function switchManagerTab(tabId) {
     renderManagerQueue();
   } else if (tabId === "tab-mgr-all-requests") {
     renderManagerAllRequests();
+  } else if (tabId === "tab-mgr-employees") {
+    return showEmployeeManagement();
   } else if (tabId === "tab-mgr-policy") {
-    loadDecisionTree();
     loadPolicyDocument();
   }
 }
@@ -4321,8 +4120,32 @@ window.toggleAllocationDrawer = function(forceOpen = null) {
   if (!drawer) return;
   const isVisible = drawer.style.display === "block" || drawer.style.display === "flex";
   const shouldOpen = forceOpen !== null ? forceOpen : !isVisible;
+  if (shouldOpen) prepareAllocationForm();
   drawer.style.display = shouldOpen ? "flex" : "none";
 };
+
+// Dựng lại lựa chọn theo quyền người đang thao tác (dữ liệu thật, không ghi cứng):
+// CEO/HRD: toàn công ty + mọi phòng ban; Quản lý trực tiếp: chỉ phòng ban mình phụ trách.
+function prepareAllocationForm() {
+  const typeEl = document.getElementById("alloc-target-type");
+  const deptEl = document.getElementById("alloc-dept-select");
+  const empEl = document.getElementById("alloc-emp-select");
+  if (!typeEl || !deptEl || !empEl) return;
+  const me = employeesCache.find(e => e.employee_id === currentManagerRoleId);
+  const roles = (me && me.actor_roles) || [];
+  const companyWide = roles.some(r => r.role === "CEO" || r.role === "HRD");
+  const scopes = roles.filter(r => r.role === "DIRECT_MANAGER").map(r => r.department_scope);
+  const active = employeesCache.filter(e => e.status === "ACTIVE" && e.department !== "Executive Board");
+  const allDepts = [...new Set(active.map(e => e.department).filter(Boolean))].sort();
+  const depts = companyWide || scopes.includes("*") ? allDepts : allDepts.filter(d => scopes.includes(d));
+
+  typeEl.innerHTML = (companyWide ? `<option value="ALL">Toàn công ty</option>` : "")
+    + `<option value="DEPARTMENT">Phòng ban cụ thể</option><option value="EMPLOYEE">Cá nhân cụ thể</option>`;
+  deptEl.innerHTML = depts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
+  empEl.innerHTML = active.filter(e => depts.includes(e.department))
+    .map(e => `<option value="${escapeHtml(e.employee_id)}">${escapeHtml(e.name)} · ${escapeHtml(e.department)} (còn ${e.remaining_leave_days ?? 0} ngày)</option>`).join("");
+  typeEl.dispatchEvent(new Event("change"));
+}
 
 function initLeaveAllocationDrawer() {
   const btnOpen = document.getElementById("btn-header-allocate");
@@ -4375,9 +4198,9 @@ function initLeaveAllocationDrawer() {
         if (res.ok && data.success) {
           showToast(data.message, "success");
           drawer.style.display = "none";
-          await loadEmployees();
+          await loadEmployees();          // số dư mới cho giao diện hiện tại; các máy Staff tự cập nhật định kỳ
         } else {
-          showToast(data.detail || "Không thể cấp phát ngày phép!", "error");
+          showToast(formatApiError(data.detail) || "Không thể cấp phát ngày phép!", "error");
         }
       } catch (err) {
         console.error("Allocate error:", err);
@@ -5184,7 +5007,7 @@ let requestsLoadSeq = 0;
 let activeRequestsActor = null;
 let lastRequestsSignature = null;
 function currentActorId() {
-  return currentMode === "manager" ? currentManagerRoleId : currentEmployeeId;
+  return (currentMode === 'manager') ? currentManagerRoleId : currentEmployeeId;
 }
 
 // Lần tải do người dùng thao tác (không silent) luôn chạy; chỉ lần tự cập nhật ngầm mới được bỏ qua khi đang có lần tải khác.
@@ -5248,7 +5071,7 @@ function isActionablePending(r) {
 
 // Đơn đang chờ một cấp khác xử lý: người hiện tại chỉ được xem, không được thao tác.
 function isPendingOnOthers(r) {
-  const actorId = currentMode === "manager" ? currentManagerRoleId : currentEmployeeId;
+  const actorId = (currentMode === 'manager') ? currentManagerRoleId : currentEmployeeId;
   return r.status === "PENDING_ESCALATION" && !r.can_act && r.employee_id !== actorId;
 }
 
@@ -5410,33 +5233,38 @@ function renderStaffHandover() {
   const tbody = document.getElementById("staff-handover-tbody");
   if (!tbody) return;
 
-  const pending = activeRequests.filter(r => r.status === "PENDING_HANDOVER" && r.handover_person_id === currentEmployeeId);
-  
+  // Giữ cả các yêu cầu đã xử lý (đã chấp nhận / đã từ chối) để người nhận bàn giao xem lại; đang chờ nằm trên cùng.
+  const mine = activeRequests.filter(r => r.handover_person_id === currentEmployeeId && r.status !== "CANCELLED"
+    && (r.status === "PENDING_HANDOVER" || ["ACCEPTED", "DECLINED"].includes(r.handover_status)));
+  const pending = mine.sort((a, b) => (b.status === "PENDING_HANDOVER") - (a.status === "PENDING_HANDOVER")
+    || String(b.submitted_at || "").localeCompare(String(a.submitted_at || "")));
+
   if (pending.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4">Không có yêu cầu bàn giao nào đang chờ bạn xác nhận.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-secondary py-4">Không có yêu cầu bàn giao nào đang chờ bạn xác nhận.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = pending.map(req => {
     const dates = `${formatSimpleDate(req.from_date)} → ${formatSimpleDate(req.to_date)}`;
     const days = req.requested_working_days ?? req.workdays ?? 1;
-    const leaveLabel = getLeaveTypeLabel(req.canonical_leave_type || req.leave_type);
-    const reason = escapeHtml(req.reason || '—');
     const sender = escapeHtml(req.employee_name || req.employee_id);
-    const dept = escapeHtml(req.department || '');
 
     return `
       <tr>
-        <td>
-          <div class="fw-bold">${sender}</div>
-          <div class="text-muted" style="font-size:0.8rem;">${dept}</div>
-        </td>
-        <td><span class="badge bg-secondary-subtle text-secondary">${escapeHtml(leaveLabel)}</span></td>
+        <td class="fw-bold">${sender}</td>
         <td>${dates}</td>
         <td><b>${days} ngày</b></td>
-        <td style="max-width:260px; white-space:normal; font-size:0.85rem;">${reason}</td>
         <td>
-          <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-outline-primary" onclick="openRequestDetailModal('${escapeHtml(req.id)}')" title="Xem đơn nghỉ phép">Chi tiết</button>
+        </td>
+        <td>
+          ${req.status !== "PENDING_HANDOVER" ? `
+          <div class="d-flex justify-content-center">
+            ${req.handover_status === "ACCEPTED"
+              ? `<span class="rd-pill rd-pill-ok">Đã chấp nhận</span>`
+              : `<span class="rd-pill rd-pill-bad" title="${escapeHtml(req.handover_decline_reason || '')}">Đã từ chối</span>`}
+          </div>` : `
+          <div class="d-flex align-items-center justify-content-center gap-2">
             <button class="btn btn-sm btn-success px-2.5 py-1" onclick="handleHandoverResponse('${escapeHtml(req.id)}', 'ACCEPT')" title="Đồng ý nhận bàn giao công việc">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="me-1">
                 <polyline points="20 6 9 17 4 12"></polyline>
@@ -5450,7 +5278,7 @@ function renderStaffHandover() {
               </svg>
               Từ chối
             </button>
-          </div>
+          </div>`}
         </td>
       </tr>
     `;
@@ -5947,6 +5775,29 @@ async function openBenchmarkCaseDetail(caseId) {
     console.warn("Could not fetch live case-detail:", err);
   }
 
+  // Hiển thị bằng cùng modal chi tiết đơn như mọi kịch bản/đơn khác để đồng bộ giao diện
+  if (record) {
+    const proofInfo = (typeof TESTCASE_PROOF_MAP !== "undefined") ? TESTCASE_PROOF_MAP[normCaseId] : null;
+    const req = Object.assign({}, record, {
+      id: normCaseId,
+      request_id: record.id || realReqId,
+      proof_file: proofInfo ? proofInfo.file : (record.proof_file || null),
+    });
+    const previousMode = currentMode;
+    try {
+      currentMode = 'manager';
+      await openRequestDetailModal(req);
+    } finally {
+      currentMode = previousMode;
+    }
+    setupRepoDetailFillButton(normCaseId);
+    return;
+  }
+  if (STAFF_TEST_CASES.some(t => t.id === normCaseId)) {
+    await openRepoMockDetail(normCaseId);
+    return;
+  }
+
   // 2. Fallback vào BENCHMARK_CASES_DATA
   const staticData = (typeof BENCHMARK_CASES_DATA !== "undefined") ? BENCHMARK_CASES_DATA[normCaseId] : null;
   const benchmarkResult = (window.__sprint1ResultsMap && window.__sprint1ResultsMap[normCaseId]) || null;
@@ -6317,6 +6168,14 @@ function renderBenchmarkDetailModal(req) {
               </div>
             </div>
 
+            ${req.actionable_question ? `
+            <div>
+              <div class="harness-right-item-label">Phản hồi của AI</div>
+              <div class="harness-right-item-val" style="font-size:0.83rem;color:#334155;">
+                ${escapeHtml(req.actionable_question)}
+              </div>
+            </div>` : ''}
+
             <!-- Kết luận ngắn -->
             <div>
               <div class="harness-right-item-label">Kết luận</div>
@@ -6568,6 +6427,10 @@ async function openRequestDetailModal(requestId) {
     + '<p class="rd-verdict-text"><strong>' + escapeHtml(boxLabel) + '</strong> ' + escapeHtml(cleanReason)
     + ((_whyEsc && _whyEsc !== cleanReason && !isAuto && !/^Không escalate/i.test(_whyEsc)) ? ' ' + escapeHtml(_whyEsc) : '')
     + '</p>'
+    + (req.status === 'PENDING_HANDOVER'
+        ? '<p class="rd-verdict-text mt-2"><strong>Bước tiếp theo:</strong> Đơn đã được duyệt, đang chờ <strong>'
+          + escapeHtml(req.handover_person_name || 'người nhận bàn giao') + '</strong> xác nhận nhận bàn giao. Sau khi xác nhận, đơn hoàn tất và trừ phép; nếu từ chối, đơn quay về để nhân viên chọn người khác.</p>'
+        : '')
     + (_aq ? '<div class="rd-question">' + _icon('help', 20) + '<div><div class="rd-question-label">Câu hỏi cần quản lý trả lời</div><div class="rd-question-text">' + escapeHtml(_aq) + '</div></div></div>' : '')
     + '</div>';
 
@@ -7071,7 +6934,6 @@ function renderManagerAllRequests() {
   if (list.length === 0) {
     container.innerHTML = `
       <tr><td colspan="6" class="mgr-records-empty">
-        <div style="font-size:2rem;margin-bottom:8px;">📂</div>
         <div class="fw-bold" style="font-size:0.95rem;color:#334155;">Không có hồ sơ nào phù hợp</div>
         <div style="font-size:0.82rem;color:#94a3b8;margin-top:4px;">Thử chọn trạng thái khác trong bộ lọc.</div>
       </td></tr>

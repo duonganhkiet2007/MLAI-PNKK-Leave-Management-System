@@ -53,6 +53,59 @@ def test_statutory_and_medical_only_warn_about_operations():
     r=evaluate(leave_type='SPECIAL_PAID',reason_category='SELF_MARRIAGE',proof={**PROOF,'proof_type':'MARRIAGE_CERTIFICATE'},to_date='2026-10-07',handover_person_id=None,team_absent_count=10)
     assert r.decision=='ESCALATE' and r.target_role=='DIRECT_MANAGER' and len(r.warnings)==2
 
+def test_self_marriage_auto_approves_with_strong_matching_proof():
+    proof = {
+        **PROOF,
+        'proof_type': 'MARRIAGE_CERTIFICATE',
+        'proof_verification_status': 'UNVERIFIED',
+        'subject_name': 'Nguyễn Văn An',
+        'partner_name': 'Trần Thị Mai',
+        'event_type': 'SELF_MARRIAGE',
+        'wedding_date': '2026-10-06',
+        'has_red_stamp': True,
+        'signature_present': True,
+        'is_tampered': False,
+        'ai_edited': False,
+    }
+    result = evaluate(leave_type='SPECIAL_PAID', reason_category='SELF_MARRIAGE',
+                      to_date='2026-10-07', proof=proof)
+    assert result.decision == 'AUTO_APPROVE'
+    assert result.target_role is None
+    assert result.deducted_days == 0
+    assert result.annual_balance_change == 0
+    assert 'không trừ quỹ phép năm' in result.human_readable_explanation
+
+
+@pytest.mark.parametrize('proof_changes', [
+    {'event_type': 'CHILD_MARRIAGE'},
+    {'subject_name': 'Lê Văn Nam', 'partner_name': 'Trần Thị Mai'},
+    {'wedding_date': '2026-10-08'},
+    {'proof_type': 'WEDDING_INVITATION'},
+    {'has_red_stamp': False},
+    {'signature_present': False},
+    {'is_tampered': True},
+    {'needs_manager_review': True},
+    {'proof_verification_status': 'NEEDS_HR_REVIEW'},
+])
+def test_self_marriage_does_not_auto_approve_uncertain_proof(proof_changes):
+    proof = {
+        **PROOF,
+        'proof_type': 'MARRIAGE_CERTIFICATE',
+        'proof_verification_status': 'UNVERIFIED',
+        'subject_name': 'Nguyễn Văn An',
+        'partner_name': 'Trần Thị Mai',
+        'event_type': 'SELF_MARRIAGE',
+        'wedding_date': '2026-10-06',
+        'has_red_stamp': True,
+        'signature_present': True,
+        'is_tampered': False,
+        'ai_edited': False,
+    }
+    proof.update(proof_changes)
+    result = evaluate(leave_type='SPECIAL_PAID', reason_category='SELF_MARRIAGE',
+                      to_date='2026-10-07', proof=proof)
+    assert result.decision != 'AUTO_APPROVE'
+
 def test_medical_digital_signature_and_no_stamp():
     assert evaluate(leave_type='SICK_MEDICAL',to_date='2026-10-05',proof={**PROOF,'recommended_to_date':'2026-10-05','signature_present':False,'digital_signature_present':True}).decision=='AUTO_APPROVE'
 
@@ -182,6 +235,8 @@ def test_wedding_event_type_survives_proof_normalization():
                 'event_type': 'CHILD_MARRIAGE',
                 'wedding_date': '2026-09-22',
                 'document_readability': 'READABLE',
+                'is_tampered': False,
+                'ai_edited': False,
             },
         },
         'SPECIAL_PAID',
@@ -195,6 +250,8 @@ def test_wedding_event_type_survives_proof_normalization():
     assert proof.subject_name == 'TRẦN QUỐC ANH'
     assert proof.partner_name == 'ĐẶNG MAI PHƯƠNG'
     assert proof.wedding_date == date(2026, 9, 22)
+    assert proof.is_tampered is False
+    assert proof.ai_edited is False
 
 
 def test_family_event_correlation_does_not_compare_relative_to_employee():

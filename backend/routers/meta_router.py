@@ -646,14 +646,25 @@ class LeaveAllocationInput(BaseModel):
 @router.post('/allocate-leave')
 def allocate_leave_endpoint(payload: LeaveAllocationInput,actor_id=Depends(actor)):
     with st.transaction() as conn:
-        # Tổ chức hiện không có HRD (policy_rules.md §3: Lead Team + CEO) → CEO được cấp phép thay.
-        if not (st.has_role(conn,actor_id,'HRD') or st.has_role(conn,actor_id,'CEO')): raise st.AccessDenied('Chỉ HRD hoặc Tổng Giám đốc (CEO) được cấp phép.')
-        query="SELECT employee_id FROM employees WHERE status='ACTIVE'"
+        # CEO / HRD cấp được cho toàn công ty; Lead Team (DIRECT_MANAGER) chỉ cấp trong phòng ban mình phụ trách.
+        company_wide = st.has_role(conn,actor_id,'HRD') or st.has_role(conn,actor_id,'CEO')
+        managed = {r['department_scope'] for r in st.roles_for(conn,actor_id) if r['role']=='DIRECT_MANAGER'}
+        if not company_wide and not managed: raise st.AccessDenied('Chỉ Quản lý trực tiếp, HRD hoặc Tổng Giám đốc (CEO) được cấp phép.')
+        query="SELECT employee_id, department FROM employees WHERE status='ACTIVE'"
         args=[]
-        if payload.target_type=='EMPLOYEE': query+=' AND employee_id=?';args=[payload.target_id]
-        elif payload.target_type=='DEPARTMENT': query+=' AND department=?';args=[payload.target_id]
-        elif payload.target_type!='ALL': raise ValueError('target_type không hợp lệ.')
+        if payload.target_type=='EMPLOYEE':
+            if not payload.target_id: raise ValueError('Vui lòng chọn nhân viên.')
+            query+=' AND employee_id=?';args=[payload.target_id]
+        elif payload.target_type=='DEPARTMENT':
+            if not payload.target_id: raise ValueError('Vui lòng chọn phòng ban.')
+            query+=' AND department=?';args=[payload.target_id]
+        elif payload.target_type=='ALL':
+            if not company_wide: raise st.AccessDenied('Chỉ Tổng Giám đốc (CEO) / HRD được cấp phép cho toàn công ty.')
+        else: raise ValueError('target_type không hợp lệ.')
         rows=conn.execute(query,args).fetchall()
+        if not rows: raise ValueError('Không tìm thấy nhân sự phù hợp để cấp phép.')
+        if not company_wide and any(r['department'] not in managed and '*' not in managed for r in rows):
+            raise st.AccessDenied('Bạn chỉ được cấp phép cho nhân sự thuộc phòng ban mình phụ trách.')
         import uuid
         allocation='ALLOC-'+uuid.uuid4().hex
         for row in rows:

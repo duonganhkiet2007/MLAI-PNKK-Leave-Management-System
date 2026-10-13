@@ -287,14 +287,22 @@ def test_tc_mgr_02_marketing_manager_routing(employees_data):
     assert res.requested_working_days == 4
 
 def test_tc_mgr_03_special_paid_wedding(employees_data):
-    """TC-MGR-03: Võ Minh Khang (EMP009) nộp đơn kết hôn 3 ngày kèm minh chứng -> DIRECT_MANAGER duyệt."""
+    """TC-MGR-03: Kết hôn bản thân 3 ngày đủ chứng cứ được AI tự duyệt."""
     emp = employees_data["EMP009"]
     proof = VerifiedProof(
         proof_type=ProofType.MARRIAGE_CERTIFICATE,
-        proof_verification_status="VERIFIED",
+        proof_verification_status="UNVERIFIED",
         issuer="UBND Phường Dịch Vọng Hậu",
         issue_date=date(2026, 9, 20),
-        document_readability="READABLE"
+        document_readability="READABLE",
+        subject_name=emp["name"],
+        partner_name="Nguyễn Thu Thảo",
+        event_type="SELF_MARRIAGE",
+        wedding_date=date(2026, 10, 6),
+        has_red_stamp=True,
+        signature_present=True,
+        is_tampered=False,
+        ai_edited=False,
     )
     req = LeaveRequest(
         employee_id=emp["employee_id"],
@@ -311,8 +319,8 @@ def test_tc_mgr_03_special_paid_wedding(employees_data):
         total_team_members=6
     )
     res = LeaveRuleEngine.evaluate(req)
-    assert res.decision == D.ESCALATE
-    assert res.target_role == R.DIRECT_MANAGER
+    assert res.decision == D.AUTO_APPROVE
+    assert res.target_role is None
     assert res.requested_working_days == 3
     assert res.paid is True
     assert res.deducted_days == 0  # Không trừ phép năm!

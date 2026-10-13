@@ -35,7 +35,41 @@ def test_30_scenarios_persist_real_balance(case,isolated_db,service):
     c=db.get_db_connection()
     c.execute('UPDATE employees SET remaining_leave_days=?,employment_status=? WHERE employee_id=\'E\'',(raw['remaining_leave_days'],raw.get('employment_status','REGULAR')))
     c.commit();c.close()
-    if raw.get('proof'): data['proof_id']=proof_fixture(db,raw['proof'])
+    if raw.get('proof'):
+        proof_id=proof_fixture(db,raw['proof'])
+        data['proof_id']=proof_id
+        if case['id']=='TC11':
+            proof=raw['proof']
+            vlm_json={
+                'inspector_persona':'Chuyên viên xác minh hôn sự',
+                'inspection_mode':'OLLAMA_REAL_QWEN25_VL_3B',
+                '_inspection_context':{'leave_type':'SPECIAL_PAID','reason_category':'SELF_MARRIAGE'},
+                'document_summary':{
+                    'patient_name':proof['subject_name'],
+                    'issuer':proof['issuer'],
+                    'issue_date':proof['issue_date'],
+                    'doctor_recommended_range':{'from':None,'to':None,'days':None},
+                    'subject_name':proof['subject_name'],
+                    'partner_name':proof['partner_name'],
+                    'event_type':proof['event_type'],
+                    'wedding_date':proof['wedding_date'],
+                },
+                'flags':{
+                    'has_red_stamp':proof['has_red_stamp'],
+                    'has_doctor_signature':False,
+                    'signature_present_on_scan':proof['signature_present'],
+                    'document_readability':proof['document_readability'],
+                    'is_tampered':proof['is_tampered'],
+                    'ai_generated_or_edited':proof['ai_edited'],
+                },
+                'correlation_analysis':{'score':None,'issues':[],'requested_workdays':3},
+                'escalation_flags':[],
+                'raw_fields_detected':['subject_name','partner_name','event_type','wedding_date'],
+            }
+            c=db.get_db_connection()
+            c.execute("UPDATE proof_documents SET inspection_status='READY',vlm_analysis_json=? WHERE id=?",
+                      (json.dumps(vlm_json,ensure_ascii=False),proof_id))
+            c.commit();c.close()
     if raw.get('approved_working_dates'): legacy_approval(db,'OLD','E',raw['approved_working_dates'])
     for i in range(raw.get('team_absent_count',0)):
         legacy_approval(db,f'ABS{i}',f'E{i}',['2026-10-05','2026-10-06'])

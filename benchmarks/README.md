@@ -79,6 +79,13 @@ Rebuild authored datasets with:
 .venv/bin/python -m benchmarks.datasets.build
 ```
 
+The unified case corpus at `datasets/unified_cases.json` combines the 120 policy benchmark cases and 38 repository case-bank scenarios (158 total, namespaced IDs; overlapping concepts are retained). Present proof cases have image files under `datasets/unified_proofs/`: 20 copied repository fixtures and 26 generated policy fixtures. All evidence is synthetic. The policy labels still evaluate structured proof facts; the attached images provide corresponding visual inputs but are not yet passed through VLM by the policy runner. Rebuild and validate with:
+
+```bash
+.venv/bin/python -m benchmarks.datasets.build_unified
+.venv/bin/python -m pytest benchmarks/tests/test_unified_dataset.py -q
+```
+
 Inspect `ARCHITECTURE.md` for policy disagreements before changing annotations. Conflicting cases are **skipped from headline correctness**, with actual observations preserved. Clear violations remain failures. Policy rule latency and optional branch coverage are measured independently; persisted actor/state/ledger/audit behavior is checked in isolated integration tests. Ground-truth state and audit fields are applicable to workflow tests and are not claimed measured by the standalone rule runner.
 
 ## Reliability and security

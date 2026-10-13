@@ -871,6 +871,8 @@ def _build_proof_extraction(
             injury_date=_as_date(_gf("injury_date"), None) if not is_unreadable else None,
             has_red_stamp=_gf("has_red_stamp") if not is_unreadable else None,
             has_doctor_signature=_gf("has_doctor_signature") if not is_unreadable else None,
+            is_tampered=_gf("is_tampered") if not is_unreadable else None,
+            ai_edited=_gf("ai_edited") if not is_unreadable else None,
             has_hospital_stamp=_gf("has_hospital_stamp") if not is_unreadable else None,
             has_bhxh_stamp=_gf("has_bhxh_stamp") if not is_unreadable else None,
             document_purpose=_gf("document_purpose") if not is_unreadable else None,

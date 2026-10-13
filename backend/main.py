@@ -39,6 +39,7 @@ from routers.leave_router import router as leave_router
 from routers.verify_router import router as verify_router
 from routers.meta_router import router as meta_router
 from routers.auth_router import router as auth_router
+from routers.employee_router import router as employee_router
 from ai.ai_stack import (
     OLLAMA_BASE,
     OLLAMA_KEEP_ALIVE,
@@ -181,6 +182,7 @@ app.include_router(leave_router)
 app.include_router(verify_router)
 app.include_router(meta_router)
 app.include_router(auth_router)
+app.include_router(employee_router)
 
 
 from fastapi.staticfiles import StaticFiles
@@ -210,6 +212,16 @@ if os.path.exists(frontend_dir):
             media_type="text/css",
             headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
         )
+
+    @app.get("/employee_management.js", include_in_schema=False)
+    async def serve_employee_management_js():
+        return FileResponse(os.path.join(frontend_dir, "employee_management.js"), media_type="application/javascript",
+                            headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+    @app.get("/employee_management.css", include_in_schema=False)
+    async def serve_employee_management_css():
+        return FileResponse(os.path.join(frontend_dir, "employee_management.css"), media_type="text/css",
+                            headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
 
     @app.get("/app.js", include_in_schema=False)
     async def serve_spa_js():

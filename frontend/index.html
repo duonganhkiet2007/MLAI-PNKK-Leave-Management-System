@@ -14,8 +14,9 @@
   <link rel="stylesheet" href="/static/vendor/tabler/tabler.min.css">
   
   <!-- Custom Styling & Refinements -->
-  <link rel="stylesheet" href="styles.css?v=20261012_v62">
+  <link rel="stylesheet" href="styles.css?v=20261013_v80">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e40af'/><text x='16' y='22' font-family='sans-serif' font-size='16' font-weight='bold' fill='white' text-anchor='middle'>HR</text></svg>">
+  <link rel="stylesheet" href="employee_management.css?v=20261013">
 </head>
 <body>
   <div class="saas-app-container">
@@ -201,6 +202,16 @@
             <span class="saas-nav-text">Quy chế</span>
           </button>
 
+          <button type="button" class="saas-nav-item tab-btn" id="btn-tab-management-employees" data-tab="tab-mgr-employees">
+            <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span class="saas-nav-text">Quản lý</span>
+          </button>
+
           <button class="saas-nav-item" id="btn-sidebar-allocate">
             <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
@@ -251,7 +262,6 @@
                     <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                       <tr>
                         <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Nhân viên</th>
-                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Phòng ban</th>
                         <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Thời gian nghỉ</th>
                         <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Số ngày</th>
                         <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Chi tiết</th>
@@ -262,7 +272,6 @@
                       <!-- Row 1 -->
                       <tr id="sprint1-row-TC-AI-01">
                         <td style="padding: 12px 16px;"><b class="text-dark">Nguyễn Văn An</b></td>
-                        <td style="padding: 12px 16px;"><span class="badge bg-secondary-lt fw-semibold">Engineering</span></td>
                         <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-16 &rarr; 2026-10-16</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">1 ngày</b></td>
                         <td style="padding: 12px 16px;">
@@ -278,7 +287,6 @@
                       <!-- Row 2 -->
                       <tr id="sprint1-row-TC-EMP008-03">
                         <td style="padding: 12px 16px;"><b class="text-dark">Nguyễn Thị Kim Ngân</b></td>
-                        <td style="padding: 12px 16px;"><span class="badge bg-secondary-lt fw-semibold">Marketing & Operations</span></td>
                         <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-22 &rarr; 2026-10-23</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">2 ngày</b></td>
                         <td style="padding: 12px 16px;">
@@ -294,7 +302,6 @@
                       <!-- Row 3 -->
                       <tr id="sprint1-row-TC-AI-03B">
                         <td style="padding: 12px 16px;"><b class="text-dark">Bùi Tuấn Kiệt</b></td>
-                        <td style="padding: 12px 16px;"><span class="badge bg-secondary-lt fw-semibold">Engineering</span></td>
                         <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-19 &rarr; 2026-10-20</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">2 ngày</b></td>
                         <td style="padding: 12px 16px;">
@@ -310,7 +317,6 @@
                       <!-- Row 4 -->
                       <tr id="sprint1-row-TC-VLM-03">
                         <td style="padding: 12px 16px;"><b class="text-dark">Lê Văn Nam</b></td>
-                        <td style="padding: 12px 16px;"><span class="badge bg-secondary-lt fw-semibold">Engineering</span></td>
                         <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-12 &rarr; 2026-10-14</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">3 ngày</b></td>
                         <td style="padding: 12px 16px;">
@@ -326,7 +332,6 @@
                       <!-- Row 5 -->
                       <tr id="sprint1-row-TC-MGR-03">
                         <td style="padding: 12px 16px;"><b class="text-dark">Võ Minh Khang</b></td>
-                        <td style="padding: 12px 16px;"><span class="badge bg-secondary-lt fw-semibold">Marketing & Operations</span></td>
                         <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-21 &rarr; 2026-10-23</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">3 ngày</b></td>
                         <td style="padding: 12px 16px;">
@@ -365,11 +370,11 @@
                     </div>
                     <div class="benchmark-kpi-card">
                       <div class="benchmark-kpi-val text-success" id="sprint1-stat-auto">—</div>
-                      <div class="benchmark-kpi-lbl">Thường quy (2 Duyệt, 1 Chặn)</div>
+                      <div class="benchmark-kpi-lbl">Thường Quy</div>
                     </div>
                     <div class="benchmark-kpi-card">
                       <div class="benchmark-kpi-val" style="color: #d97706;" id="sprint1-stat-escalate">—</div>
-                      <div class="benchmark-kpi-lbl">Chuyển tiếp / Cần làm rõ</div>
+                      <div class="benchmark-kpi-lbl">Chuyển tiếp</div>
                     </div>
                     <div class="benchmark-kpi-card">
                       <div class="benchmark-kpi-val text-success" id="sprint1-stat-status">—</div>
@@ -382,12 +387,12 @@
                     <table class="table table-sm table-hover card-table m-0" id="table-sprint1-results">
                       <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                         <tr>
-                          <th style="width: 140px; font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Mã & Nhân sự</th>
-                          <th style="width: 160px; font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Phân loại Sprint 1</th>
+                          <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Kịch bản</th>
+                          <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Phân loại</th>
                           <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Kỳ vọng</th>
                           <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Phán quyết AI</th>
-                          <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Câu hỏi hành động (Actionable Question)</th>
-                          <th style="width: 90px; font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;" class="text-center">Đánh giá</th>
+                          <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;" class="text-center">Đánh giá</th>
+                          <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;" class="text-center">Chi tiết</th>
                         </tr>
                       </thead>
                       <tbody id="sprint1-results-tbody">
@@ -411,42 +416,31 @@
               <div class="test-portal-header d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div>
                   <h3 class="benchmark-title">Kho kịch bản</h3>
-                  <div class="benchmark-subtitle">38 kịch bản toàn công ty · 4 nhóm chính</div>
+                  <div class="benchmark-subtitle" id="repo-case-subtitle">0 kịch bản toàn công ty · 4 nhóm chính</div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                  <span class="badge" id="badge-testcase-count" style="background: #2563eb; color: #fff; font-weight: 600; padding: 6px 14px; border-radius: 8px;">38 kịch bản</span>
+                  <div class="staff-filter-wrapper">
+                    <svg class="staff-filter-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    <select id="repo-status-filter" class="staff-status-select" aria-label="Lọc kịch bản theo trạng thái" onchange="setRepoFilter(this.value)">
+                      <option value="ALL">Tất cả trạng thái</option>
+                      <option value="AUTO_APPROVE">Tự động duyệt</option>
+                      <option value="ESCALATE">Chuyển cấp duyệt</option>
+                      <option value="NEED_CORRECTION">Cần xác minh</option>
+                      <option value="AUTO_REJECT">Tự động từ chối</option>
+                    </select>
+                    <svg class="staff-chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
                 </div>
               </div>
 
               <div class="saas-panel-body p-4">
+                <div class="repo-summary-strip mb-3" id="repo-summary-strip" aria-label="Tổng số kịch bản theo trạng thái"></div>
                 <!-- Filter Pills and Search Bar -->
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-                  <div class="repo-filter-chips" id="testcase-filter-pills">
-                    <button type="button" class="repo-chip active" data-filter="ALL" onclick="setRepoFilter('ALL')">
-                      <span class="repo-chip-label">Tất cả</span>
-                      <span class="repo-chip-count" id="repo-count-ALL">0</span>
-                    </button>
-                    <button type="button" class="repo-chip chip-approve" data-filter="AUTO_APPROVE" onclick="setRepoFilter('AUTO_APPROVE')">
-                      <span class="repo-chip-dot" style="background:#16a34a"></span>
-                      <span class="repo-chip-label">Tự động duyệt</span>
-                      <span class="repo-chip-count" id="repo-count-AUTO_APPROVE">0</span>
-                    </button>
-                    <button type="button" class="repo-chip chip-escalate" data-filter="ESCALATE" onclick="setRepoFilter('ESCALATE')">
-                      <span class="repo-chip-dot" style="background:#6366f1"></span>
-                      <span class="repo-chip-label">Chuyển cấp duyệt</span>
-                      <span class="repo-chip-count" id="repo-count-ESCALATE">0</span>
-                    </button>
-                    <button type="button" class="repo-chip chip-correct" data-filter="NEED_CORRECTION" onclick="setRepoFilter('NEED_CORRECTION')">
-                      <span class="repo-chip-dot" style="background:#f59e0b"></span>
-                      <span class="repo-chip-label">Cần xác minh</span>
-                      <span class="repo-chip-count" id="repo-count-NEED_CORRECTION">0</span>
-                    </button>
-                    <button type="button" class="repo-chip chip-reject" data-filter="AUTO_REJECT" onclick="setRepoFilter('AUTO_REJECT')">
-                      <span class="repo-chip-dot" style="background:#dc2626"></span>
-                      <span class="repo-chip-label">Từ chối</span>
-                      <span class="repo-chip-count" id="repo-count-AUTO_REJECT">0</span>
-                    </button>
-                  </div>
                   <div class="d-flex align-items-center gap-2">
                     <div style="position: relative;">
                       <input type="text" id="testcase-search-input" class="form-control form-control-sm" placeholder="Tìm theo nhân viên, mã, loại nghỉ..." style="width: 250px; padding-left: 32px; font-size: 0.84rem; border-radius: 8px; border-color: #cbd5e1;">
@@ -455,36 +449,19 @@
                       </span>
                     </div>
 
-                    <!-- View Mode Switcher -->
-                    <div class="repo-view-switcher">
-                      <button type="button" class="repo-view-btn active" id="btn-repo-view-cards" onclick="setRepoViewMode('cards')" title="Hiển thị dạng các ô theo nhóm kết quả trả về">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                        Các ô
-                      </button>
-                      <button type="button" class="repo-view-btn" id="btn-repo-view-table" onclick="setRepoViewMode('table')" title="Hiển thị dạng danh sách bảng">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                        Bảng
-                      </button>
-                    </div>
                   </div>
                 </div>
 
-                <!-- 1. HIỂN THỊ DẠNG CÁC Ô THẺ THEO NHÓM KẾT QUẢ TRẢ VỀ (MẶC ĐỊNH) -->
-                <div id="repo-outcome-groups-container">
-                  <!-- Rendered dynamically via JS -->
-                </div>
-
                 <!-- 2. HIỂN THỊ DẠNG BẢNG THẲNG HÀNG (ẨN MẶC ĐỊNH) -->
-                <div class="table-responsive rounded border mb-2 d-none" style="border-color: #e2e8f0 !important; background: #ffffff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);" id="repo-cases-overview">
+                <div class="table-responsive rounded border mb-2" style="border-color: #e2e8f0 !important; background: #ffffff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);" id="repo-cases-overview">
                   <table class="table table-vcenter card-table table-hover table-striped m-0" id="table-repo-overview">
                     <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                       <tr>
-                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Nhân viên</th>
-                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Phòng ban</th>
-                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Thời gian nghỉ</th>
-                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Số ngày</th>
-                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Chi tiết</th>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Tên</th>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Loại nghỉ phép</th>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;" class="text-center">Chi tiết</th>
                         <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Trạng thái</th>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;" class="text-center">Nạp</th>
                       </tr>
                     </thead>
                     <tbody id="repo-overview-tbody">
@@ -751,10 +728,10 @@
             <div class="saas-panel">
               <div class="saas-panel-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
-                  <h3 class="saas-panel-title m-0">DANH SÁCH BÀN GIAO CHỜ XÁC NHẬN</h3>
+                  <h3 class="saas-panel-title m-0">DANH SÁCH BÀN GIAO</h3>
                 </div>
                 <div class="d-flex align-items-center">
-                  <span id="staff-handover-subtitle" class="text-muted" style="font-size: 0.85rem;">Các đơn nghỉ cần sự đồng ý nhận bàn giao công việc của bạn</span>
+                  <span id="staff-handover-subtitle" class="text-muted" style="font-size: 0.85rem;">Các đơn nghỉ nhờ bạn nhận bàn giao công việc</span>
                 </div>
               </div>
               <div class="saas-panel-body p-0">
@@ -763,15 +740,14 @@
                     <thead>
                       <tr>
                         <th>Người bàn giao</th>
-                        <th>Loại nghỉ</th>
                         <th>Thời gian</th>
                         <th>Số ngày</th>
-                        <th>Lý do nghỉ</th>
-                        <th style="min-width: 170px;">Thao tác</th>
+                        <th>Chi tiết</th>
+                        <th class="text-center" style="min-width: 220px;">Thao tác</th>
                       </tr>
                     </thead>
                     <tbody id="staff-handover-tbody">
-                      <tr><td colspan="6" class="text-center text-secondary py-4">Đang tải danh sách bàn giao...</td></tr>
+                      <tr><td colspan="5" class="text-center text-secondary py-4">Đang tải danh sách bàn giao...</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -961,42 +937,55 @@
 
           <!-- TAB M6: QUY CHẾ & CÂY QUYẾT ĐỊNH -->
           <section id="tab-mgr-policy" class="tab-pane">
+            <!-- Cùng giao diện văn bản quy chế với bên Staff (loadPolicyDocument điền mọi .policy-content) -->
             <div class="saas-panel">
-              <div class="saas-panel-header d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 border-bottom">
+              <div class="saas-panel-header">
                 <div>
-                  <h3 class="saas-panel-title m-0" id="policy-main-title" style="font-size: 1.25rem;">QUY CHẾ</h3>
-                </div>
-                <!-- Mode switcher: 2 clean tabs -->
-                <div class="btn-group" role="group" id="policy-subtab-group">
-                  <button type="button" class="btn btn-sm btn-primary" id="btn-view-pipeline" onclick="switchPolicyViewMode('pipeline')">
-                    Quy tắc kiểm tra
-                  </button>
-                  <button type="button" class="btn btn-sm btn-outline-primary" id="btn-view-policy" onclick="switchPolicyViewMode('policy')">
-                    Văn bản Quy chế
-                  </button>
+                  <h3 class="saas-panel-title m-0">QUY CHẾ NGHỈ PHÉP NỘI BỘ</h3>
                 </div>
               </div>
-
-              <div class="saas-panel-body p-0">
-                <!-- VIEW 1: INTERACTIVE 3-TIER PIPELINE FLOW (DEFAULT) -->
-                <div id="subtab-pipeline" class="policy-view-pane p-4" style="display: block;">
-                  <div id="pipeline-flow-content">
-                    <div class="text-center py-5 text-secondary">Đang nạp dữ liệu quy trình thẩm định...</div>
-                  </div>
-                </div>
-
-
-
-                <!-- VIEW 3: POLICY HANDBOOK DOCUMENT -->
-                <div id="subtab-policy" class="policy-view-pane p-4" style="display: none;">
-                  <div id="policy-content" class="policy-content text-dark small" style="line-height: 1.8; max-height: 75vh; overflow-y: auto;">
-                    <div class="text-center py-5 text-secondary">Đang tải quy chế nội bộ...</div>
+              <div class="saas-panel-body p-3">
+                <div class="policy-content" style="max-height: 78vh; overflow-y: auto; overflow-x: hidden;">
+                  <div style="text-align:center; padding:40px; color: var(--text-muted, #94a3b8);">
+                    <div class="spinner-border text-primary mb-3" role="status"></div>
+                    <div>Đang tải văn bản quy chế nội bộ...</div>
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
+
+          <section id="tab-mgr-employees" class="tab-pane">
+            <div class="employee-management-heading">
+              <h1>Quản lý nhân viên</h1>
+              <p>Thêm nhân viên vào phòng ban hoặc xóa khỏi danh sách chọn. Hồ sơ cũ và test case được giữ nguyên.</p>
+            </div>
+            <div id="employee-management-message" class="employee-management-message" role="status" aria-live="polite"></div>
+            <div class="employee-management-layout">
+              <form id="employee-management-form" class="employee-management-panel">
+                <h2>Thêm nhân viên</h2>
+                <label for="employee-management-name">Tên nhân viên</label>
+                <input id="employee-management-name" name="name" type="text" maxlength="100" placeholder="Nhập họ và tên" required autocomplete="name">
+                <label for="employee-management-job-title">Chức danh (không bắt buộc)</label>
+                <input id="employee-management-job-title" name="job_title" type="text" maxlength="100" placeholder="Ví dụ: Frontend Engineer">
+                <label for="employee-management-department">Phòng ban</label>
+                <select id="employee-management-department" name="department" required></select>
+                <button type="submit" id="employee-management-submit" class="employee-management-add" disabled>Thêm nhân viên</button>
+                <p class="employee-management-hint">Chọn vai trò quản lý trên thanh trên cùng. Manager quản lý phòng ban của mình; CEO hoặc HR quản lý cả hai phòng ban.</p>
+              </form>
+              <div class="employee-management-panel">
+                <div class="employee-management-toolbar"><h2>Danh sách nhân viên</h2><span id="employee-management-count"></span></div>
+                <div class="employee-management-table-wrap">
+                  <table class="employee-management-table">
+                    <thead><tr><th>Nhân viên</th><th>Phòng ban</th><th>Chức danh</th><th>Thao tác</th></tr></thead>
+                    <tbody id="employee-management-rows"></tbody>
+                  </table>
+                </div>
+                <p class="employee-management-hint">Xóa sẽ ngừng hoạt động tài khoản và ẩn khỏi danh sách chọn. Cần giải quyết các đơn hoặc bàn giao đang chờ trước khi xóa. Tài khoản quản lý được giữ để duyệt đơn.</p>
+              </div>
+            </div>
+          </section>
 
         </div>
 
@@ -1012,7 +1001,7 @@
     <div class="modal modal-blur" id="allocation-drawer" tabindex="-1" style="display: none; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(3px);">
       <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content shadow-lg border-0">
-          <div class="modal-header bg-primary text-white py-3">
+          <div class="modal-header text-white py-3" style="background: var(--saas-topbar-bg, #1e3a8a);">
             <div>
               <h5 class="modal-title fw-bold text-white mb-0">CẤP PHÁT QUỸ PHÉP NGHỈ</h5>
               <div class="text-white-50 small">Cộng thêm ngày phép thưởng hoặc điều chỉnh chế độ cho nhân sự</div>
@@ -1034,10 +1023,7 @@
                 <div class="col-6" id="alloc-dept-group" style="display: none;">
                   <label for="alloc-dept-select" class="form-label">Chọn phòng ban</label>
                   <select id="alloc-dept-select" class="form-select">
-                    <option value="Trung tâm Công nghệ AI">Trung tâm Công nghệ AI</option>
-                    <option value="Phòng Tài chính - Kế toán">Phòng Tài chính - Kế toán</option>
-                    <option value="Phòng Dự án Toàn cầu">Phòng Dự án Toàn cầu</option>
-                    <option value="Phòng Kỹ thuật Phần mềm">Phòng Kỹ thuật Phần mềm</option>
+                    <!-- Dựng theo quyền khi mở form (prepareAllocationForm) -->
                   </select>
                 </div>
 
@@ -1253,6 +1239,7 @@
   <script src="/static/vendor/tabler/tabler.min.js" defer></script>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20261012_v62"></script>
+  <script src="app.js?v=20261013_v80"></script>
+  <script src="employee_management.js?v=20261013"></script>
 </body>
 </html>

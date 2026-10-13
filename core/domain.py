@@ -199,6 +199,8 @@ class ProofExtraction(BaseModel):
     injury_date: date | None = None
     has_red_stamp: bool | None = None
     has_doctor_signature: bool | None = None
+    is_tampered: bool | None = None
+    ai_edited: bool | None = None
     has_hospital_stamp: bool | None = None
     has_bhxh_stamp: bool | None = None
     document_purpose: str | None = None

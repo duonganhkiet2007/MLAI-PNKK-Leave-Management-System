@@ -59,6 +59,11 @@ def _vlm_output_from_json(cj, proof_type_raw=None):
             partner_name=_ds.get('partner_name'),
             event_type=_ds.get('event_type'),
             wedding_date=_safe_date(_ds.get('wedding_date')),
+            has_red_stamp=_fl.get('has_red_stamp'),
+            has_doctor_signature=_fl.get('has_doctor_signature'),
+            is_tampered=_fl.get('is_tampered'),
+            ai_edited=_fl.get('ai_generated_or_edited'),
+            needs_manager_review=_fl.get('needs_manager_review'),
         )
     except Exception:
         _pe = _PE(proof_type=_PT.NONE)
@@ -142,15 +147,17 @@ def _route_to_staffed_roles(conn, result, department, employee_id=None, leave_ty
             result.escalation.actionable_question = result.actionable_question or ''
 
 class LeaveOrchestratorService:
-    def __init__(self, agent=None, clock=None, calendar=None):
+    def __init__(self, agent=None, clock=None, calendar=None, register_global=True):
         self.agent=agent
         self.calendar=calendar or CalendarService()
         self.clock=clock or (lambda: datetime.now(self.calendar.timezone))
-        try:
-            from services.inspection_service import GLOBAL_INSPECTION_SERVICE
-            GLOBAL_INSPECTION_SERVICE.set_orchestrator(self)
-        except Exception:
-            pass
+        # Instance tạm (vd Verify với đồng hồ giả lập) không được thay orchestrator của worker kiểm định chứng từ.
+        if register_global:
+            try:
+                from services.inspection_service import GLOBAL_INSPECTION_SERVICE
+                GLOBAL_INSPECTION_SERVICE.set_orchestrator(self)
+            except Exception:
+                pass
 
     def _evaluate(self, conn, record, facts, granted=None, waived=None, enable_llm_polish=False, skip_vlm=False, precomputed_vlm=None):
         t_eval_0 = time.perf_counter()

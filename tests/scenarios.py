@@ -23,7 +23,12 @@ case(7,'Public holiday',{'from_date':'2026-04-30','to_date':'2026-04-30'},'NO_LE
 case(8,'Range chứa holiday',{'submitted_at':'2026-04-01T08:00:00+07:00','from_date':'2026-04-29','to_date':'2026-05-02'},days=1,deduct=1),
 case(9,'Friday–Monday',{'from_date':'2026-10-09','to_date':'2026-10-12'},deduct=2,harness=True),
 case(10,'Chỉ weekend',{'from_date':'2026-10-10','to_date':'2026-10-11'},'NO_LEAVE_REQUIRED',days=0,error='DAY_ALREADY_NON_WORKING'),
-case(11,'Self marriage',{'leave_type':'SPECIAL_PAID','reason_category':'SELF_MARRIAGE','to_date':'2026-10-07','proof':{**PROOF,'proof_type':'MARRIAGE_CERTIFICATE'}},'ESCALATE','DIRECT_MANAGER',days=3,cat=A,error='DURATION_OVER_AI_LIMIT'),
+case(11,'Self marriage',{'leave_type':'SPECIAL_PAID','reason_category':'SELF_MARRIAGE','to_date':'2026-10-07','proof':{
+    **PROOF,'proof_type':'MARRIAGE_CERTIFICATE','proof_verification_status':'UNVERIFIED',
+    'subject_name':'Nguyễn Văn An','partner_name':'Trần Thị Mai','event_type':'SELF_MARRIAGE',
+    'wedding_date':'2026-10-06','has_red_stamp':True,'signature_present':True,
+    'is_tampered':False,'ai_edited':False,
+}},days=3),
 case(12,'Child marriage',{'leave_type':'SPECIAL_PAID','reason_category':'CHILD_MARRIAGE','to_date':'2026-10-05','proof':{**PROOF,'proof_type':'WEDDING_INVITATION'}},'ESCALATE','DIRECT_MANAGER',days=1,cat=A,error='DURATION_OVER_AI_LIMIT'),
 case(13,'Parent death',{'leave_type':'SPECIAL_PAID','reason_category':'PARENT_DEATH','to_date':'2026-10-07','proof':{**PROOF,'proof_type':'DEATH_CERTIFICATE'}},'ESCALATE','DIRECT_MANAGER',days=3,cat=A,error='DURATION_OVER_AI_LIMIT'),
 case(14,'Grandparent death',{'leave_type':'STATUTORY_UNPAID','reason_category':'GRANDPARENT_DEATH','to_date':'2026-10-05'},'ESCALATE','DIRECT_MANAGER',days=1,cat=A,error='DURATION_OVER_AI_LIMIT'),

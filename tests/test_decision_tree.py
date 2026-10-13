@@ -90,14 +90,16 @@ def test_annual_reason_chan_di_lam_auto_approves():
     assert r.deducted_days == 2
     assert r.annual_balance_change == -2
 
-def test_sick_authority_under_3_days_auto_approves():
+def test_sick_authority_follows_policy_table():
+    # policy_rules.md §3.1: ốm 1 ngày → AI nếu chứng từ hợp lệ; 2–5 ngày → Lead Team; trên 5 ngày → CEO.
     r1 = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-05',
                   proof={**PROOF, 'recommended_to_date': '2026-10-05'})
     assert r1.decision == 'AUTO_APPROVE'
     r2 = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-06',
                   proof=PROOF)
-    assert r2.decision == 'AUTO_APPROVE'
-    assert r2.error_code is None
+    assert r2.decision == 'ESCALATE'
+    assert r2.target_role == 'DIRECT_MANAGER'
+    assert r2.error_code == 'DURATION_OVER_AI_LIMIT'
 
     r3 = evaluate(leave_type='SICK_MEDICAL', from_date='2026-10-05', to_date='2026-10-07',
                   proof={**PROOF, 'recommended_to_date': '2026-10-07'})
@@ -161,9 +163,107 @@ def test_vlm_prompt_uses_leave_specific_profile(leave_type, persona, variant):
     assert persona in prompt
     assert f'Biến thể JSON: {variant}' in prompt
 
-@pytest.mark.parametrize('patient_name', ['Lê Văn Nam', 'Lê Nam', 'Nam', 'Le Van Nam'])
+
+def test_wedding_event_type_survives_proof_normalization():
+    from vlm_inspector import _build_proof_extraction
+
+    proof = _build_proof_extraction(
+        {
+            'inspection_mode': 'OLLAMA_REAL_QWEN25_VL_3B',
+            'doc_patient_name': 'TRẦN QUỐC ANH',
+            'proof_extra': {
+                'proof_type': 'MARRIAGE_CERTIFICATE',
+                'subject_name': 'TRẦN QUỐC ANH',
+                'partner_name': 'ĐẶNG MAI PHƯƠNG',
+                'event_type': 'CHILD_MARRIAGE',
+                'wedding_date': '2026-09-22',
+                'document_readability': 'READABLE',
+            },
+        },
+        'SPECIAL_PAID',
+        'Trần Quốc Hưng',
+        date(2026, 10, 12),
+        date(2026, 10, 12),
+        1,
+    )
+
+    assert proof.event_type == 'CHILD_MARRIAGE'
+    assert proof.subject_name == 'TRẦN QUỐC ANH'
+    assert proof.partner_name == 'ĐẶNG MAI PHƯƠNG'
+    assert proof.wedding_date == date(2026, 9, 22)
+
+
+def test_family_event_correlation_does_not_compare_relative_to_employee():
+    from vlm_inspector import _score_correlation
+
+    score, issues, _ = _score_correlation(
+        employee_name='Trần Quốc Hưng',
+        reason='Nghỉ dự đám cưới con trai Trần Quốc Anh',
+        recommended_from=None,
+        recommended_to=None,
+        requested_from=date(2026, 10, 12),
+        requested_to=date(2026, 10, 12),
+        diagnosis=None,
+        days_granted_by_doctor=None,
+        requested_workdays=1,
+        leave_type='SPECIAL_PAID',
+        patient_name_on_doc='TRẦN QUỐC ANH',
+    )
+
+    assert score is None
+    assert issues == []
+
+
+def test_wedding_vlm_parser_extracts_event_type(monkeypatch, tmp_path):
+    import vlm_inspector as vi
+
+    image_path = tmp_path / 'marriage.png'
+    image_path.write_bytes(b'fixture')
+    model_output = {
+        'proof_type': 'MARRIAGE_CERTIFICATE',
+        'subject_name': 'TRẦN QUỐC ANH',
+        'partner_name': 'ĐẶNG MAI PHƯƠNG',
+        'event_type': 'CHILD_MARRIAGE',
+        'wedding_date': '2026-09-22',
+        'issuer': 'UBND Phường Dịch Vọng Hậu',
+        'issue_date': '2026-09-22',
+        'has_red_stamp': True,
+        'has_doctor_signature': False,
+        'signature_present': True,
+        'document_readability': 'READABLE',
+        'fields_detected': ['subject_name', 'partner_name', 'wedding_date'],
+    }
+    monkeypatch.setattr(vi, '_ollama_reachable', lambda: True)
+    monkeypatch.setattr(vi, '_ollama_loaded_models', lambda: ['qwen2.5vl:7b'])
+    monkeypatch.setattr(vi, '_compute_file_sha256', lambda _path: None)
+    monkeypatch.setattr(vi, 'detect_image_blur', lambda *_args, **_kwargs: (False, 100.0))
+    monkeypatch.setattr(vi, 'prepare_image_for_vlm', lambda *_args, **_kwargs: 'encoded-image')
+    monkeypatch.setattr(vi, 'ollama_generate', lambda *_args, **_kwargs: {'response': json.dumps(model_output)})
+
+    parsed, error = vi._try_ollama_extract(
+        str(image_path),
+        leave_type='SPECIAL_PAID',
+        reason_category='CHILD_MARRIAGE',
+    )
+
+    assert error is None
+    assert parsed['proof_extra']['event_type'] == 'CHILD_MARRIAGE'
+
+
+@pytest.mark.parametrize('patient_name', ['Lê Văn Nam', 'Lê Nam', 'Le Van Nam', 'LÊ VĂN NAM'])
 def test_small_name_variations_are_accepted(patient_name):
     proof = {**PROOF, 'patient_name': patient_name, 'recommended_to_date': '2026-10-05'}
     r = evaluate(leave_type='SICK_MEDICAL', employee_name='Ông Lê văn Năm',
                  from_date='2026-10-05', to_date='2026-10-05', proof=proof)
     assert r.error_code != 'NAME_MISMATCH'
+
+
+@pytest.mark.parametrize('left,right', [
+    ('Nguyễn Văn An', 'Trần Thị An'),          # chỉ trùng tên gọi
+    ('Ông Lê văn Năm', 'Nam'),                 # chỉ có một từ
+    ('Benchmark Person 999', 'Benchmark Person 000'),
+    ('Nguyễn Văn An', 'Nguyễn Thị An'),        # tên đệm khác
+])
+def test_different_people_are_not_matched(left, right):
+    from domain import names_approximately_match
+    assert not names_approximately_match(left, right)

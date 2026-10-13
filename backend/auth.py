@@ -11,7 +11,35 @@ import os
 import secrets
 import time
 
-_SECRET = (os.getenv("LEAVE_AUTH_SECRET") or secrets.token_hex(32)).encode()
+
+
+def _load_secret() -> bytes:
+    """Khóa ký token phải giữ nguyên qua các lần khởi động lại (--reload), nếu không mọi token trình duyệt
+    đang giữ đều thành 401 và giao diện ngừng cập nhật cho tới khi tải lại trang. Lưu khóa vào thư mục dữ liệu."""
+    env_secret = os.getenv("LEAVE_AUTH_SECRET")
+    if env_secret:
+        return env_secret.encode()
+    data_dir = os.getenv("LEAVE_DATA_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    path = os.path.join(data_dir, ".auth_secret")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            value = f.read().strip()
+        if value:
+            return value.encode()
+    except OSError:
+        pass
+    value = secrets.token_hex(32)
+    try:
+        os.makedirs(data_dir, exist_ok=True)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(value)
+    except OSError:
+        pass  # không ghi được: vẫn chạy với khóa trong bộ nhớ như trước
+    return value.encode()
+
+
+_SECRET = _load_secret()
 TOKEN_TTL_SECONDS = int(os.getenv("LEAVE_TOKEN_TTL", "28800"))
 
 

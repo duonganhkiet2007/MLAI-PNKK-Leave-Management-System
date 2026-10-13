@@ -5573,3 +5573,25 @@ select option:checked {
   padding: 2px 10px;
   white-space: nowrap;
 }
+
+/* ========================================================================= */
+/* MOBILE (≤ 768px): thanh menu trái chuyển thành dải ngang cuộn được,        */
+/* thanh trên xuống dòng → không còn tràn ngang trên điện thoại              */
+/* ========================================================================= */
+@media (max-width: 768px) {
+  .saas-topbar { height: auto; flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+  .saas-topbar-left { flex-wrap: wrap; gap: 8px; width: 100%; }
+  .saas-topbar-right { display: none; }
+  .saas-selector-wrap { flex-wrap: wrap; max-width: 100%; gap: 6px; }
+  .saas-selector-wrap .saas-select { max-width: 100%; }
+  .saas-workspace { flex-direction: column; }
+  .saas-sidebar {
+    width: 100%; min-width: 0; flex-direction: row;
+    overflow-x: auto; border-right: none; border-bottom: 1px solid #0f172a;
+  }
+  .saas-nav-group { flex-direction: row; align-items: center; padding: 6px 8px; gap: 4px; }
+  .saas-nav-header { display: none; }
+  .saas-nav-item { white-space: nowrap; flex: 0 0 auto; width: auto; padding: 8px 12px; }
+  .saas-main-content { padding: 16px 12px 40px; overflow-x: hidden; }
+  .saas-main-content .table-responsive { max-width: 100%; overflow-x: auto; }
+}

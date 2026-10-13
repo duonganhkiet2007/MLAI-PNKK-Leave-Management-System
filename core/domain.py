@@ -104,23 +104,38 @@ class ReasonCategory(str, Enum):
 def _name_tokens(value: str) -> list[str]:
     value = unicodedata.normalize('NFD', str(value or '').casefold())
     value = ''.join(char for char in value if unicodedata.category(char) != 'Mn')
-    value = re.sub(r'\b(ong|ba|co|chu|anh|chi|em|mr|mrs|ms)\b', ' ', value)
-    return re.findall(r'[a-z0-9]+', value)
+    tokens = re.findall(r'[a-z0-9]+', value)
+    # Chỉ bỏ danh xưng ở ĐẦU tên ("Ông Lê Văn Nam"); "Anh", "Em"... ở cuối là tên gọi thật ("Trần Quốc Anh").
+    titles = {'ong', 'ba', 'co', 'chu', 'anh', 'chi', 'em', 'mr', 'mrs', 'ms', 'bs', 'dr'}
+    while len(tokens) > 2 and tokens[0] in titles:
+        tokens = tokens[1:]
+    return tokens
 
 
 def names_approximately_match(left: str | None, right: str | None) -> bool:
-    """Accept harmless title, accent, token and small spelling differences."""
+    """Chấp nhận khác biệt vô hại (danh xưng, dấu, thiếu tên đệm, lỗi chính tả nhỏ ở từ dài) nhưng HỌ và TÊN
+    phải cùng khớp. Không coi là cùng một người chỉ vì trùng tên gọi ("Nguyễn Văn An" ≠ "Trần Thị An")
+    hoặc trùng một từ ("Person 999" ≠ "Person 000")."""
     from difflib import SequenceMatcher
 
     left_tokens, right_tokens = _name_tokens(left), _name_tokens(right)
     if not left_tokens or not right_tokens:
         return False
-    if left_tokens == right_tokens or left_tokens[-1] == right_tokens[-1]:
+    if left_tokens == right_tokens:
         return True
-    if left_tokens[-1] in right_tokens or right_tokens[-1] in left_tokens:
-        return True
-    return any(SequenceMatcher(None, left_token, right_token).ratio() >= 0.82
-               for left_token in left_tokens for right_token in right_tokens)
+    if len(left_tokens) < 2 or len(right_tokens) < 2:
+        return False  # chỉ có một từ (vd chỉ tên gọi) thì không đủ căn cứ nhận diện
+
+    def close(a: str, b: str) -> bool:
+        # Lỗi chính tả chỉ được bỏ qua với từ đủ dài; từ ngắn / số phải trùng tuyệt đối.
+        return a == b or (len(a) >= 4 and len(b) >= 4 and not (a.isdigit() or b.isdigit())
+                          and SequenceMatcher(None, a, b).ratio() >= 0.85)
+
+    if not (close(left_tokens[0], right_tokens[0]) and close(left_tokens[-1], right_tokens[-1])):
+        return False
+    shorter, longer = sorted((left_tokens, right_tokens), key=len)
+    # Tên đệm có thể bị lược, nhưng tên đệm nào có mặt thì phải khớp với tên đệm bên kia.
+    return all(any(close(t, u) for u in longer[1:-1]) for t in shorter[1:-1])
 
 class ProofType(str, Enum):
     MEDICAL_LEAVE_CERTIFICATE = 'MEDICAL_LEAVE_CERTIFICATE'
@@ -168,6 +183,7 @@ class ProofExtraction(BaseModel):
     deceased_name: str | None = None
     subject_name: str | None = None
     partner_name: str | None = None
+    event_type: str | None = None
     wedding_date: date | None = None
     date_of_death: date | None = None
     funeral_date: date | None = None

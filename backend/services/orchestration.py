@@ -25,6 +25,122 @@ STATES={'AUTO_APPROVE':'COMPLETED','NO_LEAVE_REQUIRED':'COMPLETED','AUTO_REJECT'
         'NEED_CORRECTION':'WAITING_EMPLOYEE','ESCALATE':'PENDING_ESCALATION',
         'PENDING_HANDOVER':'PENDING_HANDOVER'}
 
+
+def _vlm_output_from_json(cj, proof_type_raw=None):
+    """Dựng lại VLMInspectionOutput từ JSON VLM đã lưu (document_summary/flags lồng nhau) mà không gọi lại mô hình."""
+    from vlm_inspector import VLMInspectionOutput as _VLMOut, ProofExtraction as _PE, ProofType as _PT, _normalize_proof_type
+    _ds = cj.get('document_summary') or {}
+    _fl = cj.get('flags') or {}
+    _ca = cj.get('correlation_analysis') or {}
+    _dr = _ds.get('doctor_recommended_range') or {}
+    _pt = _normalize_proof_type(proof_type_raw or cj.get('proof_type') or 'NONE')
+    def _safe_date(v):
+        if not v: return None
+        try: return date.fromisoformat(str(v))
+        except Exception: return None
+    try:
+        _pe = _PE(
+            proof_type=_pt,
+            patient_name=_ds.get('patient_name'),
+            issuer=_ds.get('issuer'),
+            issue_date=_safe_date(_ds.get('issue_date')),
+            recommended_from_date=_safe_date(_dr.get('from')),
+            recommended_to_date=_safe_date(_dr.get('to')),
+            signature_present=_fl.get('signature_present_on_scan') or _fl.get('has_doctor_signature'),
+            digital_signature_present=_fl.get('digital_signature_present'),
+            document_readability=_fl.get('document_readability') or 'READABLE',
+            fields_detected=list(cj.get('raw_fields_detected') or []),
+            is_open_ended=_ds.get('is_open_ended'),
+            requires_followup_proof=_ds.get('requires_followup_proof'),
+            admission_date=_safe_date(_ds.get('admission_date')),
+            discharge_date=_safe_date(_ds.get('discharge_date')),
+            deceased_name=_ds.get('deceased_name'),
+            subject_name=_ds.get('subject_name'),
+            partner_name=_ds.get('partner_name'),
+            event_type=_ds.get('event_type'),
+            wedding_date=_safe_date(_ds.get('wedding_date')),
+        )
+    except Exception:
+        _pe = _PE(proof_type=_PT.NONE)
+    return _VLMOut(
+        vlm_analysis_json=cj,
+        doc_patient_name=_ds.get('patient_name'),
+        doc_diagnosis=_ds.get('diagnosis'),
+        has_red_stamp=_fl.get('has_red_stamp'),
+        has_doctor_signature=_fl.get('has_doctor_signature'),
+        is_tampered=_fl.get('is_tampered'),
+        ai_edited=_fl.get('ai_generated_or_edited'),
+        days_granted_by_doctor=_dr.get('days'),
+        correlation_score=_ca.get('score'),
+        correlation_issues=list(_ca.get('issues') or []),
+        persona_role_used=cj.get('inspector_persona'),
+        escalation_reasons_json=list(cj.get('escalation_flags') or []),
+        proof_extraction=_pe,
+        vlm_error=cj.get('vlm_error'),
+    )
+
+
+# Theo policy_rules.md §3, tổ chức chỉ có Lead Team (DIRECT_MANAGER) và CEO duyệt đơn; rule engine
+# vẫn có thể chọn HR / HRD / DEPARTMENT_HEAD. Nếu không ai giữ vai trò đó trong phòng ban, chuyển đơn
+# sang vai trò thay thế (cùng quy tắc với database.normalize_pending_approval_roles) để đơn không bị kẹt.
+_ROLE_FALLBACK = {'HR': 'DIRECT_MANAGER', 'HRD': 'CEO', 'DEPARTMENT_HEAD': 'CEO', 'DIRECT_MANAGER': 'CEO'}
+
+def _role_is_staffed(conn, role, department, exclude_employee=None):
+    """Có ai (ngoài chính người nộp đơn) giữ vai trò này cho phòng ban không. Người nộp không được tự duyệt,
+    nên quản lý tự nộp đơn thì vai trò DIRECT_MANAGER của chính họ coi như không có người."""
+    return conn.execute("SELECT 1 FROM actor_roles WHERE role=? AND (department_scope='*' OR department_scope=?) AND employee_id IS NOT ? LIMIT 1",
+                        (role, department, exclude_employee)).fetchone() is not None
+
+# policy_rules.md §3.1: nghỉ thai sản do CEO duyệt → khi không có HR, hồ sơ thai sản lên thẳng CEO.
+_LEAVE_TYPE_FALLBACK = {'MATERNITY': {'HR': 'CEO'}}
+
+def _resolve_staffed_role(conn, role, department, exclude_employee=None, leave_type=None):
+    """Đi lên chuỗi thay thế (HR → DIRECT_MANAGER → CEO, DEPARTMENT_HEAD/HRD → CEO) tới vai trò có người duyệt được."""
+    fallback = {**_ROLE_FALLBACK, **_LEAVE_TYPE_FALLBACK.get(str(leave_type or '').upper(), {})}
+    name = getattr(role, 'value', role)
+    seen = set()
+    while name in fallback and name not in seen and not _role_is_staffed(conn, name, department, exclude_employee):
+        seen.add(name)
+        name = fallback[name]
+    return name
+
+def _route_to_staffed_roles(conn, result, department, employee_id=None, leave_type=None):
+    from taxonomy import TargetApproverRole
+    def resolve(role):
+        resolved = _resolve_staffed_role(conn, role, department, employee_id, leave_type)
+        if resolved == getattr(role, 'value', role) or not _role_is_staffed(conn, resolved, department, employee_id):
+            return role
+        return TargetApproverRole(resolved)
+    original = getattr(result.target_role, 'value', result.target_role)
+    result.target_role = resolve(result.target_role) if result.target_role else None
+    result.approval_roles = list(dict.fromkeys(resolve(r) for r in result.approval_roles))
+    if result.escalation:
+        result.escalation.target_role = result.target_role
+    if (original == 'DIRECT_MANAGER' and getattr(result.target_role, 'value', None) == 'CEO'
+            and employee_id and _role_is_staffed(conn, 'DIRECT_MANAGER', department)):
+        note = ' Người nộp đơn là Quản lý trực tiếp của phòng ban nên đơn chuyển Tổng Giám đốc duyệt (không tự phê duyệt).'
+        result.human_readable_explanation = (result.human_readable_explanation or '') + note
+        if result.escalation:
+            result.escalation.plain_reason = (result.escalation.plain_reason or '') + note
+    if original == 'HR' and getattr(result.target_role, 'value', None) == 'CEO':
+        result.human_readable_explanation = (result.human_readable_explanation or '').replace('Phòng Nhân sự (HR)', 'Tổng Giám đốc (CEO)')
+        result.quick_action_options = ['APPROVE', 'REJECT', 'REQUEST_MORE_INFO']
+        if result.escalation:
+            result.escalation.plain_reason = (result.escalation.plain_reason or '').replace('Phòng Nhân sự (HR)', 'Tổng Giám đốc (CEO)')
+    if original == 'HR' and getattr(result.target_role, 'value', None) == 'DIRECT_MANAGER':
+        # Lead Team đối chiếu chứng từ thay HR → được phép duyệt; sửa lời nhắn cho đúng người nhận.
+        def retarget(text):
+            return ((text or '').replace('HR vui lòng xác minh hồ sơ/cấu hình; không thể duyệt bỏ qua điều kiện này.',
+                                         'Bạn có phê duyệt sau khi đã đối chiếu chứng từ không?')
+                    .replace('HR cần', 'Lead Team cần')
+                    .replace('Phòng Nhân sự (HR)', 'Lead Team (quản lý trực tiếp)'))
+        result.human_readable_explanation = retarget(result.human_readable_explanation)
+        result.actionable_question = retarget(result.actionable_question)
+        result.quick_action_options = ['APPROVE', 'REJECT', 'REQUEST_MORE_INFO']
+        if result.escalation:
+            result.escalation.plain_reason = retarget(result.escalation.plain_reason)
+            result.escalation.actionable_question = result.actionable_question or ''
+
 class LeaveOrchestratorService:
     def __init__(self, agent=None, clock=None, calendar=None):
         self.agent=agent
@@ -126,60 +242,31 @@ class LeaveOrchestratorService:
                     proof_row
                     and proof_row.get('inspection_status') == 'READY'
                     and cached_vlm_json
-                    and cached_vlm_json.get('inspection_mode', '').startswith('OLLAMA_REAL')
+                    and (
+                        cached_vlm_json.get('inspection_mode', '').startswith('OLLAMA_REAL')
+                        or cached_vlm_json.get('inspection_mode') == 'VLM_CACHE_HIT'
+                    )
+                    and (
+                        (
+                            (cached_vlm_json.get('_inspection_context') or {}).get('leave_type')
+                            == str(getattr(facts, 'leave_type', '')).upper()
+                            and (
+                                (cached_vlm_json.get('_inspection_context') or {}).get('reason_category') or ''
+                            ) == str(getattr(getattr(facts, 'reason_category', ''), 'value', getattr(facts, 'reason_category', '')) or '').upper()
+                        )
+                        or (
+                            not cached_vlm_json.get('_inspection_context')
+                            and str(getattr(facts, 'leave_type', '')).upper() == 'SICK_MEDICAL'
+                            and not getattr(facts, 'reason_category', None)
+                            and proof_row.get('proof_type') in {
+                                'MEDICAL_LEAVE_CERTIFICATE', 'MEDICAL_RECORD_SUMMARY',
+                                'LAB_RESULT', 'HOSPITAL_DISCHARGE',
+                            }
+                        )
+                    )
                 )
                 if _proof_ready:
-                    from vlm_inspector import VLMInspectionOutput as _VLMOut, ProofExtraction as _PE, ProofType as _PT, _normalize_proof_type
-                    _cj = cached_vlm_json
-                    _ds = _cj.get('document_summary') or {}
-                    _fl = _cj.get('flags') or {}
-                    _ca = _cj.get('correlation_analysis') or {}
-                    _dr = _ds.get('doctor_recommended_range') or {}
-                    _pt_raw = proof_row.get('proof_type') or _cj.get('proof_type') or 'NONE'
-                    _pt = _normalize_proof_type(_pt_raw)
-                    def _safe_date(v):
-                        if not v: return None
-                        from datetime import date as _d
-                        try: return _d.fromisoformat(str(v))
-                        except Exception: return None
-                    try:
-                        _pe = _PE(
-                            proof_type=_pt,
-                            patient_name=_ds.get('patient_name'),
-                            issuer=_ds.get('issuer'),
-                            issue_date=_safe_date(_ds.get('issue_date')),
-                            recommended_from_date=_safe_date(_dr.get('from')),
-                            recommended_to_date=_safe_date(_dr.get('to')),
-                            signature_present=_fl.get('signature_present_on_scan') or _fl.get('has_doctor_signature'),
-                            digital_signature_present=_fl.get('digital_signature_present'),
-                            document_readability=_fl.get('document_readability') or 'READABLE',
-                            fields_detected=list(_cj.get('raw_fields_detected') or []),
-                            is_open_ended=_ds.get('is_open_ended'),
-                            requires_followup_proof=_ds.get('requires_followup_proof'),
-                            admission_date=_safe_date(_ds.get('admission_date')),
-                            discharge_date=_safe_date(_ds.get('discharge_date')),
-                            deceased_name=_ds.get('deceased_name'),
-                            subject_name=_ds.get('subject_name'),
-                            wedding_date=_safe_date(_ds.get('wedding_date')),
-                        )
-                    except Exception:
-                        _pe = _PE(proof_type=_PT.NONE)
-                    vlm_out = _VLMOut(
-                        vlm_analysis_json=_cj,
-                        doc_patient_name=_ds.get('patient_name'),
-                        doc_diagnosis=_ds.get('diagnosis'),
-                        has_red_stamp=_fl.get('has_red_stamp'),
-                        has_doctor_signature=_fl.get('has_doctor_signature'),
-                        is_tampered=_fl.get('is_tampered'),
-                        ai_edited=_fl.get('ai_generated_or_edited'),
-                        days_granted_by_doctor=_dr.get('days'),
-                        correlation_score=_ca.get('score'),
-                        correlation_issues=list(_ca.get('issues') or []),
-                        persona_role_used=_cj.get('inspector_persona'),
-                        escalation_reasons_json=list(_cj.get('escalation_flags') or []),
-                        proof_extraction=_pe,
-                        vlm_error=_cj.get('vlm_error'),
-                    )
+                    vlm_out = _vlm_output_from_json(cached_vlm_json, proof_row.get('proof_type') or cached_vlm_json.get('proof_type'))
                 else:
                     # Chỉ dùng cached JSON như mock khi không phải real VLM result
                     if cached_vlm_json and cached_vlm_json.get('inspection_mode', '').startswith('OLLAMA_REAL'):
@@ -273,7 +360,10 @@ class LeaveOrchestratorService:
                 if not proof_dict.get('recommended_to_date') and dr.get('to'):
                     proof_dict['recommended_to_date'] = dr['to']
                 if proof_dict.get('signature_present') is None:
-                    proof_dict['signature_present'] = bool(vlm_out.has_doctor_signature or flags.get('has_doctor_signature'))
+                    # Giữ None khi VLM không xác định được: None = chưa rõ, False = chắc chắn không có chữ ký.
+                    sig_values = (vlm_out.has_doctor_signature, flags.get('has_doctor_signature'), flags.get('signature_present_on_scan'))
+                    proof_dict['signature_present'] = True if any(v is True for v in sig_values) else (
+                        False if any(v is False for v in sig_values) else None)
                 if not proof_dict.get('document_readability') or proof_dict.get('document_readability') == 'UNKNOWN':
                     proof_dict['document_readability'] = flags.get('document_readability') or 'READABLE'
 
@@ -317,6 +407,7 @@ class LeaveOrchestratorService:
 
         t_rule_0 = time.perf_counter()
         result=LeaveRuleEngine.evaluate(ctx,self.calendar)
+        _route_to_staffed_roles(conn,result,ctx.department,record.get('employee_id'),getattr(facts,'leave_type',None))
         rule_engine_ms = round((time.perf_counter() - t_rule_0) * 1000, 3)
         record.update(employee_name=ctx.employee_name,department=ctx.department,
             from_date=facts.from_date,to_date=facts.to_date,workdays=result.requested_working_days or 0,
@@ -375,22 +466,24 @@ class LeaveOrchestratorService:
         }
         ERROR_VI = {
             'OK':'—',
-            'NOTICE_PERIOD_VIOLATION':'Thời hạn báo trước chưa đủ theo chính sách',
-            'NOTICE_PERIOD_VIOLATED':'Thời hạn báo trước chưa đủ theo chính sách',
-            'NOTICE_PERIOD_OPERATIONAL':'Thời hạn báo trước dưới ngưỡng hoạt động, cần Manager ghi nhận',
-            'DOC_ILLEGIBLE':'Chứng từ khó đọc / thiếu nét xác nhận, cần Quản lý xem xét đặc cách',
-            'PROOF_REVIEW_REQUIRED':'Chứng từ cần người có thẩm quyền đối chiếu',
-            'PROOF_MISSING':'Thiếu chứng từ đính kèm (cần bổ sung trước khi duyệt)',
-            'DOC_FIELD_MISSING':'Một số trường trên chứng từ bị thiếu hoặc chưa khớp với yêu cầu nghỉ',
-            'DURATION_OVER_AI_LIMIT':'Số ngày nghỉ vượt ngưỡng tự duyệt → cần cấp trên xem xét',
-            'TEAM_QUOTA_BREACH':'Đội ngũ có nhiều người nghỉ cùng lúc (quá 30%), cần quản lý bộ phận xác nhận',
-            'TEAM_QUOTA_EXCEEDED':'Đội ngũ có nhiều người nghỉ cùng lúc (quá 30%), cần Quản lý xác nhận',
-            'BALANCE_EXCEEDED':'Số dư phép năm không đủ cho số ngày xin nghỉ',
-            'BALANCE_CHECK_REQUIRED':'Cần kiểm tra lại số dư phép trước khi duyệt',
-            'OUT_OF_POLICY':'Ngoài phạm vi quy định hiện hành',
-            'UNCERTAIN_FACTS':'Các facts chưa chắc chắn (vd chẩn đoán / ngày khớp chưa đủ)',
-            'AUTHORITY_REQUIRED':'Cần người có thẩm quyền cao hơn xem xét dựa trên số ngày',
-            'FLAG_ABUSE_PATTERN':'Phát hiện mẫu nghỉ phép lặp lại bất thường trong tháng',
+            'NOTICE_PERIOD_VIOLATION':'[Nộp đơn gấp vi phạm thời hạn báo trước] Thời gian nộp đơn chưa đủ hạn báo trước theo quy chế. Đơn cần Quản lý trực tiếp xem xét đặc cách.',
+            'NOTICE_PERIOD_VIOLATED':'[Nộp đơn gấp vi phạm thời hạn báo trước] Thời gian nộp đơn chưa đủ hạn báo trước theo quy chế. Đơn cần Quản lý trực tiếp xem xét đặc cách.',
+            'NOTICE_PERIOD_OPERATIONAL':'[Báo trước gấp] Thời hạn báo trước dưới ngưỡng vận hành thông thường. Đơn cần Quản lý trực tiếp ghi nhận.',
+            'DOC_ILLEGIBLE':'[Chứng từ mờ / khó nhận diện] Ảnh chứng từ khó đọc hoặc thiếu nét xác nhận. Cần Quản lý trực tiếp kiểm tra bản gốc hoặc yêu cầu bổ sung.',
+            'PROOF_REVIEW_REQUIRED':'[Chứng từ y tế cần đối chiếu] Đã tiếp nhận chứng từ y tế. Cần Phòng Nhân sự (HR) đối soát thông tin chuyên môn trước khi duyệt.',
+            'PROOF_MISSING':'[Thiếu chứng từ bắt buộc] Chế độ nghỉ yêu cầu phải có giấy tờ xác minh. Vui lòng bổ sung chứng từ hợp lệ trước khi đơn được xử lý.',
+            'DOC_FIELD_MISSING':'[Thiếu thông tin chứng từ] Một số thông tin quan trọng trên chứng từ chưa đầy đủ hoặc chưa khớp với đơn. Vui lòng bổ sung.',
+            'DURATION_OVER_AI_LIMIT':'[Vượt trần tự duyệt của AI] Số ngày nghỉ trên 2 ngày vượt hạn mức tự duyệt. Đơn chuyển Quản lý trực tiếp xem xét theo phân cấp.',
+            'DURATION_OVER_MANAGER_LIMIT':'[Vượt thẩm quyền Quản lý trực tiếp] Số ngày nghỉ trên 5 ngày vượt mức Quản lý trực tiếp. Đơn chuyển Trưởng bộ phận xem xét.',
+            'TEAM_QUOTA_BREACH':'[Tỷ lệ vắng mặt phòng ban cao] Đội ngũ có trên 30% nhân sự vắng mặt cùng ngày. Cần Quản lý trực tiếp xem xét phân công.',
+            'TEAM_QUOTA_EXCEEDED':'[Tỷ lệ vắng mặt phòng ban cao] Đội ngũ có trên 30% nhân sự vắng mặt cùng ngày. Cần Quản lý trực tiếp xem xét phân công.',
+            'BALANCE_EXCEEDED':'[Không đủ số dư phép] Số ngày xin nghỉ vượt quá quỹ phép năm hiện có. Vui lòng giảm số ngày hoặc nộp đơn nghỉ không lương.',
+            'BALANCE_CHECK_REQUIRED':'[Kiểm tra số dư phép] Cần đối soát lại số dư phép năm trước khi hoàn tất phê duyệt.',
+            'OUT_OF_POLICY':'[Ngoài phạm vi quy chế thường quy] Đơn có yếu tố ngoại lệ. Cần chuyển cấp có thẩm quyền xem xét trực tiếp.',
+            'UNCERTAIN_FACTS':'[Dữ liệu chứng từ chưa rõ] Thông tin trích xuất từ chứng từ chưa đủ độ tin cậy. Cần kiểm tra lại hồ sơ.',
+            'AUTHORITY_REQUIRED':'[Cần phê duyệt theo thẩm quyền] Số ngày nghỉ vượt trần tự động. Đơn chuyển tới cấp thẩm quyền theo quy định.',
+            'FLAG_ABUSE_PATTERN':'[Phát hiện nhiều đơn nghỉ ngắn lặp lại] Phát hiện chuỗi đơn nghỉ phép rời rạc trong tháng. Cần Quản lý trực tiếp xem xét kế hoạch.',
+            'LONG_TERM_UNPAID':'[Nghỉ không lương dài hạn] Đơn nghỉ không lương kéo dài. Cần Trưởng bộ phận / Ban Giám đốc xem xét phê duyệt.',
         }
         DECISION_VI = {
             'AUTO_APPROVE':'Tự động duyệt',
@@ -455,6 +548,15 @@ class LeaveOrchestratorService:
         persona_cfg = _resolve_persona_config(ltype, reason_cat)
         schema_key = persona_cfg.get('schema_key', 'ADMINISTRATIVE')
         pe = proof_extraction or (getattr(vlm_out, 'proof_extraction', None) if vlm_out else None)
+        if schema_key == 'WEDDING' and vlm_out:
+            wedding_flags = (vlm_out.vlm_analysis_json or {}).get('flags') or {}
+            sig = wedding_flags.get('signature_present_on_scan')
+        reason_cat_value = getattr(reason_cat, 'value', reason_cat)
+        wedding_event_type = getattr(pe, 'event_type', None)
+        is_child_marriage = (
+            schema_key == 'WEDDING'
+            and (reason_cat_value == 'CHILD_MARRIAGE' or wedding_event_type == 'CHILD_MARRIAGE')
+        )
 
         bullet_lines = [
             f"• Đơn xin nghỉ: Nhân viên {emp_n} nộp đơn {ltype_vi} {requested_wd or requested_cd or 1} ngày làm việc (từ {from_d} đến {to_d}) với lý do \"{reason or 'Nghỉ theo kế hoạch cá nhân'}\".",
@@ -631,8 +733,9 @@ class LeaveOrchestratorService:
         integrity_parts = []
         if rs is True: integrity_parts.append('đã thấy dấu đỏ')
         elif rs is False: integrity_parts.append('không thấy dấu đỏ')
-        if sig is True: integrity_parts.append('có chữ ký bác sĩ')
-        elif sig is False: integrity_parts.append('thiếu chữ ký bác sĩ')
+        signature_label = 'chữ ký cơ quan/người có thẩm quyền' if schema_key == 'WEDDING' else 'chữ ký bác sĩ'
+        if sig is True: integrity_parts.append(f'có {signature_label}')
+        elif sig is False: integrity_parts.append(f'thiếu {signature_label}')
         if tamper is True: integrity_parts.append('nghi vấn chỉnh sửa (tampered)')
         if ai_ed is True: integrity_parts.append('nghi vấn được tạo bởi AI')
 
@@ -708,13 +811,29 @@ class LeaveOrchestratorService:
 
         if vlm_fields_present:
             if rs is True: info_suf.append("Chứng từ có dấu mộc đỏ hợp lệ")
-            elif rs is False: info_mis.append("Chứng từ thiếu dấu mộc đỏ bệnh viện/phòng khám")
-            if sig is True: info_suf.append("Chứng từ có chữ ký bác sĩ / người cấp giấy")
-            elif sig is False: info_mis.append("Chứng từ thiếu chữ ký bác sĩ / người cấp giấy")
-            if doc_patient and emp_n and names_approximately_match(emp_n, doc_patient):
-                info_suf.append(f"Tên trên chứng từ khớp với nhân viên: {doc_patient}")
-            elif doc_patient and emp_n and (emp_n.strip().casefold() != doc_patient.strip().casefold()):
-                info_mis.append(f"Tên trên chứng từ ({doc_patient}) KHÔNG khớp với nhân viên nộp đơn ({emp_n})")
+            elif rs is False:
+                stamp_type = 'UBND/cơ quan' if schema_key == 'WEDDING' else 'bệnh viện/phòng khám'
+                info_mis.append(f"Chứng từ thiếu dấu mộc đỏ {stamp_type}")
+            signature_type = 'cơ quan/người có thẩm quyền' if schema_key == 'WEDDING' else 'bác sĩ/người cấp giấy'
+            if sig is True: info_suf.append(f"Chứng từ có chữ ký {signature_type}")
+            elif sig is False: info_mis.append(f"Chứng từ thiếu chữ ký {signature_type}")
+            if is_child_marriage:
+                subject = getattr(pe, 'subject_name', None) or doc_patient
+                partner = getattr(pe, 'partner_name', None)
+                names = ' & '.join(name for name in (subject, partner) if name)
+                if names:
+                    info_suf.append(f"Chứng từ hôn sự ghi nhận cặp đôi: {names}; không yêu cầu tên cặp đôi trùng nhân viên nộp đơn")
+            elif schema_key == 'WEDDING' and reason_cat_value == 'SELF_MARRIAGE':
+                participants = [getattr(pe, 'subject_name', None) or doc_patient, getattr(pe, 'partner_name', None)]
+                if any(name and emp_n and names_approximately_match(emp_n, name) for name in participants):
+                    info_suf.append(f"Tên nhân viên ({emp_n}) trùng với một bên trên giấy kết hôn")
+                elif any(participants):
+                    info_mis.append("Không tìm thấy tên nhân viên trong các bên kết hôn trên chứng từ")
+            elif schema_key not in ('WEDDING', 'BEREAVEMENT', 'STATUTORY'):
+                if doc_patient and emp_n and names_approximately_match(emp_n, doc_patient):
+                    info_suf.append(f"Tên trên chứng từ khớp với nhân viên: {doc_patient}")
+                elif doc_patient and emp_n and (emp_n.strip().casefold() != doc_patient.strip().casefold()):
+                    info_mis.append(f"Tên trên chứng từ ({doc_patient}) KHÔNG khớp với nhân viên nộp đơn ({emp_n})")
 
         if error_code == 'TEAM_QUOTA_EXCEEDED':
             info_mis.append("Tỷ lệ vắng mặt trong bộ phận vượt ngưỡng an toàn 30% tại ngày xin nghỉ")
@@ -723,7 +842,12 @@ class LeaveOrchestratorService:
         elif error_code == 'DURATION_OVER_AI_LIMIT':
             info_mis.append(f"Số ngày nghỉ ({requested_wd} ngày) vượt hạn mức phê duyệt tự động")
         elif error_code == 'PROOF_REVIEW_REQUIRED':
-            info_mis.append("Chứng từ y tế chưa được xác minh")
+            review_label = {
+                'WEDDING': 'Chứng từ hôn sự chưa được người có thẩm quyền xác minh',
+                'BEREAVEMENT': 'Chứng từ tang chế chưa được người có thẩm quyền xác minh',
+                'STATUTORY': 'Chứng từ quan hệ thân nhân chưa được người có thẩm quyền xác minh',
+            }.get(schema_key, 'Chứng từ y tế chưa được xác minh' if schema_key in {'SICK_MEDICAL', 'EMERGENCY'} else 'Chứng từ chưa được xác minh')
+            info_mis.append(review_label)
         elif error_code == 'PROOF_MISSING':
             info_mis.append("Thiếu chứng từ đính kèm bắt buộc theo quy định của loại nghỉ này")
         elif error_code == 'DOC_ILLEGIBLE':
@@ -853,7 +977,8 @@ class LeaveOrchestratorService:
                 "diagnosis": diag,
                 "doctor_recommended_days": doctor_days,
                 "has_red_stamp": rs,
-                "has_doctor_signature": sig,
+                "has_doctor_signature": None if schema_key == 'WEDDING' else sig,
+                "signature_present_on_scan": sig,
                 "is_tampered": tamper,
                 "ai_edited": ai_ed,
                 "correlation_score": corr_score,
@@ -865,6 +990,7 @@ class LeaveOrchestratorService:
                     "emergency_diagnosis": getattr(pe, "emergency_diagnosis", None),
                     "subject_name": getattr(pe, "subject_name", None),
                     "partner_name": getattr(pe, "partner_name", None),
+                    "event_type": getattr(pe, "event_type", None),
                     "wedding_date": getattr(pe, "wedding_date", None).isoformat() if getattr(pe, "wedding_date", None) else None,
                     "deceased_name": getattr(pe, "deceased_name", None),
                     "relationship_label": getattr(pe, "relationship_label", None),
@@ -956,7 +1082,7 @@ class LeaveOrchestratorService:
             st.audit(conn, request_id, 'INSPECTION_RESUMED', 'Proof inspection completed; leave policy evaluated.')
             return st.serialize(conn, st.read_request(conn, record['id']))
 
-    def process_new_request(self,raw_text=None,employee_id=None,structured_data=None,enable_llm_polish=False,custom_request_id=None,skip_vlm=False):
+    def process_new_request(self,raw_text=None,employee_id=None,structured_data=None,enable_llm_polish=False,custom_request_id=None,skip_vlm=False,submitted_at=None):
         data=dict(structured_data or {})
         emp_id=employee_id or data.pop('employee_id',None)
         data.pop('employee_id',None)
@@ -984,11 +1110,14 @@ class LeaveOrchestratorService:
 
         req_id = custom_request_id or ('REQ-'+uuid.uuid4().hex[:16].upper())
         now_str = self.clock().isoformat()
+        # submitted_at giả lập (kịch bản test ở chế độ demo) quyết định các kiểm tra báo trước / mốc 08:30
+        submitted_str = submitted_at.isoformat() if submitted_at else now_str
         record={'id':req_id,'employee_id':emp_id,
-                'submitted_at':now_str,'updated_at':now_str,'revision':1,'human_resolution':None}
+                'submitted_at':submitted_str,'updated_at':now_str,'revision':1,'human_resolution':None}
 
         # Case B: Proof inspection is still PENDING or PROCESSING -> Return 202 without blocking
         if proof_row and not skip_vlm and (proof_row.get('inspection_status') in ('PENDING', 'PROCESSING')):
+            base_record = dict(record)
             record.update({
                 'employee_name': emp['name'],
                 'department': emp['department'],
@@ -1007,9 +1136,23 @@ class LeaveOrchestratorService:
                 'decision': 'PROCESSING',
                 'human_readable_explanation': 'Chứng từ đang được kiểm định tự động. Kết quả thẩm định sẽ được cập nhật ngay khi hoàn tất.',
             })
+            # Kiểm tra lại trạng thái chứng từ NGAY TRONG transaction ghi đơn (BEGIN IMMEDIATE tuần tự hóa với worker):
+            # nếu worker đã xong giữa lần đọc ở trên và lúc này, lời đánh thức của worker đã bị bỏ lỡ → không lưu
+            # PROCESSING nữa mà đánh giá luôn bên dưới. Ngược lại, đơn được lưu trước khi worker ghi kết quả nên
+            # resume_pending_requests_for_proof chắc chắn tìm thấy đơn.
+            saved_pending = False
             with st.transaction() as conn:
-                st.save_record(conn, record)
-                st.audit(conn, req_id, 'SUBMIT_PENDING_INSPECTION', f'Waiting for proof {facts.proof_id} inspection')
+                current = conn.execute('SELECT inspection_status FROM proof_documents WHERE id=?', (facts.proof_id,)).fetchone()
+                if current and current['inspection_status'] in ('PENDING', 'PROCESSING'):
+                    st.save_record(conn, record)
+                    st.audit(conn, req_id, 'SUBMIT_PENDING_INSPECTION', f'Waiting for proof {facts.proof_id} inspection')
+                    saved_pending = True
+            if not saved_pending:
+                record = base_record
+                with st.readonly_connection() as conn:
+                    fresh = conn.execute('SELECT * FROM proof_documents WHERE id=?', (facts.proof_id,)).fetchone()
+                    proof_row = dict(fresh) if fresh else proof_row
+        if proof_row and not skip_vlm and record.get('status') == 'PROCESSING':
             return {
                 'id': req_id,
                 'status': 'PROCESSING',
@@ -1020,7 +1163,7 @@ class LeaveOrchestratorService:
                 'employee_id': emp_id,
                 'employee_name': emp['name'],
                 'department': emp['department'],
-                'submitted_at': now_str,
+                'submitted_at': record['submitted_at'],
                 'facts_json': facts.model_dump(),
             }
 
@@ -1092,13 +1235,18 @@ class LeaveOrchestratorService:
         elif self.agent and hasattr(self.agent, 'process_human_feedback'):
             feedback=self.agent.process_human_feedback(feedback_text)
         else:
-            fb_u = (feedback_text or '').upper()
-            if any(k in fb_u for k in ('TỪ CHỐI', 'REJECT', 'BÁC BỎ', 'KHÔNG ĐỒNG Ý')):
+            # Fail-closed: chỉ DUYỆT khi văn bản có từ khóa duyệt rõ ràng và không kèm phủ định / do dự.
+            # Câu mơ hồ ("Để tôi xem lại", "Chưa duyệt được", "Cần họp lại") không được tự suy ra là duyệt.
+            fb_u = ' '.join((feedback_text or '').upper().split())
+            if any(k in fb_u for k in ('TỪ CHỐI', 'REJECT', 'BÁC BỎ', 'KHÔNG ĐỒNG Ý', 'KHÔNG DUYỆT')):
                 act = 'REJECT'
             elif any(k in fb_u for k in ('BỔ SUNG', 'INFO', 'THÊM THÔNG TIN', 'SỬA')):
                 act = 'REQUEST_MORE_INFO'
-            else:
+            elif (any(k in fb_u for k in ('ĐỒNG Ý', 'PHÊ DUYỆT', 'DUYỆT', 'APPROVE', 'CHẤP THUẬN'))
+                  and not any(k in fb_u for k in ('KHÔNG', 'CHƯA', 'XEM LẠI', 'HỌP', 'SAU', 'CÂN NHẮC', '?', 'NOT ', "DON'T", 'LATER'))):
                 act = 'APPROVE_OVERRIDE'
+            else:
+                raise ValueError('Không xác định được quyết định từ ý kiến. Vui lòng chọn rõ Duyệt / Yêu cầu bổ sung / Từ chối.')
             feedback=HumanFeedbackResolution(action=act,updated_fields=updated_fields or {},feedback_notes=feedback_text)
         with st.transaction() as conn:
             req=st.read_request(conn,request_id)
@@ -1126,10 +1274,30 @@ class LeaveOrchestratorService:
                 steps=[dict(r) for r in conn.execute('SELECT * FROM approval_steps WHERE request_id=? AND revision=? ORDER BY step_index',(request_id,req['revision']))]
                 granted=[s['role'] for s in steps if s['status']=='APPROVED']
                 granted.append(req['target_role'])
+                # Vai trò thay thế (vd CEO duyệt thay DEPARTMENT_HEAD/HRD khi không ai giữ vai trò đó) được tính là
+                # đã duyệt vai trò gốc; nếu không, rule engine lại đòi vai trò gốc và đơn quay vòng về chính người vừa duyệt.
+                for original in _ROLE_FALLBACK:
+                    if original not in granted and _resolve_staffed_role(conn,original,req['department'],req['employee_id'],req.get('canonical_leave_type') or req.get('leave_type')) in granted:
+                        granted.append(original)
                 waive=[ErrorCode.NOTICE_PERIOD_VIOLATED,ErrorCode.TEAM_QUOTA_EXCEEDED]
+                # Đơn chờ đối chiếu chứng từ đã được chuyển cho Lead Team (không có HR): Lead Team duyệt
+                # nghĩa là đã xem xét chứng từ, nên không chuyển lại bước này. Các kiểm tra nội dung chứng từ vẫn áp dụng.
+                if req.get('error_code')==ErrorCode.PROOF_REVIEW_REQUIRED.value:
+                    waive.append(ErrorCode.PROOF_REVIEW_REQUIRED)
                 # Re-evaluate before writing this approval. No balance/proof/overlap bypass.
                 st.audit(conn,request_id,'HUMAN_APPROVAL',f'{approver_id}: {req["target_role"]}; {feedback.feedback_notes}')
-                result=self._evaluate(conn,req,RequestFacts.model_validate(req['facts_json']),granted,waive,skip_vlm=True)
+                # Dùng lại kết quả đọc chứng từ đã lưu trên đơn (không gọi lại VLM). Nếu bỏ qua hẳn VLM,
+                # rule engine mất dữ liệu chứng từ và chuyển nhầm sang HR (PROOF_REVIEW_REQUIRED).
+                stored_vlm=req.get('vlm_analysis_json')
+                if isinstance(stored_vlm,str):
+                    try: stored_vlm=json.loads(stored_vlm)
+                    except ValueError: stored_vlm=None
+                cached_vlm=None
+                if isinstance(stored_vlm,dict) and stored_vlm.get('document_summary') and not stored_vlm.get('vlm_error'):
+                    try: cached_vlm=_vlm_output_from_json(stored_vlm)
+                    except Exception: cached_vlm=None
+                result=self._evaluate(conn,req,RequestFacts.model_validate(req['facts_json']),granted,waive,
+                    skip_vlm=cached_vlm is None,precomputed_vlm=cached_vlm)
                 if result.decision in {DecisionType.AUTO_APPROVE,DecisionType.ESCALATE} and result.error_code not in {ErrorCode.PROOF_REVIEW_REQUIRED,ErrorCode.LEGAL_REVIEW_REQUIRED,ErrorCode.AUTOMATION_SCOPE_UNSUPPORTED}:
                     conn.execute("UPDATE approval_steps SET status='APPROVED',approver_id=?,decided_at=? WHERE request_id=? AND revision=? AND role=? AND status='PENDING'",
                         (approver_id,self.clock().isoformat(),request_id,req['revision'],old_target))

@@ -29,10 +29,46 @@ from vlm_inspector import (
     _write_vlm_cache,
     inspect_document_with_vlm,
 )
+from domain import LeaveType, ReasonCategory
 
 logger = logging.getLogger("inspection_service")
 VLM_MAX_CONCURRENCY = int(os.getenv("VLM_MAX_CONCURRENCY", "1"))
 VLM_JOB_MAX_RETRIES = int(os.getenv("VLM_JOB_MAX_RETRIES", "2"))
+
+_PROOF_TYPE_LEAVE_TYPE = {
+    "MEDICAL_LEAVE_CERTIFICATE": "SICK_MEDICAL",
+    "MEDICAL_RECORD_SUMMARY": "SICK_MEDICAL",
+    "LAB_RESULT": "SICK_MEDICAL",
+    "HOSPITAL_DISCHARGE": "SICK_MEDICAL",
+    "EMERGENCY_ADMISSION": "MEDICAL_EMERGENCY",
+    "SURGERY_NOTICE": "MEDICAL_EMERGENCY",
+    "MARRIAGE_CERTIFICATE": "SPECIAL_PAID",
+    "WEDDING_INVITATION": "SPECIAL_PAID",
+    "DEATH_CERTIFICATE": "SPECIAL_PAID",
+    "FUNERAL_DECISION": "SPECIAL_PAID",
+    "FAMILY_EVENT_LETTER": "STATUTORY_UNPAID",
+    "MATERNITY_CERTIFICATE": "MATERNITY",
+    "ACCIDENT_CERTIFICATE": "WORK_ACCIDENT",
+    "ACCIDENT_REPORT": "WORK_ACCIDENT",
+    "INJURY_CERTIFICATE": "WORK_ACCIDENT",
+    "IDENTITY_CARD": "UNPAID_OTHER",
+    "VISA_OR_TRAVEL_DOC": "UNPAID_OTHER",
+    "OTHER_ADMINISTRATIVE": "UNPAID_OTHER",
+}
+
+
+def _enum_hint(value: Any, enum_type) -> Optional[str]:
+    raw = getattr(value, "value", value)
+    if raw is None:
+        return None
+    try:
+        return enum_type(str(raw).strip().upper()).value
+    except ValueError:
+        return None
+
+
+def _default_leave_type(proof_type: Optional[str]) -> str:
+    return _PROOF_TYPE_LEAVE_TYPE.get(str(proof_type or "").strip().upper(), "UNPAID_OTHER")
 
 
 class ProofInspectionService:
@@ -98,7 +134,43 @@ class ProofInspectionService:
                 )
         except Exception as e:
             logger.error(f"Error during job recovery: {e}")
+        self._recover_stranded_requests()
         return recovered
+
+    def _recover_stranded_requests(self) -> None:
+        """Sau khi khởi động lại: đánh thức các đơn còn PROCESSING / PENDING_INSPECTION.
+        - Chứng từ đã READY/FAILED (lỡ tín hiệu đánh thức, hoặc job vừa bị đánh FAILED khi phục hồi) → đánh giá lại ngay.
+        - Chứng từ chưa xong mà không còn job nào đang chờ → xếp lại job kiểm định."""
+        try:
+            with st.readonly_connection() as conn:
+                rows = conn.execute(
+                    """SELECT r.id AS request_id, r.employee_id, r.proof_id, r.facts_json,
+                              p.inspection_status, p.proof_type,
+                              (SELECT COUNT(*) FROM proof_inspection_jobs j
+                               WHERE j.proof_id = r.proof_id AND j.status IN ('PENDING','PROCESSING')) AS active_jobs
+                       FROM leave_requests r LEFT JOIN proof_documents p ON p.id = r.proof_id
+                       WHERE r.status IN ('PROCESSING','PENDING_INSPECTION')"""
+                ).fetchall()
+            done_proofs, requeue = set(), {}
+            for r in rows:
+                if not r["proof_id"] or r["inspection_status"] in ("READY", "FAILED", None):
+                    done_proofs.add(r["proof_id"])
+                elif not r["active_jobs"]:
+                    requeue[r["proof_id"]] = r
+            for proof_id, r in requeue.items():
+                try:
+                    facts = json.loads(r["facts_json"] or "{}")
+                except (TypeError, ValueError):
+                    facts = {}
+                self.enqueue_proof_inspection(proof_id, r["employee_id"], r["proof_type"],
+                                              facts.get("leave_type"), facts.get("reason_category"))
+            if done_proofs or requeue:
+                logger.warning(f"🔄 [ProofInspectionService] Resuming {len(rows)} stranded leave request(s) after restart.")
+            for proof_id in done_proofs:
+                if proof_id:
+                    self.resume_pending_requests_for_proof(proof_id)
+        except Exception as e:
+            logger.error(f"Error recovering stranded requests: {e}")
 
     def enqueue_proof_inspection(
         self,
@@ -106,6 +178,7 @@ class ProofInspectionService:
         employee_id: str,
         proof_type_hint: Optional[str] = None,
         leave_type_hint: Optional[str] = None,
+        reason_category_hint: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Persist inspection job and check instant SHA-256 cache.
         Returns proof inspection status dict.
@@ -138,22 +211,39 @@ class ProofInspectionService:
                 pass
 
         # 3. Fast cache check (<1ms)
-        leave_type_str = leave_type_hint or ""
+        leave_type_str = (
+            _enum_hint(leave_type_hint, LeaveType)
+            or _default_leave_type(proof_dict.get("proof_type") or proof_type_hint)
+        )
+        reason_category_str = _enum_hint(reason_category_hint, ReasonCategory) or ""
         cached_result = None
         if file_hash:
-            cached_result = _read_vlm_cache(file_hash, leave_type_str)
+            cached_result = _read_vlm_cache(file_hash, leave_type_str, reason_category_str)
             if not cached_result:
                 # Also check if another proof row in DB with identical sha256 is READY
                 with st.readonly_connection() as conn:
-                    matched = conn.execute(
-                        "SELECT vlm_analysis_json FROM proof_documents WHERE file_sha256=? AND inspection_status='READY' AND id!=? AND vlm_analysis_json IS NOT NULL LIMIT 1",
+                    matches = conn.execute(
+                        "SELECT proof_type, vlm_analysis_json FROM proof_documents WHERE file_sha256=? AND inspection_status='READY' AND id!=? AND vlm_analysis_json IS NOT NULL",
                         (file_hash, proof_id),
-                    ).fetchone()
-                    if matched and matched["vlm_analysis_json"]:
+                    ).fetchall()
+                    for matched in matches:
                         try:
-                            cached_result = json.loads(matched["vlm_analysis_json"])
+                            candidate = json.loads(matched["vlm_analysis_json"])
+                            context = candidate.get("_inspection_context") or {}
+                            context_matches = (
+                                context.get("leave_type") == leave_type_str
+                                and (context.get("reason_category") or "") == reason_category_str
+                            )
+                            legacy_context_matches = (
+                                not context
+                                and not reason_category_str
+                                and _default_leave_type(matched["proof_type"]) == leave_type_str
+                            )
+                            if context_matches or legacy_context_matches:
+                                cached_result = candidate
+                                break
                         except Exception:
-                            pass
+                            continue
 
         if cached_result:
             GLOBAL_METRICS.record_vlm_call(is_cache_hit=True)
@@ -183,9 +273,14 @@ class ProofInspectionService:
             job_id = f"JOB-{uuid.uuid4().hex[:12].upper()}"
             curr_ver = int(proof_dict.get("inspection_version") or 1)
             conn.execute(
-                """INSERT INTO proof_inspection_jobs(id, proof_id, employee_id, status, version, retry_count, max_retries, created_at)
-                   VALUES(?,?,?,?,?,0,?,?)""",
-                (job_id, proof_id, employee_id, "PENDING", curr_ver, VLM_JOB_MAX_RETRIES, st.now_iso()),
+                """INSERT INTO proof_inspection_jobs(
+                       id, proof_id, employee_id, status, version, retry_count, max_retries,
+                       created_at, leave_type_hint, reason_category_hint
+                   ) VALUES(?,?,?,?,?,0,?,?,?,?)""",
+                (
+                    job_id, proof_id, employee_id, "PENDING", curr_ver,
+                    VLM_JOB_MAX_RETRIES, st.now_iso(), leave_type_str, reason_category_str or None,
+                ),
             )
             conn.execute(
                 "UPDATE proof_documents SET inspection_status='PENDING' WHERE id=?",
@@ -246,6 +341,27 @@ class ProofInspectionService:
             os.getenv("LEAVE_UPLOAD_DIR", str(Path(db.DB_PATH).parent / "uploads"))
         )
         file_path = str(uploads_dir / storage_name)
+        leave_type = (
+            _enum_hint(job.get("leave_type_hint"), LeaveType)
+            or _default_leave_type(job.get("proof_type"))
+        )
+        reason_category = _enum_hint(job.get("reason_category_hint"), ReasonCategory)
+
+        # A leave request may have been linked after upload but before this job starts.
+        with st.readonly_connection() as conn:
+            linked_request = conn.execute(
+                """SELECT facts_json FROM leave_requests
+                   WHERE proof_id=? AND status IN ('PROCESSING', 'PENDING_INSPECTION')
+                   ORDER BY submitted_at DESC LIMIT 1""",
+                (proof_id,),
+            ).fetchone()
+        if linked_request and linked_request["facts_json"]:
+            try:
+                facts = json.loads(linked_request["facts_json"])
+                leave_type = _enum_hint(facts.get("leave_type"), LeaveType) or leave_type
+                reason_category = _enum_hint(facts.get("reason_category"), ReasonCategory) or reason_category
+            except (TypeError, ValueError, json.JSONDecodeError):
+                pass
 
         t0 = time.perf_counter()
         GLOBAL_METRICS.record_vlm_call(is_cache_hit=False)
@@ -253,16 +369,21 @@ class ProofInspectionService:
         try:
             # 1. Inspect outside DB transaction
             vlm_out: VLMInspectionOutput = inspect_document_with_vlm(
-                leave_type="SICK_MEDICAL",
+                leave_type=leave_type,
                 employee_name=None,
                 reason="",
                 attachment_path_or_type=file_path,
                 allow_mock_fallback=False,
+                reason_category=reason_category,
             )
             vlm_sec = time.perf_counter() - t0
             GLOBAL_METRICS.record_vlm_duration(vlm_sec)
 
             vlm_dict = vlm_out.vlm_analysis_json
+            vlm_dict["_inspection_context"] = {
+                "leave_type": leave_type,
+                "reason_category": reason_category,
+            }
             if vlm_out.vlm_error:
                 # Handled VLM failure (timeout, network, unreadable)
                 self._apply_inspection_failure(
@@ -311,6 +432,12 @@ class ProofInspectionService:
                 logger.warning(
                     f"Stale worker tried to overwrite proof {proof_id} (version {job_version} vs current {current['inspection_version']}). Skipping."
                 )
+                # Khép job cũ lại, không để treo ở PROCESSING
+                if job_id:
+                    conn.execute(
+                        "UPDATE proof_inspection_jobs SET status='SUPERSEDED', completed_at=?, error_message=? WHERE id=?",
+                        (now_str, f"Superseded by proof version {current['inspection_version']}", job_id),
+                    )
                 return
 
             conn.execute(
@@ -351,7 +478,13 @@ class ProofInspectionService:
         # Write to cache if hash present
         file_hash = vlm_data.get("_file_hash")
         if file_hash:
-            _write_vlm_cache(file_hash, "SICK_MEDICAL", vlm_data)
+            context = vlm_data.get("_inspection_context") or {}
+            _write_vlm_cache(
+                file_hash,
+                context.get("leave_type", ""),
+                vlm_data,
+                context.get("reason_category", "") or "",
+            )
 
         # Auto-resume any pending leave requests waiting for this proof
         self.resume_pending_requests_for_proof(proof_id)
@@ -368,6 +501,25 @@ class ProofInspectionService:
         retry_count = int(job.get("retry_count") or 0)
         max_retries = int(job.get("max_retries") or VLM_JOB_MAX_RETRIES)
         now_str = st.now_iso()
+        job_version = job.get("version")
+
+        # Job cũ (version khác) hoặc chứng từ đã READY (vd nhờ cache): bỏ job lỗi, không ghi đè trạng thái mới.
+        with st.transaction() as conn:
+            current = conn.execute(
+                "SELECT inspection_version, inspection_status FROM proof_documents WHERE id=?", (proof_id,)
+            ).fetchone()
+            stale = bool(current) and (
+                (job_version is not None and current["inspection_version"] != job_version)
+                or current["inspection_status"] == "READY"
+            )
+            if stale:
+                conn.execute(
+                    "UPDATE proof_inspection_jobs SET status='SUPERSEDED', completed_at=?, error_message=? WHERE id=?",
+                    (now_str, f"Discarded stale failure: {error_msg}", job_id),
+                )
+        if stale:
+            logger.warning(f"Discarded stale failure of job {job_id} for proof {proof_id}.")
+            return
 
         if retry_count < max_retries:
             # Requeue for retry
@@ -377,8 +529,8 @@ class ProofInspectionService:
                     (error_msg, job_id),
                 )
                 conn.execute(
-                    "UPDATE proof_documents SET inspection_status='PENDING', vlm_error=? WHERE id=?",
-                    (error_msg, proof_id),
+                    "UPDATE proof_documents SET inspection_status='PENDING', vlm_error=? WHERE id=? AND inspection_version=? AND inspection_status!='READY'",
+                    (error_msg, proof_id, job_version),
                 )
             logger.info(f"Requeued job {job_id} for retry ({retry_count + 1}/{max_retries}).")
             return
@@ -395,12 +547,13 @@ class ProofInspectionService:
                    vlm_error=?,
                    inspected_at=?,
                    vlm_analysis_json=?
-                   WHERE id=?""",
+                   WHERE id=? AND inspection_version=? AND inspection_status!='READY'""",
                 (
                     error_msg,
                     now_str,
                     json.dumps(vlm_dict, ensure_ascii=False) if vlm_dict else None,
                     proof_id,
+                    job_version,
                 ),
             )
 

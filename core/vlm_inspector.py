@@ -653,12 +653,15 @@ def _score_correlation(
     requested_workdays: int,
     leave_type: str = '',
     patient_name_on_doc: Optional[str] = None,
-) -> tuple[float, list[str], Optional[int]]:
+) -> tuple[Optional[float], list[str], Optional[int]]:
     """Deterministic correlation scoring between employee claim + VLM findings.
 
     For non-medical leave types (SPECIAL_PAID, STATUTORY_UNPAID, MATERNITY, WORK_ACCIDENT),
     skip the clinical-keyword check — marriage/death certs don't have diagnoses.
     """
+    if leave_type.upper() in {'SPECIAL_PAID', 'STATUTORY_UNPAID'}:
+        return None, [], days_granted_by_doctor
+
     score = 0.60
     issues: list[str] = []
     is_medical = leave_type.upper() not in _NON_MEDICAL_LEAVE_TYPES
@@ -853,6 +856,7 @@ def _build_proof_extraction(
             subject_name=_gf("subject_name") if not is_unreadable else None,
             partner_name=_gf("partner_name") if not is_unreadable else None,
             wedding_date=_as_date(_gf("wedding_date"), None) if not is_unreadable else None,
+            event_type=_gf("event_type") if not is_unreadable else None,
             date_of_death=_as_date(_gf("date_of_death"), None) if not is_unreadable else None,
             funeral_date=_as_date(_gf("funeral_date"), None) if not is_unreadable else None,
             relationship_label=_gf("relationship_label") if not is_unreadable else None,
@@ -1072,6 +1076,8 @@ def inspect_document_with_vlm(
             "discharge_date": proof_extraction.discharge_date.isoformat() if proof_extraction.discharge_date else None,
             "deceased_name": proof_extraction.deceased_name,
             "subject_name": proof_extraction.subject_name,
+            "partner_name": proof_extraction.partner_name,
+            "event_type": proof_extraction.event_type,
             "relationship": proof_extraction.relationship_to_employee or proof_extraction.relationship_label,
             "wedding_date": proof_extraction.wedding_date.isoformat() if proof_extraction.wedding_date else None,
         },
@@ -1236,15 +1242,25 @@ def _get_vlm_cache_dir() -> Path:
     return cache_dir
 
 
+def _vlm_cache_path(file_hash: str, leave_type: str = "", reason_category: str = "") -> Path:
+    context = f"{leave_type or ''}:{reason_category or ''}"
+    if not context.strip(":"):
+        return _get_vlm_cache_dir() / f"{file_hash}.json"
+    import hashlib
+    context_hash = hashlib.sha256(context.encode("utf-8")).hexdigest()[:16]
+    return _get_vlm_cache_dir() / f"{file_hash}.{context_hash}.json"
+
+
 def _read_vlm_cache(file_hash: str, leave_type: str = "", reason_category: str = "") -> Optional[Dict[str, Any]]:
-    if not file_hash:
+    # Kết quả VLM phụ thuộc loại nghỉ (persona): không dùng cache khi thiếu ngữ cảnh loại nghỉ.
+    if not file_hash or not (leave_type or "").strip():
         return None
     key = f"{file_hash}:{leave_type or ''}:{reason_category or ''}"
     if key in _VLM_CACHE_MEM:
         import copy
         return copy.deepcopy(_VLM_CACHE_MEM[key])
     try:
-        cache_file = _get_vlm_cache_dir() / f"{file_hash}.json"
+        cache_file = _vlm_cache_path(file_hash, leave_type, reason_category)
         if cache_file.is_file():
             import copy
             with open(cache_file, "r", encoding="utf-8") as f:
@@ -1257,13 +1273,13 @@ def _read_vlm_cache(file_hash: str, leave_type: str = "", reason_category: str =
 
 
 def _write_vlm_cache(file_hash: str, leave_type: str, data: Dict[str, Any], reason_category: str = "") -> None:
-    if not file_hash or not data:
+    if not file_hash or not data or not (leave_type or "").strip():
         return
     key = f"{file_hash}:{leave_type or ''}:{reason_category or ''}"
     import copy
     _VLM_CACHE_MEM[key] = copy.deepcopy(data)
     try:
-        cache_file = _get_vlm_cache_dir() / f"{file_hash}.json"
+        cache_file = _vlm_cache_path(file_hash, leave_type, reason_category)
         with open(cache_file, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception:
@@ -1281,6 +1297,25 @@ def _try_ollama_extract(
         (normalized_dict, None)                nếu thành công
         (None, error_message_description)      nếu thất bại (có lỗi rõ ràng để caller xử lý)
     """
+    path = attachment_path_or_type or ""
+    if not path:
+        return None, (
+            "Không có đường dẫn file chứng từ nào được truyền cho VLM. "
+            "Nhân viên cần upload file ảnh/PDF thật và gắn proof_id vào đơn nghỉ."
+        )
+    if not os.path.isfile(path):
+        return None, (
+            f"File chứng từ '{path}' không tồn tại trên đĩa. "
+            f"Không thể gọi VLM ({VLM_TARGET_MODEL}) khi không có file thật để OCR."
+        )
+
+    file_hash = _compute_file_sha256(path)
+    if file_hash:
+        cached_result = _read_vlm_cache(file_hash, leave_type, reason_category or "")
+        if cached_result is not None:
+            cached_result["_from_cache"] = True
+            return cached_result, None
+
     # 1. Kiểm tra Ollama service có chạy không
     if not _ollama_reachable():
         return None, (
@@ -1295,19 +1330,6 @@ def _try_ollama_extract(
             f"Chạy: `ollama pull {VLM_TARGET_MODEL}`"
         )
     matched_model = VLM_TARGET_MODEL
-    # 3. Kiểm tra đường dẫn file ảnh thật có tồn tại không
-    path = attachment_path_or_type or ""
-    if not path or not os.path.isfile(path):
-        if not path:
-            return None, (
-                "Không có đường dẫn file chứng từ nào được truyền cho VLM. "
-                "Nhân viên cần upload file ảnh/PDF thật và gắn proof_id vào đơn nghỉ."
-            )
-        return None, (
-            f"File chứng từ '{path}' không tồn tại trên đĩa. "
-            f"Không thể gọi VLM ({matched_model}) khi không có file thật để OCR."
-        )
-
     # 3.1. Nếu tên file chứa tiếng Việt / non-ASCII, gán tên mới bằng UUID để hàm mở ảnh không gặp lỗi đường dẫn
     p_obj = Path(path)
     if any(ord(c) > 127 for c in p_obj.name):
@@ -1320,14 +1342,6 @@ def _try_ollama_extract(
             path = uuid_path
         except Exception:
             pass
-
-    # 3.2. SHA-256 Inference Cache Check (<1ms return on repeat proof evaluations)
-    file_hash = _compute_file_sha256(path)
-    if file_hash:
-        cached_result = _read_vlm_cache(file_hash, leave_type, reason_category or "")
-        if cached_result is not None:
-            cached_result["_from_cache"] = True
-            return cached_result, None
 
     # 3.5. CỔNG KIỂM SOÁT ĐỘ MỜ TẤT ĐỊNH (Deterministic Blur Gate - ~1ms)
     is_blurry, blur_score = detect_image_blur(path, threshold=50.0)
@@ -1468,6 +1482,7 @@ def _try_ollama_extract(
         dec_name = None
         sub_name = None
         part_name = None
+        event_type_val = None
         wed_date = None
         d_death = None
         fun_date = None
@@ -1525,6 +1540,7 @@ def _try_ollama_extract(
         dec_name = parsed.get("deceased_name")
         sub_name = parsed.get("subject_name")
         part_name = parsed.get("partner_name")
+        event_type_val = parsed.get("event_type")
         wed_date = parsed.get("wedding_date")
         d_death = parsed.get("date_of_death")
         fun_date = parsed.get("funeral_date")
@@ -1611,6 +1627,7 @@ def _try_ollama_extract(
             "deceased_name": dec_name,
             "subject_name": sub_name,
             "partner_name": part_name,
+            "event_type": event_type_val,
             "wedding_date": wed_date,
             "date_of_death": d_death,
             "funeral_date": fun_date,

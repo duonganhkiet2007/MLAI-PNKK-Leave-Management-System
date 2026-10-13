@@ -27,7 +27,7 @@ case(11,'Self marriage',{'leave_type':'SPECIAL_PAID','reason_category':'SELF_MAR
 case(12,'Child marriage',{'leave_type':'SPECIAL_PAID','reason_category':'CHILD_MARRIAGE','to_date':'2026-10-05','proof':{**PROOF,'proof_type':'WEDDING_INVITATION'}},'ESCALATE','DIRECT_MANAGER',days=1,cat=A,error='DURATION_OVER_AI_LIMIT'),
 case(13,'Parent death',{'leave_type':'SPECIAL_PAID','reason_category':'PARENT_DEATH','to_date':'2026-10-07','proof':{**PROOF,'proof_type':'DEATH_CERTIFICATE'}},'ESCALATE','DIRECT_MANAGER',days=3,cat=A,error='DURATION_OVER_AI_LIMIT'),
 case(14,'Grandparent death',{'leave_type':'STATUTORY_UNPAID','reason_category':'GRANDPARENT_DEATH','to_date':'2026-10-05'},'ESCALATE','DIRECT_MANAGER',days=1,cat=A,error='DURATION_OVER_AI_LIMIT'),
-case(15,'Sick valid proof',{'leave_type':'SICK_MEDICAL','proof':PROOF},'AUTO_APPROVE',None,days=2,cat=None,error=None),
+case(15,'Sick valid proof',{'leave_type':'SICK_MEDICAL','proof':PROOF},'ESCALATE','DIRECT_MANAGER',days=2,cat=A,error='DURATION_OVER_AI_LIMIT'),  # policy §3.1: ốm 2–5 ngày → Lead Team
 case(16,'Sick missing proof',{'leave_type':'SICK_MEDICAL'},'NEED_CORRECTION','EMPLOYEE',cat=C,error='PROOF_MISSING'),
 case(17,'Unreadable proof',{'leave_type':'SICK_MEDICAL','proof':{**PROOF,'document_readability':'ILLEGIBLE'}},'ESCALATE','DIRECT_MANAGER',cat=A,error='DOC_ILLEGIBLE'),
 case(18,'Medical period mismatch',{'leave_type':'SICK_MEDICAL','proof':{**PROOF,'recommended_to_date':'2026-10-05'}},'NEED_CORRECTION','EMPLOYEE',cat=C,error='MEDICAL_DAYS_MISMATCH'),

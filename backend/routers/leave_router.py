@@ -3,18 +3,20 @@ import json
 import os
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Literal
 from fastapi import APIRouter, Depends, Header, Query, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, ConfigDict, Field
 from services.orchestration import LeaveOrchestratorService
 from services.inspection_service import GLOBAL_INSPECTION_SERVICE
 from metrics import GLOBAL_METRICS
-from domain import RequestFacts, ProofType, ProofExtraction, VerifiedProof, EditableFields, should_deduct_annual_balance
+from domain import RequestFacts, ProofType, ProofExtraction, VerifiedProof, EditableFields, LeaveType, ReasonCategory, names_approximately_match, should_deduct_annual_balance
 import database as db
 import storage as st
-from auth import verify_token, legacy_actor_header_allowed
+from auth import verify_token, legacy_actor_header_allowed, demo_login_enabled
 
 router=APIRouter(prefix='/api/leave',tags=['Leave Application'])
 service=LeaveOrchestratorService()
@@ -38,6 +40,8 @@ def actor(authorization: Optional[str]=Header(None),token: Optional[str]=Query(N
 class NewLeaveRequestInput(RequestFacts):
     employee_id: str | None = None
     raw_text: str | None = None
+    # Thời điểm nộp giả lập của kịch bản kiểm thử (tab Test → "Nạp vào form"); chỉ nhận ở chế độ demo.
+    simulated_submitted_at: datetime | None = None
 
 class HumanDecisionInput(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -46,12 +50,24 @@ class HumanDecisionInput(BaseModel):
     action_type: str | None = None
     updated_fields: EditableFields = Field(default_factory=EditableFields)
 
+def _strip_simulated_attachment(data: dict) -> dict:
+    """attachment_type dạng chuỗi (vd 'clean_hospital') chỉ dùng cho bộ giả lập kiểm thử: storage.load_context
+    dựng chứng từ VERIFIED từ chuỗi này. Trên API thật, chứng từ chỉ đến từ file tải lên (proof_id)."""
+    if os.getenv('APP_ENV') != 'test':
+        data['attachment_type'] = 'none'
+    return data
+
 @router.post('/request')
 def submit_leave_request(payload: NewLeaveRequestInput, actor_id=Depends(actor)):
     t0 = time.perf_counter()
     if payload.employee_id and payload.employee_id!=actor_id: raise st.AccessDenied('Không được nộp thay nhân sự khác.')
-    data=payload.model_dump(exclude={'employee_id','raw_text'})
-    res=service.process_new_request(payload.raw_text,actor_id,data)
+    data=_strip_simulated_attachment(payload.model_dump(exclude={'employee_id','raw_text','simulated_submitted_at'}))
+    submitted_at=None
+    if payload.simulated_submitted_at:
+        if not demo_login_enabled(): raise st.AccessDenied('Không hỗ trợ thời điểm nộp giả lập.')
+        submitted_at=payload.simulated_submitted_at
+        if submitted_at.tzinfo is None: submitted_at=submitted_at.replace(tzinfo=service.calendar.timezone)
+    res=service.process_new_request(payload.raw_text,actor_id,data,submitted_at=submitted_at)
     total_api_ms = round((time.perf_counter() - t0) * 1000, 2)
     status_code = 202 if (isinstance(res, dict) and res.get('status') == 'PROCESSING') else 200
     GLOBAL_METRICS.record_submission(total_api_ms / 1000.0, status_code=status_code)
@@ -77,13 +93,26 @@ def list_leave_requests(status: str | None=None,actor_id=Depends(actor)):
         return {'success':True,'total':len(rows),'data':rows}
 
 @router.post('/proofs')
-async def upload_proof(file: UploadFile=File(...),proof_type: ProofType=Form(ProofType.OTHER),actor_id=Depends(actor)):
-    with st.readonly_connection() as conn: st.employee(conn,actor_id)
+async def upload_proof(
+    file: UploadFile = File(...),
+    proof_type: ProofType = Form(ProofType.OTHER),
+    leave_type: LeaveType | None = Form(None),
+    reason_category: ReasonCategory | None = Form(None),
+    actor_id=Depends(actor),
+):
     if proof_type==ProofType.NONE: raise ValueError('Chọn loại chứng từ.')
     content=await file.read(10*1024*1024+1)
     if len(content)>10*1024*1024: raise HTTPException(413,'Tệp tối đa 10 MB.')
+    # Ghi file, transaction SQLite và xếp job đều là I/O đồng bộ (có thể chờ khóa DB tới busy_timeout):
+    # chạy trong threadpool để không chặn event loop của toàn bộ server.
+    return await run_in_threadpool(_store_proof_upload, content, file.content_type, file.filename,
+                                   proof_type, leave_type, reason_category, actor_id)
+
+
+def _store_proof_upload(content, content_type, filename, proof_type, leave_type, reason_category, actor_id):
+    with st.readonly_connection() as conn: st.employee(conn,actor_id)
     actual='application/pdf' if content.startswith(b'%PDF-') else 'image/png' if content.startswith(b'\x89PNG\r\n\x1a\n') else 'image/jpeg' if content.startswith(b'\xff\xd8\xff') else None
-    if not actual or actual!=file.content_type: raise HTTPException(415,'Chỉ nhận PDF/JPEG/PNG đúng định dạng.')
+    if not actual or actual!=content_type: raise HTTPException(415,'Chỉ nhận PDF/JPEG/PNG đúng định dạng.')
     directory=Path(os.getenv('LEAVE_UPLOAD_DIR',str(Path(db.DB_PATH).parent/'uploads')))
     directory.mkdir(parents=True,exist_ok=True)
     pid=uuid.uuid4().hex
@@ -91,7 +120,7 @@ async def upload_proof(file: UploadFile=File(...),proof_type: ProofType=Form(Pro
     name=f"{pid}{ext}"
     path=directory/name
     proof=VerifiedProof(proof_type=proof_type)
-    incoming_raw_name = Path(file.filename or 'document').name
+    incoming_raw_name = Path(filename or 'document').name
     # Nếu tên file tải lên chứa tiếng Việt hoặc ký tự non-ASCII, gán tên bằng UUID để tránh lỗi mở file trong VLM model
     safe_original_name = name if any(ord(c) > 127 for c in incoming_raw_name) else incoming_raw_name
     file_sha256 = hashlib.sha256(content).hexdigest()
@@ -105,7 +134,13 @@ async def upload_proof(file: UploadFile=File(...),proof_type: ProofType=Form(Pro
         path.unlink(missing_ok=True); raise
 
     # Trigger asynchronous proof inspection immediately
-    q_res = GLOBAL_INSPECTION_SERVICE.enqueue_proof_inspection(pid, actor_id, proof_type.value)
+    q_res = GLOBAL_INSPECTION_SERVICE.enqueue_proof_inspection(
+        pid,
+        actor_id,
+        proof_type_hint=proof_type.value,
+        leave_type_hint=leave_type.value if leave_type else None,
+        reason_category_hint=reason_category.value if reason_category else None,
+    )
     insp_status = q_res.get('inspection_status', 'PENDING')
     return {'success':True,'data':{'proof_id':pid,'proof_type':proof_type.value,'proof_verification_status':'UNVERIFIED','inspection_status':insp_status}}
 
@@ -117,6 +152,7 @@ def get_proof_inspection_status(proof_id: str, actor_id=Depends(actor)):
         if not row:
             raise HTTPException(404, 'Không tìm thấy chứng từ.')
         doc = dict(row)
+        doc['vlm_error'] = st.public_vlm_error(doc.get('vlm_error'))
         allowed = (doc['employee_id'] == actor_id or
                    st.has_role(conn, actor_id, 'HR') or
                    st.has_role(conn, actor_id, 'DIRECT_MANAGER') or
@@ -211,6 +247,12 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             return str(v)
         checklist = []
         llm = req.get('llm_summary_json') or {}
+        leave_type_value = req.get('canonical_leave_type') or req.get('leave_type')
+        reason_category_value = req.get('reason_category')
+        schema_key = ((llm.get('vlm_summary') or {}).get('schema_key') if isinstance(llm, dict) else None)
+        if not schema_key:
+            from vlm_inspector import _resolve_persona_config
+            schema_key = _resolve_persona_config(leave_type_value, reason_category_value).get('schema_key')
         vlm_full = req.get('vlm_analysis_json') or {}
         doc_summary = (vlm_full.get('document_summary') or {}) if isinstance(vlm_full, dict) else {}
         readability_raw = _s(req.get('document_readability')) or _s((vlm_full.get('flags') or {}).get('document_readability')) or _s((proof or {}).get('document_readability'))
@@ -228,8 +270,8 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         else:
             doc_patient_name = req.get('doc_patient_name') or (doc_summary.get('patient_name') if isinstance(doc_summary, dict) else None) or (proof.get('patient_name') if isinstance(proof, dict) else None)
             doc_diagnosis = req.get('doc_diagnosis') or (doc_summary.get('diagnosis') if isinstance(doc_summary, dict) else None) or (proof.get('diagnosis') if isinstance(proof, dict) else None)
-            doc_issuer = (proof or {}).get('issuer') if isinstance(proof, dict) else None
-            doc_issue_date = (proof or {}).get('issue_date') if isinstance(proof, dict) else None
+            doc_issuer = proof_storage.get('issuer') or (doc_summary.get('issuer') if isinstance(doc_summary, dict) else None) or ((proof or {}).get('issuer') if isinstance(proof, dict) else None)
+            doc_issue_date = proof_storage.get('issue_date') or (doc_summary.get('issue_date') if isinstance(doc_summary, dict) else None) or ((proof or {}).get('issue_date') if isinstance(proof, dict) else None)
         if isinstance(vlm_full, dict) and vlm_full.get('document_summary') and not is_unreadable_doc:
             try:
                 from datetime import date as _date
@@ -250,6 +292,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     days_granted_by_doctor=doctor_range.get('days'),
                     requested_workdays=int(req.get('requested_working_days') or req.get('workdays') or 0),
                     leave_type=str(req.get('canonical_leave_type') or req.get('leave_type') or ''),
+                    patient_name_on_doc=doc_patient_name,
                 )
                 req['correlation_score'] = refreshed_score
                 req['correlation_issues'] = refreshed_issues
@@ -261,7 +304,6 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 }
             except Exception:
                 pass
-        leave_type_value = req.get('canonical_leave_type') or req.get('leave_type')
         shows_balance = should_deduct_annual_balance(leave_type_value)
         employee_row = conn.execute(
             'SELECT remaining_leave_days FROM employees WHERE employee_id=?',
@@ -314,13 +356,26 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         if pt_label and pt_label not in ('NONE', 'Không có chứng từ'):
             proof_segments.append(f"Loại chứng từ: {pt_label}")
         for label, value in [
-            ('Tên trên giấy', _s(doc_patient_name)),
             ('Nơi cấp', _s(doc_issuer)),
             ('Ngày cấp', _s(doc_issue_date)),
-            ('Chẩn đoán', _s(doc_diagnosis)),
         ]:
             if value and value.strip() and value.strip().lower() not in {'none','null','unknown','chưa đọc được','không đọc được','không xác định'}:
                 proof_segments.append(f"{label}: {value}")
+        if schema_key == 'WEDDING':
+            subject_name = doc_summary.get('subject_name') or doc_patient_name
+            partner_name = doc_summary.get('partner_name')
+            wedding_date = doc_summary.get('wedding_date')
+            event_type = doc_summary.get('event_type')
+            if subject_name and partner_name:
+                proof_segments.append(f"Cặp đôi: {subject_name} & {partner_name}")
+            elif subject_name:
+                proof_segments.append(f"Người kết hôn: {subject_name}")
+            if event_type:
+                proof_segments.append(f"Sự kiện: {event_type}")
+            if wedding_date:
+                proof_segments.append(f"Ngày cưới: {wedding_date}")
+        elif doc_diagnosis:
+            proof_segments.append(f"Chẩn đoán: {_s(doc_diagnosis)}")
         if proof_segments:
             proof_note = ' • '.join(proof_segments)
         else:
@@ -339,7 +394,11 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                        severity=proof_severity, include=shows_proof)
         # ===== NODE 4. VLM - Document Integrity (red_stamp + signature + tamper + AI) =====
         rs = req.get('has_red_stamp')
+        vlm_flags = vlm_full.get('flags') if isinstance(vlm_full, dict) else {}
+        vlm_flags = vlm_flags if isinstance(vlm_flags, dict) else {}
         sig = req.get('has_doctor_signature')
+        if schema_key == 'WEDDING':
+            sig = vlm_flags.get('signature_present_on_scan')
         tamper = req.get('is_tampered')
         ai_edit = req.get('ai_edited')
         none_count = sum(1 for x in (rs,sig,tamper,ai_edit) if x is None)
@@ -364,15 +423,17 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 dint_status = "PASS"; dint_pass = True; dint_severity = "SUCCESS"
             dint_segments = []
             if rs is not None:
-                dint_segments.append(f"Dấu đỏ: {_yn(rs,'Có','Không thấy','Chưa đọc được')}")
+                stamp_label = 'Dấu đỏ UBND/cơ quan' if schema_key == 'WEDDING' else 'Dấu đỏ'
+                dint_segments.append(f"{stamp_label}: {_yn(rs,'Có','Không thấy','Chưa đọc được')}")
             if sig is not None:
-                dint_segments.append(f"Chữ ký bác sĩ: {_yn(sig,'Có','Thiếu','Chưa đọc được')}")
+                signature_label = 'Chữ ký người có thẩm quyền' if schema_key == 'WEDDING' else 'Chữ ký bác sĩ'
+                dint_segments.append(f"{signature_label}: {_yn(sig,'Có','Thiếu','Chưa đọc được')}")
             readability = _s(req.get('document_readability')) or _s((vlm_full.get('flags') or {}).get('document_readability'))
             if readability and readability.strip() and readability.strip().lower() not in {'none','null','unknown'}:
                 dint_segments.append(f"Độ rõ tài liệu: {readability}")
             dint_note = ' • '.join(dint_segments) if dint_segments else 'Không có thông tin toàn vẹn chứng từ được trích xuất.'
         add_node(4,"VLM_INTEGRITY",dint_status, dint_pass, dint_note,
-                               title_vi="VLM - Kiểm tra toàn vẹn chứng từ (dấu đỏ, chữ ký, giả mạo)",
+                               title_vi=("VLM - Kiểm tra dấu và chữ ký cơ quan" if schema_key == 'WEDDING' else "VLM - Kiểm tra toàn vẹn chứng từ (dấu đỏ, chữ ký, giả mạo)"),
                        severity=dint_severity, include=shows_proof)
         # ===== NODE 5. VLM - Patient / Employee name match =====
         doc_pat = doc_patient_name or ''
@@ -383,17 +444,31 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         elif is_unreadable_doc:
             p_status = "FAIL"; p_pass = False; p_severity="CRITICAL"
             p_note = "Chứng từ không đọc được (UNREADABLE). Không thể xác minh tên bệnh nhân."
+        elif schema_key == 'WEDDING' and str(reason_category_value or '').upper() == 'CHILD_MARRIAGE':
+            p_status = "NOT_RUN"; p_pass = False; p_severity="INFO"
+            couple = ' & '.join(x for x in (doc_summary.get('subject_name'), doc_summary.get('partner_name')) if x)
+            p_note = f"Người kết hôn trên giấy: {couple or doc_pat or 'Chưa đọc được'} — đơn thuộc trường hợp con kết hôn nên không so tên đương sự với nhân viên nộp đơn."
+        elif schema_key == 'WEDDING' and doc_pat:
+            couple_names = [doc_summary.get('subject_name') or doc_pat, doc_summary.get('partner_name')]
+            match_ok = any(names_approximately_match(emp_n, name) for name in couple_names if name)
+            p_status = "PASS" if match_ok else "FAIL"
+            p_pass = match_ok
+            p_severity = "SUCCESS" if match_ok else "CRITICAL"
+            p_note = f"Người kết hôn trên giấy: {' & '.join(x for x in couple_names if x)} — tên nhân viên {'có' if match_ok else 'không'} nằm trong cặp đôi."
+        elif schema_key in {'BEREAVEMENT', 'STATUTORY'}:
+            p_status = "NOT_RUN"; p_pass = False; p_severity="INFO"
+            p_note = f"Người thân trên giấy: {doc_pat or 'Chưa đọc được'} — không yêu cầu tên người thân trùng tên nhân viên nộp đơn."
         elif not doc_pat:
             p_status = "WARN"; p_pass = False; p_severity="WARNING"
             p_note = "VLM KHÔNG đọc được tên người khám trên chứng từ (tên bệnh nhân trống). Không thể xác minh đây là giấy của nhân viên này."
         else:
-            match_ok = (doc_pat.casefold().replace(' ','') == emp_n.casefold().replace(' ',''))
+            match_ok = names_approximately_match(doc_pat, emp_n)
             p_status = "PASS" if match_ok else "FAIL"
             p_pass = match_ok
             p_severity = "SUCCESS" if match_ok else "CRITICAL"
             p_note = "Tên trên giấy: {doc} — Tên trong nhân sự: {emp} — {result}.".format(
                 doc = doc_pat, emp = emp_n,
-                result = "KHỚP" if match_ok else "KHÔNG KHỚP (có thể giấy của người khác / sai tên)",
+                result = "(Khớp)" if match_ok else "(Không khớp)",
             )
         add_node(5,"VLM_PATIENT",p_status, p_pass, p_note,
                                title_vi="VLM - Đối chiếu tên bệnh nhân vs. nhân sự",
@@ -416,33 +491,53 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             dc_status = "FAIL"; dc_pass = False; dc_severity="CRITICAL"
             dc_note = "Chứng từ không đọc được (UNREADABLE). Không thể xác minh khoảng ngày bác sĩ chỉ định."
         else:
-            in_range = False
-            if dr_from and dr_to and req_from and req_to:
-                try:
-                    from datetime import date as _d
-                    df1, dt1 = _d.fromisoformat(dr_from), _d.fromisoformat(dr_to)
-                    df2, dt2 = _d.fromisoformat(req_from), _d.fromisoformat(req_to)
-                    in_range = df1 <= df2 and dt2 <= dt1
-                except Exception: in_range = False
-            missing_range = not dr_from or not dr_to
-            overlap_issue = False
-            if dr_days is not None and req_wd:
-                overlap_issue = req_wd > int(dr_days)
-            if missing_range:
-                dc_status = "WARN"; dc_pass = False; dc_severity = "WARNING"
-            elif overlap_issue or not in_range:
-                dc_status = "FAIL"; dc_pass = False; dc_severity = "CRITICAL"
+            wedding_date = doc_summary.get('wedding_date') if schema_key == 'WEDDING' else None
+            if schema_key == 'WEDDING':
+                if wedding_date and req_from and req_to:
+                    try:
+                        from datetime import date as _d
+                        event_day = _d.fromisoformat(str(wedding_date))
+                        requested_start = _d.fromisoformat(str(req_from))
+                        requested_end = _d.fromisoformat(str(req_to))
+                        date_matches = requested_start <= event_day <= requested_end
+                    except Exception:
+                        date_matches = False
+                    dc_status = "PASS" if date_matches else "FAIL"
+                    dc_pass = date_matches
+                    dc_severity = "SUCCESS" if date_matches else "CRITICAL"
+                    date_result = "Ngày cưới nằm trong khoảng xin nghỉ" if date_matches else "Ngày cưới nằm ngoài khoảng xin nghỉ"
+                    dc_note = f"Ngày cưới trên giấy: {wedding_date} · Ngày xin nghỉ: {req_from} → {req_to} · Kết quả: {date_result}."
+                else:
+                    dc_status = "WARN"; dc_pass = False; dc_severity = "WARNING"
+                    dc_note = f"Không đọc được ngày cưới hoặc ngày xin nghỉ để đối chiếu (ngày cưới: {wedding_date or 'chưa đọc được'})."
             else:
-                dc_status = "PASS"; dc_pass = True; dc_severity = "SUCCESS"
-            dc_note = "Yêu cầu: {rf} → {rt} ({rw} ngày làm việc) · Bác sĩ chỉ định: {df} → {dt} ({dd} ngày nghỉ) — Kết quả: {res}.".format(
-                rf = req_from or 'N/A', rt = req_to or 'N/A', rw = req_wd,
-                df = dr_from or 'Chưa đọc được', dt = dr_to or 'Chưa đọc được',
-                dd = str(dr_days) if dr_days is not None else 'Chưa đọc được',
-                res = ('Khoảng yêu cầu nằm trong khoảng bác sĩ chỉ định' if dc_pass else
-                       'Khoảng yêu cầu vượt ngoài / ngày yêu cầu nhiều hơn số ngày bác sĩ cấp')
-            )
+                in_range = False
+                if dr_from and dr_to and req_from and req_to:
+                    try:
+                        from datetime import date as _d
+                        df1, dt1 = _d.fromisoformat(dr_from), _d.fromisoformat(dr_to)
+                        df2, dt2 = _d.fromisoformat(req_from), _d.fromisoformat(req_to)
+                        in_range = df1 <= df2 and dt2 <= dt1
+                    except Exception: in_range = False
+                missing_range = not dr_from or not dr_to
+                overlap_issue = False
+                if dr_days is not None and req_wd:
+                    overlap_issue = req_wd > int(dr_days)
+                if missing_range:
+                    dc_status = "WARN"; dc_pass = False; dc_severity = "WARNING"
+                elif overlap_issue or not in_range:
+                    dc_status = "FAIL"; dc_pass = False; dc_severity = "CRITICAL"
+                else:
+                    dc_status = "PASS"; dc_pass = True; dc_severity = "SUCCESS"
+                dc_note = "Yêu cầu: {rf} → {rt} ({rw} ngày làm việc) · Bác sĩ chỉ định: {df} → {dt} ({dd} ngày nghỉ) — Kết quả: {res}.".format(
+                    rf = req_from or 'N/A', rt = req_to or 'N/A', rw = req_wd,
+                    df = dr_from or 'Chưa đọc được', dt = dr_to or 'Chưa đọc được',
+                    dd = str(dr_days) if dr_days is not None else 'Chưa đọc được',
+                    res = ('Khoảng yêu cầu nằm trong khoảng bác sĩ chỉ định' if dc_pass else
+                           'Khoảng yêu cầu vượt ngoài / ngày yêu cầu nhiều hơn số ngày bác sĩ cấp')
+                )
         add_node(6,"VLM_DATE_COVERAGE",dc_status, dc_pass, dc_note,
-                               title_vi="VLM - Đối chiếu khoảng ngày nghỉ vs. bác sĩ chỉ định",
+                               title_vi=("VLM - Đối chiếu ngày cưới với ngày nghỉ" if schema_key == 'WEDDING' else "VLM - Đối chiếu khoảng ngày nghỉ vs. bác sĩ chỉ định"),
                        severity=dc_severity, include=shows_proof)
         # ===== NODE 7. VLM - Correlation score (diagnosis ↔ reason + dates) =====
         cs = req.get('correlation_score')
@@ -453,6 +548,9 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         elif is_unreadable_doc:
             c_status = "FAIL"; c_pass = False; c_severity="CRITICAL"
             c_note = "Chứng từ không đọc được (UNREADABLE). Không thể đánh giá độ khớp nội dung (0.00 / 1.00)."
+        elif schema_key in {'WEDDING', 'BEREAVEMENT', 'STATUTORY'}:
+            c_status = "NOT_RUN"; c_pass = False; c_severity="INFO"
+            c_note = "Không áp dụng đối chiếu chẩn đoán y tế cho chứng từ sự kiện gia đình."
         elif cs is None:
             c_status = "WARN"; c_pass = False; c_severity="WARNING"
             c_note = "Chưa tính được correlation_score (VLM chưa đọc đủ các trường để đánh giá độ khớp)."
@@ -472,7 +570,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 top = '; '.join(top_issues) if top_issues else '(không có vấn đề đáng kể)'
             )
         add_node(7,"VLM_CORRELATION",c_status, c_pass, c_note,
-                               title_vi="VLM - Đánh giá độ khớp (diagnosis ↔ lý do nghỉ ↔ số ngày)",
+                               title_vi=("VLM - Đối chiếu nội dung y tế" if schema_key not in {'WEDDING', 'BEREAVEMENT', 'STATUTORY'} else "VLM - Độ khớp nội dung"),
                        severity=c_severity, include=shows_proof)
         # ===== NODE 8. PROOF VERIFICATION status =====
         pv_status_raw = proof.get('proof_verification_status') if isinstance(proof,dict) else (req.get('status') or '')
@@ -632,7 +730,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                       'correlation_score','correlation_issues','days_granted_by_doctor']
         for k in raw_fields:
             vlm_fields_ext[k] = req.get(k)
-        return {'success':True,'request_id':request_id,
+        return st.sanitize_public({'success':True,'request_id':request_id,
                 'decision':req.get('decision'),'status':req.get('status'),
                 'target_role':req.get('target_role'),
                 'error_code':req.get('error_code'),'uncertainty_category':req.get('uncertainty_category'),
@@ -661,12 +759,12 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 },
                 'llm_summary': llm or {},
                 'engine_result': req.get('result_json'),
-                'decision_tree_checklist': checklist}
+                'decision_tree_checklist': checklist})
 
 @router.post('/{request_id}/resubmit')
 def resubmit(request_id,payload: RequestFacts,actor_id=Depends(actor)):
     t0 = time.perf_counter()
-    res = service.resubmit(request_id,actor_id,payload.model_dump())
+    res = service.resubmit(request_id,actor_id,_strip_simulated_attachment(payload.model_dump()))
     total_api_ms = round((time.perf_counter() - t0) * 1000, 2)
     if isinstance(res, dict):
         res['total_api_ms'] = total_api_ms

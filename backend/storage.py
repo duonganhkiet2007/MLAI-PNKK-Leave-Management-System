@@ -66,6 +66,10 @@ def can_view(conn, actor_id, req):
     if req.get('handover_person_id') and actor_id == req.get('handover_person_id'):
         return True
     roles=roles_for(conn,actor_id)
+    # Lead Team (quản lý trực tiếp) xem được toàn bộ hồ sơ của phòng ban mình (kể cả đơn AI từ chối, đã thu hồi,
+    # đang chờ cấp trên) để trang "Hồ sơ đơn" khớp với những gì nhân viên thấy; quyền thao tác vẫn theo can_act.
+    if any(r['role']=='DIRECT_MANAGER' and r['department_scope'] in ('*',req.get('department')) for r in roles):
+        return True
     required={s['role'] for s in conn.execute('SELECT role FROM approval_steps WHERE request_id=? AND revision=?',
                 (req['id'],req.get('revision',0)))}
     if req.get('target_role'): required.add(req['target_role'])
@@ -236,6 +240,36 @@ def set_steps(conn, record, roles, preserve=False):
         conn.execute('INSERT OR IGNORE INTO approval_steps(request_id,revision,step_index,role) VALUES(?,?,?,?)',
             (record['id'],record['revision'],i,str(getattr(role,'value',role))))
 
+# ---- Không trả lỗi nội bộ (traceback, đường dẫn máy chủ, cổng Ollama...) ra client (CWE-209) ----
+PUBLIC_VLM_ERROR = 'Không đọc được chứng từ tự động. Người duyệt cần kiểm tra chứng từ gốc.'
+_INTERNAL_ERROR_MARKERS = ('traceback', 'vlm_exception', 'httpconnectionpool', 'localhost', '127.0.0.1',
+                           '/workingspace', '/home/', '/tmp/', '/usr/', 'errno', 'exception', 'ollama /api',
+                           'http://', 'https://', 'runtimeerror', 'connectionerror', 'max retries', 'model runner')
+_SANITIZE_SKIP_KEYS = {'inspection_mode', 'target_model', 'inspector_persona'}
+
+
+def public_vlm_error(message):
+    return PUBLIC_VLM_ERROR if message else message
+
+
+def _looks_internal(text: str) -> bool:
+    low = text.lower()
+    return any(marker in low for marker in _INTERNAL_ERROR_MARKERS)
+
+
+def sanitize_public(value, _key=None):
+    """Thay mọi chuỗi trông như lỗi nội bộ bằng thông báo thân thiện; chi tiết vẫn nằm trong DB/log."""
+    if _key in _SANITIZE_SKIP_KEYS:
+        return value
+    if isinstance(value, dict):
+        return {k: (public_vlm_error(v) if k == 'vlm_error' else sanitize_public(v, k)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [sanitize_public(v) for v in value]
+    if isinstance(value, str) and _looks_internal(value):
+        return PUBLIC_VLM_ERROR
+    return value
+
+
 def serialize(conn, req):
     req=dict(req)
     req['leave_policy_tags'] = leave_policy_metadata(req.get('canonical_leave_type') or req.get('leave_type'))
@@ -269,7 +303,7 @@ def serialize(conn, req):
     result=req.get('result_json')
     if isinstance(result,dict):
         for k in ('warnings','working_dates','paid'): req[k]=result.get(k)
-    return req
+    return sanitize_public(req)
 
 def commit_approval(conn, record, result):
     """Caller holds BEGIN IMMEDIATE and has just evaluated fresh authoritative context."""

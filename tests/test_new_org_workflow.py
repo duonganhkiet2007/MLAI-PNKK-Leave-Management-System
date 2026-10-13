@@ -617,7 +617,7 @@ def test_tc_vlm_06_blur_gate_early_exit_no_hallucination():
     assert out.vlm_analysis_json.get("inspection_mode") == "CV_BLUR_GATE_EARLY_EXIT"
 
 
-def test_tc_vlm_07_sha256_inference_cache():
+def test_tc_vlm_07_sha256_inference_cache(monkeypatch):
     """TC-VLM-07: SHA-256 caching returns instantaneous VLM extraction without GPU recalculation."""
     from vlm_inspector import (
         _compute_file_sha256,
@@ -625,7 +625,10 @@ def test_tc_vlm_07_sha256_inference_cache():
         _read_vlm_cache,
         inspect_document_with_vlm,
     )
+    import vlm_inspector
     import time
+
+    monkeypatch.setattr(vlm_inspector, "VLM_FORCE_MOCK", False)
 
     img_path = "tests/assets/proofs/proof_sick_valid_3days.png"
     h = _compute_file_sha256(img_path)

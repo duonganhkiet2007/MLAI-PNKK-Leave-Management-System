@@ -43,7 +43,12 @@ def migrate(conn):
                 id TEXT PRIMARY KEY, proof_id TEXT NOT NULL, employee_id TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'PENDING', version INTEGER NOT NULL DEFAULT 1,
                 retry_count INTEGER NOT NULL DEFAULT 0, max_retries INTEGER NOT NULL DEFAULT 2,
-                error_message TEXT, created_at TEXT NOT NULL, started_at TEXT, completed_at TEXT)''')
+              error_message TEXT, created_at TEXT NOT NULL, started_at TEXT, completed_at TEXT,
+              leave_type_hint TEXT, reason_category_hint TEXT)''')
+            job_cols = {r[1] for r in conn.execute('PRAGMA table_info(proof_inspection_jobs)')}
+            for col in ('leave_type_hint', 'reason_category_hint'):
+              if col not in job_cols:
+                conn.execute(f'ALTER TABLE proof_inspection_jobs ADD COLUMN {col} TEXT')
             conn.execute('CREATE INDEX IF NOT EXISTS idx_inspection_jobs_status ON proof_inspection_jobs(status, created_at)')
             conn.execute('CREATE INDEX IF NOT EXISTS idx_inspection_jobs_proof ON proof_inspection_jobs(proof_id)')
             conn.commit(); return
@@ -60,7 +65,8 @@ def migrate(conn):
                               'inspection_version':"INTEGER NOT NULL DEFAULT 1",
                               'file_sha256':'TEXT','vlm_analysis_json':'TEXT',
                               'vlm_error':'TEXT','inspected_at':'TEXT',
-                              'retry_count':'INTEGER NOT NULL DEFAULT 0'}
+                              'retry_count':'INTEGER NOT NULL DEFAULT 0'},
+          'proof_inspection_jobs': {'leave_type_hint':'TEXT','reason_category_hint':'TEXT'}
         }
         for table, fields in additions.items():
             if conn.execute(f"SELECT 1 FROM sqlite_master WHERE type='table' AND name='{table}'").fetchone():
@@ -81,7 +87,8 @@ def migrate(conn):
             id TEXT PRIMARY KEY, proof_id TEXT NOT NULL, employee_id TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'PENDING', version INTEGER NOT NULL DEFAULT 1,
             retry_count INTEGER NOT NULL DEFAULT 0, max_retries INTEGER NOT NULL DEFAULT 2,
-            error_message TEXT, created_at TEXT NOT NULL, started_at TEXT, completed_at TEXT)''',
+            error_message TEXT, created_at TEXT NOT NULL, started_at TEXT, completed_at TEXT,
+            leave_type_hint TEXT, reason_category_hint TEXT)''',
           '''CREATE INDEX IF NOT EXISTS idx_inspection_jobs_status ON proof_inspection_jobs(status, created_at)''',
           '''CREATE INDEX IF NOT EXISTS idx_inspection_jobs_proof ON proof_inspection_jobs(proof_id)''',
           '''CREATE TABLE approval_steps (

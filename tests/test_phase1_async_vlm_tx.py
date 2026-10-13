@@ -220,6 +220,118 @@ def test_4_duplicate_uploads_and_sha256_cache_hit(client, isolated_db, mock_vlm_
     assert data["inspection_status"] == "READY"
 
 
+def test_inspection_job_keeps_leave_context(isolated_db):
+    c = isolated_db.get_db_connection()
+    c.execute(
+        """INSERT INTO proof_documents(id, employee_id, storage_name, original_name, mime_type,
+           size_bytes, proof_type, facts_json, created_at, file_sha256, inspection_status)
+           VALUES('P_CONTEXT', 'E', 'context.png', 'context.png', 'image/png', 10,
+                  'MARRIAGE_CERTIFICATE', '{}', '2026-09-01T08:00:00', 'a' * 64, 'PENDING')"""
+    )
+    c.commit()
+    c.close()
+
+    inspector = ProofInspectionService()
+    inspector.enqueue_proof_inspection(
+        'P_CONTEXT',
+        'E',
+        proof_type_hint='MARRIAGE_CERTIFICATE',
+        leave_type_hint='SPECIAL_PAID',
+        reason_category_hint='SELF_MARRIAGE',
+    )
+
+    c = isolated_db.get_db_connection()
+    job = c.execute(
+        "SELECT leave_type_hint, reason_category_hint FROM proof_inspection_jobs WHERE proof_id='P_CONTEXT'"
+    ).fetchone()
+    c.close()
+    assert tuple(job) == ('SPECIAL_PAID', 'SELF_MARRIAGE')
+
+
+def test_proof_upload_accepts_leave_context(client, isolated_db):
+    response = client.post(
+        '/api/leave/proofs',
+        headers={'X-Actor-ID': 'E'},
+        data={
+            'proof_type': 'MARRIAGE_CERTIFICATE',
+            'leave_type': 'SPECIAL_PAID',
+            'reason_category': 'SELF_MARRIAGE',
+        },
+        files={'file': ('marriage.png', b'\x89PNG\r\n\x1a\nproof-bytes', 'image/png')},
+    )
+    assert response.status_code == 200, response.text
+    proof_id = response.json()['data']['proof_id']
+
+    c = isolated_db.get_db_connection()
+    job = c.execute(
+        "SELECT leave_type_hint, reason_category_hint FROM proof_inspection_jobs WHERE proof_id=?",
+        (proof_id,),
+    ).fetchone()
+    c.close()
+    assert tuple(job) == ('SPECIAL_PAID', 'SELF_MARRIAGE')
+
+
+def test_worker_uses_job_leave_context(isolated_db, mock_vlm_output):
+    inspector = ProofInspectionService()
+    job = {
+        'id': 'JOB_CONTEXT',
+        'proof_id': 'P_CONTEXT_WORKER',
+        'storage_name': 'context.png',
+        'proof_type': 'MARRIAGE_CERTIFICATE',
+        'leave_type_hint': 'SPECIAL_PAID',
+        'reason_category_hint': 'SELF_MARRIAGE',
+        'version': 1,
+    }
+
+    with patch(
+        'services.inspection_service.inspect_document_with_vlm',
+        return_value=mock_vlm_output,
+    ) as inspect, patch.object(inspector, '_apply_inspection_success'):
+        inspector._process_single_job(job)
+
+    assert inspect.call_args.kwargs['leave_type'] == 'SPECIAL_PAID'
+    assert inspect.call_args.kwargs['reason_category'] == 'SELF_MARRIAGE'
+
+
+def test_worker_prefers_linked_request_context(service, isolated_db, mock_vlm_output):
+    c = isolated_db.get_db_connection()
+    c.execute(
+        """INSERT INTO proof_documents(id, employee_id, storage_name, original_name, mime_type,
+           size_bytes, proof_type, facts_json, created_at, file_sha256, inspection_status)
+           VALUES('P_LINKED_CONTEXT', 'E', 'linked.png', 'linked.png', 'image/png', 10,
+                  'MARRIAGE_CERTIFICATE', '{}', '2026-09-01T08:00:00', 'b' * 64, 'PENDING')"""
+    )
+    c.commit()
+    c.close()
+
+    inspector = ProofInspectionService()
+    inspector.enqueue_proof_inspection(
+        'P_LINKED_CONTEXT', 'E', proof_type_hint='MARRIAGE_CERTIFICATE',
+        leave_type_hint='SICK_MEDICAL',
+    )
+    service.process_new_request(
+        employee_id='E',
+        structured_data={
+            'leave_type': 'SPECIAL_PAID',
+            'reason_category': 'SELF_MARRIAGE',
+            'from_date': '2026-09-08',
+            'to_date': '2026-09-08',
+            'reason': 'Kết hôn',
+            'proof_id': 'P_LINKED_CONTEXT',
+        },
+    )
+    job = inspector._claim_next_job()
+
+    with patch(
+        'services.inspection_service.inspect_document_with_vlm',
+        return_value=mock_vlm_output,
+    ) as inspect, patch.object(inspector, '_apply_inspection_success'):
+        inspector._process_single_job(job)
+
+    assert inspect.call_args.kwargs['leave_type'] == 'SPECIAL_PAID'
+    assert inspect.call_args.kwargs['reason_category'] == 'SELF_MARRIAGE'
+
+
 def test_5_replacement_of_proof_during_processing(client, service, isolated_db):
     """Case D: Uploading a new proof invalidates stale job; only current version affects decision."""
     c = isolated_db.get_db_connection()

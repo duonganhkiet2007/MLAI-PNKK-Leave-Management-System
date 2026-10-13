@@ -183,6 +183,76 @@ def test_upload_hr_verification_medical_workflow(client,isolated_db):
     assert isolated_db.get_employee('E')['remaining_leave_days']==100
     assert client.post('/api/leave/proofs/'+pid+'/verify',headers={'X-Actor-ID':'HR'},json=verify).status_code==409
 
+
+def test_child_marriage_analysis_uses_event_not_medical_fields(client,isolated_db,service):
+    pid=proof_fixture(isolated_db,{
+        **PROOF,
+        'proof_type':'MARRIAGE_CERTIFICATE',
+        'proof_verification_status':'UNVERIFIED',
+        'issuer':'UBND Phường Dịch Vọng Hậu, Cầu Giấy, Hà Nội',
+        'issue_date':'2026-09-22',
+        'document_readability':'READABLE',
+        'signature_present':True,
+    })
+    vlm_json={
+        'inspector_persona':'Chuyên viên xác minh hôn sự',
+        'target_model':'qwen2.5vl:7b',
+        'inspection_mode':'OLLAMA_REAL_QWEN25_VL_3B',
+        '_inspection_context':{'leave_type':'SPECIAL_PAID','reason_category':'CHILD_MARRIAGE'},
+        'document_summary':{
+            'patient_name':'TRẦN QUỐC ANH',
+            'issuer':'UBND Phường Dịch Vọng Hậu, Cầu Giấy, Hà Nội',
+            'issue_date':'2026-09-22',
+            'doctor_recommended_range':{'from':None,'to':None,'days':None},
+            'subject_name':'TRẦN QUỐC ANH',
+            'partner_name':'ĐẶNG MAI PHƯƠNG',
+            'event_type':'CHILD_MARRIAGE',
+            'wedding_date':'2026-09-22',
+        },
+        'flags':{
+            'has_red_stamp':True,
+            'has_doctor_signature':False,
+            'signature_present_on_scan':True,
+            'document_readability':'READABLE',
+            'is_tampered':False,
+            'ai_generated_or_edited':False,
+        },
+        'correlation_analysis':{'score':None,'issues':[],'requested_workdays':1},
+        'escalation_flags':[],
+        'raw_fields_detected':['subject_name','partner_name','wedding_date'],
+    }
+    c=isolated_db.get_db_connection()
+    c.execute(
+        "UPDATE proof_documents SET inspection_status='READY',vlm_analysis_json=? WHERE id=?",
+        (json.dumps(vlm_json,ensure_ascii=False),pid),
+    )
+    c.commit();c.close()
+
+    request=service.process_new_request(
+        employee_id='E',
+        structured_data=payload(
+            leave_type='SPECIAL_PAID',
+            reason_category='CHILD_MARRIAGE',
+            from_date='2026-10-12',
+            to_date='2026-10-12',
+            reason='Nghỉ dự đám cưới con trai Trần Quốc Anh',
+            proof_id=pid,
+        ),
+    )
+    response=client.get(f"/api/leave/{request['id']}/analysis",headers={'X-Actor-ID':'E'})
+    assert response.status_code==200,response.text
+    analysis=response.json()
+    nodes={node['stage']:node for node in analysis['decision_tree_checklist']}
+
+    assert nodes['VLM_DATE_COVERAGE']['status']=='FAIL'
+    assert 'Ngày cưới trên giấy' in nodes['VLM_DATE_COVERAGE']['note']
+    assert 'Bác sĩ chỉ định' not in nodes['VLM_DATE_COVERAGE']['note']
+    assert nodes['VLM_CORRELATION']['status']=='NOT_RUN'
+    assert nodes['VLM_PATIENT']['status']=='NOT_RUN'
+    assert 'TRẦN QUỐC ANH' in nodes['PROOF']['note']
+    assert 'Chữ ký người có thẩm quyền: Có' in nodes['VLM_INTEGRITY']['note']
+    assert all('y tế' not in item.casefold() for item in analysis['llm_summary']['info_missing_vn'])
+
 def test_upload_limits_and_fake_mime(client):
     assert client.post('/api/leave/proofs',headers={'X-Actor-ID':'E'},files={'file':('x.png',b'not png','image/png')}).status_code==415
     assert client.post('/api/leave/proofs',headers={'X-Actor-ID':'E'},files={'file':('x.pdf',b'%PDF-'+b'0'*(10*1024*1024),'application/pdf')}).status_code==413

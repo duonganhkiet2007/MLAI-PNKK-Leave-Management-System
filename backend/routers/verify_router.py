@@ -233,7 +233,8 @@ def _ensure_proof_doc(case: dict):
     proof_file = case.get('proof_file')
     if not proof_file:
         return None, 'none'
-    uploads_dir = Path(__file__).resolve().parents[1] / 'uploads'
+    # Dùng đúng thư mục upload đang chạy (LEAVE_UPLOAD_DIR), giống API tải chứng từ.
+    uploads_dir = Path(os.getenv('LEAVE_UPLOAD_DIR', str(Path(db.DB_PATH).parent / 'uploads')))
     uploads_dir.mkdir(parents=True, exist_ok=True)
     ext = Path(proof_file).suffix or '.png'
     # Gán tên file bằng UUID nếu tên file có tiếng Việt/non-ASCII
@@ -253,17 +254,19 @@ def _ensure_proof_doc(case: dict):
     pid = f"PROOF-TC-{case['id']}"
     file_size = dest_path.stat().st_size if dest_path.exists() else 50000
     ptype = (case.get('proof') or {}).get('proof_type') or 'OTHER'
+    row = {
+        'id': pid, 'employee_id': case['employee_id'], 'storage_name': uuid_storage_name, 'original_name': uuid_storage_name,
+        'mime_type': 'image/png', 'size_bytes': file_size, 'proof_type': ptype, 'facts_json': json.dumps(case.get('proof') or {}),
+        # Cột cũ chỉ có ở DB tạo từ schema đời trước; DB mới không có nên chỉ ghi khi cột tồn tại.
+        'storage_path': str(dest_path), 'file_real_path': str(dest_path), 'original_filename': uuid_storage_name,
+        'file_size_bytes': file_size, 'uploaded_by': case['employee_id'],
+        'created_at': datetime.now().isoformat(), 'inspection_status': 'READY',
+    }
     with st.transaction() as conn:
-        conn.execute('''INSERT OR REPLACE INTO proof_documents(
-            id, employee_id, storage_name, original_name, mime_type, size_bytes,
-            proof_type, facts_json, storage_path, file_real_path, original_filename, file_size_bytes, uploaded_by, created_at,
-            inspection_status
-        ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', (
-            pid, case['employee_id'], uuid_storage_name, uuid_storage_name, 'image/png', file_size,
-            ptype, json.dumps(case.get('proof') or {}), str(dest_path), str(dest_path),
-            uuid_storage_name, file_size, case['employee_id'], datetime.now().isoformat(),
-            'READY'
-        ))
+        existing = {r[1] for r in conn.execute('PRAGMA table_info(proof_documents)')}
+        cols = [k for k in row if k in existing]
+        conn.execute(f"INSERT OR REPLACE INTO proof_documents({','.join(cols)}) VALUES({','.join('?' for _ in cols)})",
+                     [row[k] for k in cols])
     return pid, 'image_attachment'
 
 def _run_single_case(c: dict, orch: LeaveOrchestratorService = None):

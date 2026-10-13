@@ -569,8 +569,14 @@ def get_vlm_status():
 def get_ai_stack_status():
     return {'llm':get_llm_status(),'vlm':get_vlm_status(),'system':{'backend':'ok','db':'ok','version':'3.0.0'}}
 
+def _require_any_role(actor_id, *roles):
+    with st.readonly_connection() as conn:
+        if not any(st.has_role(conn, actor_id, role) for role in roles):
+            raise st.AccessDenied('Bạn không có quyền thực hiện thao tác quản trị này.')
+
 @router.post('/vlm-restart')
-def restart_vlm_endpoint():
+def restart_vlm_endpoint(actor_id=Depends(actor)):
+    _require_any_role(actor_id, 'DIRECT_MANAGER', 'CEO', 'HRD')
     import threading
     import storage as st
     from services.inspection_service import GLOBAL_INSPECTION_SERVICE
@@ -640,7 +646,8 @@ class LeaveAllocationInput(BaseModel):
 @router.post('/allocate-leave')
 def allocate_leave_endpoint(payload: LeaveAllocationInput,actor_id=Depends(actor)):
     with st.transaction() as conn:
-        if not st.has_role(conn,actor_id,'HRD'): raise st.AccessDenied('Chỉ HRD được cấp phép.')
+        # Tổ chức hiện không có HRD (policy_rules.md §3: Lead Team + CEO) → CEO được cấp phép thay.
+        if not (st.has_role(conn,actor_id,'HRD') or st.has_role(conn,actor_id,'CEO')): raise st.AccessDenied('Chỉ HRD hoặc Tổng Giám đốc (CEO) được cấp phép.')
         query="SELECT employee_id FROM employees WHERE status='ACTIVE'"
         args=[]
         if payload.target_type=='EMPLOYEE': query+=' AND employee_id=?';args=[payload.target_id]
@@ -668,7 +675,8 @@ def get_gpu_status():
 def debug_status(): return get_llm_status()
 
 @router.post('/reset-database')
-def reset_database():
+def reset_database(actor_id=Depends(actor)):
+    # Không cho gọi ẩn danh (trước đây ai có URL cũng xóa được toàn bộ dữ liệu bằng một lệnh POST).
     try:
         db.reset_all_data()
         return {'success': True, 'message': 'Đã khôi phục toàn bộ database về trạng thái demo ban đầu.'}
@@ -676,13 +684,16 @@ def reset_database():
         raise HTTPException(500, f'Lỗi khi reset database: {str(e)}')
 
 @router.get('/server-logs')
-def get_server_logs(lines: int = 100):
+def get_server_logs(lines: int = 100, actor_id=Depends(actor)):
+    # Log chứa IP người dùng và đường dẫn nội bộ: chỉ CEO được xem.
+    _require_any_role(actor_id, 'CEO')
+    lines = max(1, min(int(lines), 1000))
     current_dir = os.path.dirname(os.path.abspath(__file__))
     candidates = [
-        os.path.join(current_dir, 'server.log'),
-        os.path.join(os.path.dirname(current_dir), 'server.log'),
-        '/workingspace_aiclub/WorkingSpace/Personal/phongnh/MLAI/backend/server.log',
+        os.path.join(os.getenv('LEAVE_DATA_DIR', ''), 'server.log') if os.getenv('LEAVE_DATA_DIR') else '',
+        os.path.join(os.path.dirname(current_dir), 'data', 'server.log'),
     ]
+    candidates = [c for c in candidates if c]
     log_path = None
     for p in candidates:
         if os.path.exists(p):

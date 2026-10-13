@@ -15,6 +15,7 @@ let currentManagerRoleId = "EMP001";
 let editingRequestId = null;
 let currentProofId = null;
 let selectedProofFile = null;
+let currentProofContext = null;
 let activeRequests = [];
 let requestsLoadInFlight = false;
 let lastRequestsLoadTime = 0;
@@ -68,7 +69,20 @@ async function getActorToken(actorId) {
   return null;
 }
 
-async function apiFetch(url, options = {}) {
+// Lỗi API (FastAPI/Pydantic) → câu dễ đọc, thay vì in nguyên JSON thô lên toast
+function formatApiError(detail) {
+  if (!detail) return "Có lỗi xảy ra, vui lòng thử lại.";
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(d => {
+      const field = Array.isArray(d.loc) ? d.loc.filter(x => x !== "body").join(".") : "";
+      return field ? `${field}: ${d.msg || "không hợp lệ"}` : (d.msg || String(d));
+    }).join("; ");
+  }
+  return detail.message || detail.msg || JSON.stringify(detail);
+}
+
+async function apiFetch(url, options = {}, _retried = false) {
   const headers = new Headers(options.headers || {});
   const currentActor = currentMode === 'manager' ? currentManagerRoleId : currentEmployeeId;
   if (currentActor) {
@@ -78,7 +92,13 @@ async function apiFetch(url, options = {}) {
       headers.set('Authorization', `Bearer ${token}`);
     }
   }
-  return fetch(url, {...options, headers});
+  const res = await fetch(url, {...options, headers});
+  // Token hết hạn hoặc server đã đổi khóa ký: bỏ token cũ, xin token mới và thử lại một lần
+  if (res.status === 401 && currentActor && !_retried) {
+    delete authTokenCache[currentActor];
+    return apiFetch(url, options, true);
+  }
+  return res;
 }
 const DECISION_LABELS = {
   NO_LEAVE_REQUIRED: 'Không cần xin phép', AUTO_APPROVE: 'Tự động duyệt',
@@ -317,9 +337,12 @@ document.addEventListener("DOMContentLoaded", () => {
   loadAllRequests();
   loadPolicyDocument();
 
-  // Background sync for requests
+  // Background sync for requests (+ số dư phép của nhân viên đang xem: thay đổi khi được cấp phép / thu hồi
+  // mà không làm danh sách đơn đổi, nên phải tải riêng)
+  let pollTick = 0;
   pollInterval = setInterval(() => {
     loadAllRequests(true);
+    if (currentMode === "staff" && (++pollTick % 3 === 0)) refreshCurrentEmployeeBalance();
   }, 4000);
 
   // Activate Test Mode by default
@@ -495,7 +518,7 @@ function initModeSwitcher() {
   const btnResetDb = document.getElementById("btn-reset-database");
   if (btnResetDb) {
     btnResetDb.addEventListener("click", async () => {
-      const confirmed = window.confirm("BẠN CÓ CHẮC CHẮN MUỐN RESET TOÀN BỘ DATABASE?\n\n- Toàn bộ đơn xin nghỉ đã nộp và các thao tác duyệt/bổ sung sẽ được khôi phục về mặc định.\n- Số dư ngày phép của nhân viên sẽ được reset về ban đầu (12 ngày).\n- 5 đơn mẫu demo sẽ được nạp lại.");
+      const confirmed = window.confirm("BẠN CÓ CHẮC CHẮN MUỐN RESET TOÀN BỘ DATABASE?\n\n- Toàn bộ đơn xin nghỉ đã nộp và các thao tác duyệt/bổ sung sẽ bị xóa (áp dụng cho cả Staff và Manager).\n- Số dư ngày phép của nhân viên được khôi phục về ban đầu.");
       if (!confirmed) return;
 
       const originalHtml = btnResetDb.innerHTML;
@@ -513,18 +536,21 @@ function initModeSwitcher() {
           editingRequestId = null;
           currentProofId = null;
           document.getElementById('form-staff-standard')?.reset();
+          selectedProofFile = null;
+          setMgrRecordsFilter("ALL");
+          activeRequests = [];
           await loadEmployees();
-          await loadAllRequests();
-          if (currentMode === "staff") {
-            renderStaffDashboard();
-            renderStaffRequests();
-          } else {
-            renderManagerBanner();
-            renderManagerOverviewKPIs();
-            renderManagerQueue();
-            renderAutoApprovedLogs();
-            renderManagerAllRequests();
-          }
+          await loadAllRequests(false, true);
+          // Làm mới cả giao diện Staff lẫn Manager (không chỉ chế độ đang mở)
+          renderStaffDashboard();
+          renderStaffRequests();
+          renderStaffRecentPreview();
+          renderStaffHandover();
+          renderManagerBanner();
+          renderManagerOverviewKPIs();
+          renderManagerQueue();
+          renderManagerAllRequests();
+          updateBadgesAndCounters();
           renderWeeklyCalendar();
         } else {
           showToast("Lỗi khi reset database: " + (result.detail || "Không rõ nguyên nhân"), "error");
@@ -672,6 +698,22 @@ function initDemoLoginAndRoles() {
       if (roleSelect) autoResizeSelect(roleSelect);
     });
   }
+}
+
+async function refreshCurrentEmployeeBalance() {
+  const empId = currentEmployeeId;
+  try {
+    const res = await apiFetch(`${API_BASE}/api/verify/employees/${encodeURIComponent(empId)}`);
+    if (!res.ok) return;
+    const fresh = (await res.json()).data;
+    const cached = employeesCache.find(e => e.employee_id === empId);
+    if (!fresh || !cached || empId !== currentEmployeeId) return;
+    if (cached.remaining_leave_days !== fresh.remaining_leave_days || cached.employment_status !== fresh.employment_status) {
+      cached.remaining_leave_days = fresh.remaining_leave_days;
+      cached.employment_status = fresh.employment_status;
+      renderStaffDashboard();
+    }
+  } catch (err) { /* lần sau thử lại */ }
 }
 
 async function loadEmployees() {
@@ -1141,21 +1183,21 @@ const STAFF_TEST_CASES = [
     title: "TC-VLM-01: Khám ngoại trú 2 ngày phòng khám Medlatec hợp lệ",
     badge: "Chứng từ · Hợp lệ",
     badgeClass: "bg-info-lt",
-    desc: "Đơn nghỉ ốm 2 ngày kèm chứng từ y tế PK Đa khoa Medlatec có chữ ký bác sĩ & dấu mộc vuông -> Chuyển Quản lý duyệt.",
+    desc: "Đơn nghỉ ốm 3 ngày (14–16/10) kèm chứng từ PK Đa khoa Medlatec có chữ ký bác sĩ & dấu mộc -> Chuyển Quản lý duyệt.",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-06",
-      to_date: "2026-10-07",
-      reason: "Viêm dạ dày tá tràng cấp tính điều trị ngoại trú",
+      from_date: "2026-10-14",
+      to_date: "2026-10-16",
+      reason: "Sốt xuất huyết Dengue điều trị ngoại trú",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Phòng khám Đa khoa Medlatec",
-        issue_date: "2026-10-06",
+        issue_date: "2026-10-14",
         signature_present: true,
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-06T07:30:00+07:00",
+      submitted_at: "2026-10-14T07:30:00+07:00",
       total_team_members: 6
     },
     expected: {
@@ -1170,17 +1212,17 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP005-02: [Bẫy quá hạn] Nộp chứng từ y tế quá thời hạn 3 ngày làm việc",
     badge: "Bẫy VLM · Quá hạn",
     badgeClass: "bg-warning-lt",
-    desc: "Chứng từ khám từ ngày 15/09 nhưng đến 05/10 mới nộp (quá 3 ngày làm việc) -> Bắt cảnh báo nộp muộn DOC_SUBMISSION_EXPIRED.",
+    desc: "Giấy khám bệnh từ đợt ốm 15–18/05/2026 nhưng đến 05/10 mới nộp đơn -> Báo nghỉ ốm trễ hạn (NOTICE_PERIOD_VIOLATED), chuyển Quản lý xem xét.",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-09-15",
-      to_date: "2026-09-16",
+      from_date: "2026-05-15",
+      to_date: "2026-05-18",
       reason: "Nộp bổ sung giấy khám sức khỏe tháng trước",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Bệnh viện Đa khoa Quốc tế Thu Cúc",
-        issue_date: "2026-09-15",
+        issue_date: "2026-05-15",
         signature_present: true,
         document_readability: "READABLE"
       },
@@ -1190,7 +1232,7 @@ const STAFF_TEST_CASES = [
     expected: {
       decision: "ESCALATE",
       target_role: "DIRECT_MANAGER",
-      error_code: "DOC_SUBMISSION_EXPIRED",
+      error_code: "NOTICE_PERIOD_VIOLATED",
       note: "Quá hạn nộp chứng từ: Chuyển Quản lý xem xét lý do nộp trễ"
     }
   },
@@ -1253,18 +1295,18 @@ const STAFF_TEST_CASES = [
     desc: "Nghỉ ốm 2 ngày điều trị viêm xoang có Giấy chứng nhận nghỉ việc hưởng BHXH BV Đống Đa -> Chuyển Quản lý duyệt.",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-14",
-      to_date: "2026-10-15",
-      reason: "Viêm phế quản co thắt điều trị ngoại trú",
+      from_date: "2026-10-15",
+      to_date: "2026-10-16",
+      reason: "Viêm amidan hốc mủ cấp tính điều trị ngoại trú",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Bệnh viện Đa khoa Đống Đa",
-        issue_date: "2026-10-14",
+        issue_date: "2026-10-15",
         signature_present: true,
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-14T08:00:00+07:00",
+      submitted_at: "2026-10-15T07:30:00+07:00",
       total_team_members: 6
     },
     expected: {
@@ -1279,26 +1321,26 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP006-02: Giấy cấp cứu ban đêm tai nạn nhẹ BV E (Hỗ trợ khẩn cấp)",
     badge: "Khẩn cấp · Ban đêm",
     badgeClass: "bg-danger-lt",
-    desc: "Sơ cứu vết thương phần mềm tại Khoa Cấp cứu BV E lúc 23h45 đêm -> Nộp giấy cấp cứu, chuyển Quản lý xem xét phê duyệt hỗ trợ.",
+    desc: "Nhập Khoa Cấp cứu BV E lúc 06:15 sáng 15/10 vì đau bụng cấp -> Phiếu cấp cứu hợp lệ (đủ tên, nơi cấp, ngày, chữ ký) cho 1 ngày nghỉ: AI tự duyệt theo quy chế §3.1.",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-19",
-      reason: "Cấp cứu ban đêm tai nạn sinh hoạt tại Khoa Cấp cứu BV E",
+      from_date: "2026-10-15",
+      to_date: "2026-10-15",
+      reason: "Cấp cứu đau bụng cấp hố chậu phải nghi viêm ruột thừa tại Khoa Cấp cứu BV E",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Bệnh viện E - Khoa Cấp cứu",
-        issue_date: "2026-10-19",
+        issue_date: "2026-10-15",
         signature_present: true,
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-19T07:15:00+07:00",
+      submitted_at: "2026-10-15T07:15:00+07:00",
       total_team_members: 6
     },
     expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
+      decision: "AUTO_APPROVE",
+      target_role: "AI",
       note: "Ca cấp cứu khẩn cấp: Chuyển Quản lý xử lý nhanh chế độ"
     }
   },
@@ -1359,26 +1401,26 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP007-01: Thử việc nghỉ ốm 1 ngày có chứng từ PK Medlatec",
     badge: "Thử việc · Ốm BHXH",
     badgeClass: "bg-info-lt",
-    desc: "Nhân sự thử việc có đóng BHXH nộp đơn ốm 1 ngày kèm chứng từ đầy đủ -> Chuyển Quản lý trực tiếp phê duyệt.",
+    desc: "Nhân sự thử việc (có đóng BHXH) nộp đơn ốm 1 ngày kèm chứng từ đầy đủ -> AI tự duyệt theo quy chế §3.1 (ốm 1 ngày, chứng từ hợp lệ).",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-15",
-      to_date: "2026-10-15",
-      reason: "Sốt siêu vi điều trị ngoại trú theo chỉ định",
+      from_date: "2026-10-16",
+      to_date: "2026-10-16",
+      reason: "Migraine tiền đình cấp, hạ đường huyết điều trị ngoại trú",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Phòng khám Đa khoa Medlatec Cầu Giấy",
-        issue_date: "2026-10-15",
+        issue_date: "2026-10-16",
         signature_present: true,
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-15T08:10:00+07:00",
+      submitted_at: "2026-10-16T08:10:00+07:00",
       total_team_members: 6
     },
     expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
+      decision: "AUTO_APPROVE",
+      target_role: "AI",
       note: "Thử việc có chứng từ y tế hợp lệ: Chuyển Quản lý duyệt chế độ BHXH"
     }
   },
@@ -1388,27 +1430,27 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP007-02: [Bẫy thiếu chữ ký] Chứng từ thiếu chữ ký bác sĩ điều trị",
     badge: "Bẫy VLM · Thiếu ký",
     badgeClass: "bg-danger-lt",
-    desc: "Chứng từ có mộc đỏ bệnh viện nhưng ô bác sĩ khám ký tên bị bỏ trống -> Bắt lỗi DOC_SIGNATURE_MISSING, yêu cầu bổ sung.",
+    desc: "Chứng từ có mộc đỏ bệnh viện nhưng ô bác sĩ khám ký tên bị bỏ trống -> Báo thiếu chữ ký (DOC_FIELD_MISSING), yêu cầu bổ sung.",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-15",
-      to_date: "2026-10-15",
+      from_date: "2026-10-16",
+      to_date: "2026-10-16",
       reason: "Nghỉ ốm theo dõi",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Bệnh viện Giao thông Vận tải",
-        issue_date: "2026-10-15",
+        issue_date: "2026-10-16",
         signature_present: false,
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-15T08:15:00+07:00",
+      submitted_at: "2026-10-16T08:15:00+07:00",
       total_team_members: 6
     },
     expected: {
       decision: "NEED_CORRECTION",
       target_role: "AI",
-      error_code: "DOC_SIGNATURE_MISSING",
+      error_code: "DOC_FIELD_MISSING",
       note: "Thiếu chữ ký bác sĩ chuyên khoa: Yêu cầu nhân viên xin xác nhận lại"
     }
   },
@@ -1422,26 +1464,26 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP008-01: Khám thai định kỳ 1 ngày có chứng nhận y tế (BHXH)",
     badge: "BHXH · Khám thai",
     badgeClass: "bg-pink-lt",
-    desc: "Nguyễn Thị Kim Ngân nộp đơn khám thai định kỳ kèm Giấy chứng nhận BV Phụ sản Hà Nội -> Chuyển Quản lý duyệt hưởng chế độ thai sản.",
+    desc: "Nguyễn Thị Kim Ngân nộp đơn khám thai định kỳ kèm Giấy chứng nhận BV Phụ sản Hà Nội -> Chế độ thai sản: chuyển Tổng Giám đốc duyệt theo quy chế §3.1.",
     payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-16",
-      to_date: "2026-10-16",
+      leave_type: "MATERNITY",
+      from_date: "2026-10-19",
+      to_date: "2026-10-19",
       reason: "Khám thai định kỳ tuần thứ 28 tại BV Phụ sản Hà Nội",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Bệnh viện Phụ sản Hà Nội",
-        issue_date: "2026-10-16",
+        issue_date: "2026-10-19",
         signature_present: true,
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-16T08:00:00+07:00",
+      submitted_at: "2026-10-19T08:00:00+07:00",
       total_team_members: 6
     },
     expected: {
       decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
+      target_role: "CEO",
       note: "Chế độ thai sản BHXH: Chuyển Quản lý duyệt theo Luật BHXH"
     }
   },
@@ -1451,21 +1493,21 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP008-02: Tang lễ tứ thân phụ mẫu 3 ngày hưởng nguyên lương",
     badge: "Nguyên lương · Tang chế",
     badgeClass: "bg-dark-lt",
-    desc: "Nghỉ việc riêng hưởng nguyên lương do bố đẻ qua đời kèm Giấy chứng tử UBND xã -> Quản lý duyệt 3 ngày nguyên lương theo Điều 115 BLLĐ.",
+    desc: "Nghỉ việc riêng hưởng nguyên lương do mẹ đẻ qua đời (18/10) kèm Giấy chứng tử -> Quản lý duyệt 3 ngày nguyên lương theo Điều 115 BLLĐ.",
     payload: {
       leave_type: "SPECIAL_PAID",
-      reason_category: "PARENT_FUNERAL",
-      from_date: "2026-10-20",
-      to_date: "2026-10-22",
-      reason: "Lo tang lễ cho bố ruột (Nguyễn Văn Thành) tại quê nhà Nam Định",
+      reason_category: "PARENT_DEATH",
+      from_date: "2026-10-19",
+      to_date: "2026-10-21",
+      reason: "Lo tang lễ cho mẹ ruột (Trần Thị Lan) tại quê nhà",
       proof: {
         proof_type: "OTHER",
         proof_verification_status: "VERIFIED",
         issuer: "UBND Xã Hải Hậu, Tỉnh Nam Định",
-        issue_date: "2026-10-19",
+        issue_date: "2026-10-18",
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-20T06:30:00+07:00",
+      submitted_at: "2026-10-19T06:30:00+07:00",
       total_team_members: 6
     },
     expected: {
@@ -1512,17 +1554,17 @@ const STAFF_TEST_CASES = [
     payload: {
       leave_type: "SPECIAL_PAID",
       reason_category: "SELF_MARRIAGE",
-      from_date: "2026-10-05",
-      to_date: "2026-10-07",
+      from_date: "2026-10-19",
+      to_date: "2026-10-21",
       reason: "Nghỉ đám cưới bản thân (Lễ thành hôn)",
       proof: {
         proof_type: "MARRIAGE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "UBND Phường Dịch Vọng Hậu",
-        issue_date: "2026-09-20",
+        issue_date: "2026-10-20",
         document_readability: "READABLE"
       },
-      submitted_at: "2026-09-25T08:00:00+07:00",
+      submitted_at: "2026-10-12T08:00:00+07:00",
       total_team_members: 6
     },
     expected: {
@@ -1537,22 +1579,22 @@ const STAFF_TEST_CASES = [
     title: "TC-VLM-02: Bẫy lệch tên bệnh nhân trên giấy nghỉ ốm (NAME_MISMATCH)",
     badge: "Bẫy VLM · Lệch tên",
     badgeClass: "bg-danger-lt",
-    desc: "Giấy chứng nhận ghi tên bệnh nhân 'Phạm Quốc Dũng' khác tên Võ Minh Khang -> Bắt cờ NAME_MISMATCH, yêu cầu sửa/nộp lại đơn.",
+    desc: "Giấy chứng nhận ghi tên bệnh nhân 'Võ Hoàng Long' khác tên Võ Minh Khang -> Bắt cờ NAME_MISMATCH, yêu cầu sửa/nộp lại đơn.",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-12",
-      to_date: "2026-10-14",
+      from_date: "2026-10-20",
+      to_date: "2026-10-22",
       reason: "Nghỉ ốm điều trị",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Bệnh viện Đa khoa Medlatec",
-        patient_name: "Phạm Quốc Dũng",
-        issue_date: "2026-10-12",
+        patient_name: "Võ Hoàng Long",
+        issue_date: "2026-10-20",
         signature_present: true,
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-12T07:30:00+07:00",
+      submitted_at: "2026-10-20T07:30:00+07:00",
       total_team_members: 6
     },
     expected: {
@@ -1641,23 +1683,22 @@ const STAFF_TEST_CASES = [
     title: "TC-VLM-04: Ảnh chụp chứng từ bị mờ nhòe, mất nét (DOC_ILLEGIBLE)",
     badge: "Bẫy VLM · Mờ nhòe",
     badgeClass: "bg-danger-lt",
-    desc: "Ảnh chụp tài liệu mờ nhòe, mất nét không đọc được thông tin -> Bắt cờ DOC_ILLEGIBLE, yêu cầu tải lại ảnh rõ nét.",
+    desc: "Ảnh chụp tài liệu mờ nhòe, mất nét không đọc được thông tin -> Không tự đối soát được (DOC_ILLEGIBLE / PROOF_REVIEW_REQUIRED), chuyển Quản lý kiểm tra bản gốc / yêu cầu ảnh rõ.",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-08",
-      to_date: "2026-10-10",
+      from_date: "2026-10-21",
+      to_date: "2026-10-23",
       reason: "Nghỉ ốm điều trị",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         document_readability: "ILLEGIBLE"
       },
-      submitted_at: "2026-10-08T07:30:00+07:00",
+      submitted_at: "2026-10-21T07:30:00+07:00",
       total_team_members: 6
     },
     expected: {
-      decision: "NEED_CORRECTION",
-      target_role: "AI",
-      error_code: "DOC_ILLEGIBLE",
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
       note: "Bẫy chất lượng ảnh: Ảnh mờ nhòe, yêu cầu bổ sung ảnh đọc được"
     }
   },
@@ -1667,21 +1708,21 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP010-02: Nghỉ ốm 3 ngày tiêu chuẩn BV Vinmec Times City",
     badge: "BHXH · Vinmec Times City",
     badgeClass: "bg-info-lt",
-    desc: "Nghỉ ốm ngoại trú 3 ngày do viêm amidan hốc mủ kèm chứng từ chuẩn Vinmec Times City -> Quản lý duyệt chế độ BHXH.",
+    desc: "Nghỉ ốm ngoại trú 3 ngày (21–23/10) kèm chứng từ BV Thanh Nhàn -> Quản lý duyệt chế độ BHXH.",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-08",
-      to_date: "2026-10-10",
-      reason: "Viêm amidan hốc mủ sốt cao điều trị ngoại trú",
+      from_date: "2026-10-21",
+      to_date: "2026-10-23",
+      reason: "Sốt virus nhiễm khuẩn hô hấp cấp điều trị ngoại trú",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Bệnh viện ĐKQT Vinmec Times City",
-        issue_date: "2026-10-08",
+        issue_date: "2026-10-21",
         signature_present: true,
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-08T07:30:00+07:00",
+      submitted_at: "2026-10-21T07:30:00+07:00",
       total_team_members: 6
     },
     expected: {
@@ -1703,15 +1744,15 @@ const STAFF_TEST_CASES = [
     desc: "Hoàng Kim Yến nộp đơn ốm 1 ngày lúc 07:45 sáng kèm đơn thuốc bệnh viện hợp lệ -> AI tự duyệt, 0 trừ phép năm (chế độ BHXH).",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-05",
-      to_date: "2026-10-05",
-      reason: "Bị sốt cảm cúm đột xuất",
-      submitted_at: "2026-10-05T07:45:00+07:00",
+      from_date: "2026-10-22",
+      to_date: "2026-10-22",
+      reason: "Viêm dạ dày ruột cấp tính, mất nước nhẹ",
+      submitted_at: "2026-10-22T07:45:00+07:00",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Bệnh viện Đa khoa Quốc tế Hà Nội",
-        issue_date: "2026-10-05",
+        issue_date: "2026-10-22",
         signature_present: true,
         document_readability: "READABLE"
       },
@@ -1730,21 +1771,21 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP011-02: Tai nạn giao thông nhẹ trên đường đi làm (Thẩm định tai nạn)",
     badge: "Thẩm định · Tai nạn LĐ",
     badgeClass: "bg-warning-lt",
-    desc: "Va chạm giao thông nhẹ trên tuyến đường đi làm hợp lý lúc 07:30 sáng -> Nộp bệnh án sơ cứu, chuyển Quản lý thẩm định chế độ tai nạn lao động.",
+    desc: "Tai nạn lao động: trượt ngã cầu thang tòa nhà công ty, có phiếu tiếp nhận sơ cứu -> Chuyển Quản lý thẩm định chế độ tai nạn lao động.",
     payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-13",
-      to_date: "2026-10-14",
-      reason: "Xây xát phần mềm do va quệt xe trên đường đi làm",
+      leave_type: "WORK_ACCIDENT",
+      from_date: "2026-10-22",
+      to_date: "2026-10-23",
+      reason: "Trượt ngã cầu thang bộ tầng 6 tòa nhà công ty, bong gân cổ chân phải",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Bệnh viện Giao thông Vận tải",
-        issue_date: "2026-10-13",
+        issue_date: "2026-10-22",
         signature_present: true,
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-13T08:15:00+07:00",
+      submitted_at: "2026-10-22T09:00:00+07:00",
       total_team_members: 6
     },
     expected: {
@@ -1811,18 +1852,18 @@ const STAFF_TEST_CASES = [
     desc: "Nghỉ chăm sóc con gái 4 tuổi bị viêm phế quản kèm Giấy chứng nhận BV Nhi Trung ương -> Chuyển Quản lý duyệt hưởng chế độ con ốm.",
     payload: {
       leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-20",
-      to_date: "2026-10-21",
-      reason: "Nghỉ chăm sóc con gái ruột (Lê Ngọc Ánh, 4 tuổi) điều trị viêm phế quản",
+      from_date: "2026-10-23",
+      to_date: "2026-10-23",
+      reason: "Nghỉ chăm sóc con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
         issuer: "Bệnh viện Nhi Trung ương",
-        issue_date: "2026-10-20",
+        issue_date: "2026-10-23",
         signature_present: true,
         document_readability: "READABLE"
       },
-      submitted_at: "2026-10-20T08:00:00+07:00",
+      submitted_at: "2026-10-23T07:30:00+07:00",
       total_team_members: 6
     },
     expected: {
@@ -1837,11 +1878,12 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP012-03: [Bẫy quy chế] Cưới em gái ruột (Không thuộc diện có lương)",
     badge: "Bẫy quy chế · Không lương",
     badgeClass: "bg-warning-lt",
-    desc: "Tham dự lễ cưới em gái ruột -> Điều 115 BLLĐ chỉ cho nghỉ có lương khi bản thân hoặc con kết hôn. Đơn chuyển thành nghỉ không lương hoặc phép năm.",
+    desc: "Xin nghỉ CÓ LƯƠNG để dự cưới em gái ruột -> Điều 115 BLLĐ chỉ cho nghỉ có lương khi bản thân hoặc con kết hôn. Hệ thống trả đơn, hướng dẫn đổi sang nghỉ không lương luật định hoặc phép năm.",
     payload: {
       leave_type: "SPECIAL_PAID",
-      from_date: "2026-10-24",
-      to_date: "2026-10-24",
+      reason_category: "SIBLING_MARRIAGE",
+      from_date: "2026-10-23",
+      to_date: "2026-10-23",
       reason: "Tham dự lễ thành hôn của em gái ruột (Lê Mai Linh)",
       proof: {
         proof_type: "MARRIAGE_CERTIFICATE",
@@ -1854,9 +1896,9 @@ const STAFF_TEST_CASES = [
       total_team_members: 6
     },
     expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      error_code: "NON_COMPLIANT_POLICY",
+      decision: "NEED_CORRECTION",
+      target_role: "AI",
+      error_code: "REASON_REQUIRED",
       note: "Bẫy quy chế: Anh/chị/em cưới không có lương -> Quản lý hướng dẫn đổi loại phép"
     }
   },
@@ -1876,6 +1918,7 @@ const STAFF_TEST_CASES = [
       from_date: "2026-10-05",
       to_date: "2026-10-07",
       reason: "Nghỉ phép cá nhân",
+      handover_person_id: "EMP003",
       submitted_at: "2026-09-25T08:00:00+07:00",
       total_team_members: 6
     },
@@ -3119,6 +3162,7 @@ async function attachProofFileFromUrl(url, fileName, proofType) {
 
 function clearAttachedProofFile() {
   selectedProofFile = null;
+  currentProofContext = null;
   const fileInput = document.getElementById("staff-file-input");
   const promptEl = document.getElementById("dropzone-prompt");
   const cardEl = document.getElementById("attached-file-card");
@@ -3132,8 +3176,26 @@ function clearAttachedProofFile() {
   if (attachTypeVal) attachTypeVal.value = "none";
 }
 
+// Kịch bản test vừa nạp vào form: dùng thời điểm nộp giả lập của kịch bản khi gửi,
+// để kết quả (báo trước, mốc 08:30 nghỉ ốm...) đúng như thiết kế dù ngày nghỉ đã qua.
+let activeTestScenario = null;
+
+function scenarioSubmittedAtFor(payload) {
+  const sc = activeTestScenario;
+  if (!sc || !sc.submitted_at || editingRequestId) return null;
+  const same = payload.leave_type === sc.leave_type && payload.from_date === sc.from_date && payload.to_date === sc.to_date;
+  return same ? sc.submitted_at : null;
+}
+
 async function fillStaffTestCaseIntoForm(tc) {
   if (!tc) return;
+  activeTestScenario = {
+    id: tc.id,
+    leave_type: tc.payload.leave_type,
+    from_date: tc.payload.from_date,
+    to_date: tc.payload.to_date,
+    submitted_at: tc.payload.submitted_at || null,
+  };
 
   // 1. Tự động chuyển nhân viên nếu kịch bản thiết kế cho nhân viên khác
   if (tc.primaryEmpId && tc.primaryEmpId !== currentEmployeeId) {
@@ -3155,9 +3217,16 @@ async function fillStaffTestCaseIntoForm(tc) {
   if (toEl && tc.payload.to_date) toEl.value = tc.payload.to_date;
   if (reasonEl && tc.payload.reason) reasonEl.value = tc.payload.reason;
   if (handoverEl && tc.payload.handover_person_id) {
-    if (Array.from(handoverEl.options).some(o => o.value === tc.payload.handover_person_id)) {
-      handoverEl.value = tc.payload.handover_person_id;
+    if (!Array.from(handoverEl.options).some(o => o.value === tc.payload.handover_person_id)) {
+      // Kịch bản kiểm thử bàn giao sai (vd khác phòng ban): ô chọn chỉ liệt kê đồng nghiệp cùng phòng,
+      // nên thêm tạm lựa chọn này để kiểm tra bước xác thực bàn giao phía server.
+      const emp = employeesCache.find(e => e.employee_id === tc.payload.handover_person_id);
+      const opt = document.createElement("option");
+      opt.value = tc.payload.handover_person_id;
+      opt.text = emp ? `${emp.name} (${emp.department})` : tc.payload.handover_person_id;
+      handoverEl.appendChild(opt);
     }
+    handoverEl.value = tc.payload.handover_person_id;
   }
 
   // BUG FIX: Nạp reason_category vào hidden select (quan trọng cho SPECIAL_PAID / STATUTORY_UNPAID)
@@ -4567,8 +4636,12 @@ function initStaffForm() {
   }
 
   if (standardForm) {
+    let standardSubmitInFlight = false;
     standardForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      // Chặn gửi lần hai (vd nhấn Enter khi đơn trước còn đang xử lý) → tránh tạo đơn trùng
+      if (standardSubmitInFlight) return;
+      standardSubmitInFlight = true;
       const btnSubmit = document.getElementById("btn-submit-leave-form");
       if (btnSubmit) {
         btnSubmit.disabled = true;
@@ -4577,6 +4650,7 @@ function initStaffForm() {
       try {
         await handleStandardFormSubmit();
       } finally {
+        standardSubmitInFlight = false;
         if (btnSubmit) {
           btnSubmit.disabled = false;
           btnSubmit.innerHTML = `<span data-i18n="btn_submit_leave">Gửi duyệt bằng AI Agent</span>`;
@@ -4585,6 +4659,11 @@ function initStaffForm() {
     });
 
     standardForm.addEventListener("reset", () => {
+      activeTestScenario = null;
+      // "Làm lại" khi đang bổ sung đơn → thoát chế độ bổ sung, lần gửi sau là đơn mới
+      editingRequestId = null;
+      const correctionBanner = document.getElementById('correction-banner');
+      if (correctionBanner) { correctionBanner.textContent = ''; correctionBanner.classList.add('d-none'); }
       setTimeout(() => {
         const fileInput = document.getElementById("staff-file-input");
         const promptEl = document.getElementById("dropzone-prompt");
@@ -4669,6 +4748,7 @@ function initFileUploadDropzone() {
     if (fileInput.files && fileInput.files[0]) {
       const file = fileInput.files[0];
       currentProofId = null;
+      currentProofContext = null;
       if (nameEl) nameEl.innerText = file.name;
       if (sizeEl) sizeEl.innerText = `${(file.size / 1024).toFixed(1)} KB`;
       if (iconEl) iconEl.innerText = "";
@@ -4693,10 +4773,15 @@ function initFileUploadDropzone() {
         const form = new FormData();
         form.append('file', fileToUpload, uuidFileName);
         form.append('proof_type', document.getElementById('staff-proof-type')?.value || 'MEDICAL_LEAVE_CERTIFICATE');
+        const leaveType = document.getElementById('staff-leave-type')?.value || '';
+        const reasonCategory = document.getElementById('staff-reason-category')?.value || '';
+        if (leaveType) form.append('leave_type', leaveType);
+        if (reasonCategory) form.append('reason_category', reasonCategory);
         const response = await apiFetch(`${API_BASE}/api/leave/proofs`, { method: 'POST', body: form });
         if (response.ok) {
           const res = await response.json();
           currentProofId = res.data?.proof_id;
+          currentProofContext = { leaveType, reasonCategory };
         }
       } catch (err) {
         console.warn("Background upload warning:", err);
@@ -4709,6 +4794,7 @@ function initFileUploadDropzone() {
       e.stopPropagation();
       selectedProofFile = null;
       currentProofId = null;
+      currentProofContext = null;
       fileInput.value = "";
       if (promptEl) promptEl.classList.remove("d-none");
       if (cardEl) {
@@ -4940,7 +5026,12 @@ async function handleStandardFormSubmit() {
 
   showSubmitProgress(!!file);
 
-  if (file && !currentProofId) {
+  const reasonCategory = document.getElementById('staff-reason-category')?.value || '';
+  const proofContextChanged = currentProofId && (
+    currentProofContext?.leaveType !== leaveType ||
+    currentProofContext?.reasonCategory !== reasonCategory
+  );
+  if (file && (!currentProofId || proofContextChanged)) {
     try {
       const ext = (file.name && file.name.lastIndexOf('.') !== -1)
         ? file.name.substring(file.name.lastIndexOf('.'))
@@ -4954,13 +5045,16 @@ async function handleStandardFormSubmit() {
       const form = new FormData();
       form.append('file', fileToUpload, uuidFileName);
       form.append('proof_type',document.getElementById('staff-proof-type')?.value || 'MEDICAL_LEAVE_CERTIFICATE');
+      if (leaveType) form.append('leave_type', leaveType);
+      if (reasonCategory) form.append('reason_category', reasonCategory);
       const response = await apiFetch(`${API_BASE}/api/leave/proofs`,{method:'POST',body:form});
       const result=await response.json();
       if(!response.ok) {
-        finishSubmitProgress(false, () => showToast(JSON.stringify(result.detail),'error'));
+        finishSubmitProgress(false, () => showToast(formatApiError(result.detail),'error'));
         return;
       }
       currentProofId=result.data.proof_id;
+      currentProofContext = { leaveType, reasonCategory };
     } catch(err) {
       finishSubmitProgress(false, () => showToast('Lỗi tải file: ' + err.message, 'error'));
       return;
@@ -4977,6 +5071,8 @@ async function handleStandardFormSubmit() {
     no_handover_needed:!!document.getElementById('staff-no-handover')?.checked,
     proof_id:currentProofId
   };
+  const simulatedAt = scenarioSubmittedAtFor(payload);
+  if (simulatedAt) payload.simulated_submitted_at = simulatedAt;
   await submitLeaveToBackend(payload, !!file);
 }
 
@@ -4987,10 +5083,16 @@ async function submitLeaveToBackend(payload, hasFile = false) {
       showSubmitProgress(hasFile || !!payload.proof_id);
     }
     const url=editingRequestId ? `/api/leave/${editingRequestId}/resubmit` : '/api/leave/request';
-    const res=await apiFetch(API_BASE+url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    // API nộp lại nhận đúng RequestFacts (không cho trường thừa): bỏ các trường chỉ dành cho đơn mới.
+    let body = payload;
+    if (editingRequestId) {
+      const { employee_id, simulated_submitted_at, ...facts } = payload;
+      body = facts;
+    }
+    const res=await apiFetch(API_BASE+url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     let result=await res.json();
     if(!res.ok && res.status !== 202) {
-      finishSubmitProgress(false, () => showToast(JSON.stringify(result.detail),'error'));
+      finishSubmitProgress(false, () => showToast(formatApiError(result.detail),'error'));
       return false;
     }
 
@@ -5032,14 +5134,14 @@ async function submitLeaveToBackend(payload, hasFile = false) {
         }
       }
 
-      editingRequestId=null; currentProofId=null; selectedProofFile=null;
+      editingRequestId=null; currentProofId=null; selectedProofFile=null; activeTestScenario=null;
       document.getElementById('form-staff-standard')?.reset();
       const attachTypeVal = document.getElementById("staff-attachment-type");
       if (attachTypeVal) attachTypeVal.value = "none";
       const proofPreview = document.getElementById("staff-proof-preview");
       if (proofPreview) proofPreview.classList.add("d-none");
       const banner = document.getElementById('correction-banner');
-      if (banner) banner.textContent='';
+      if (banner) { banner.textContent=''; banner.classList.add('d-none'); }
 
       switchStaffTab('tab-staff-requests');
       renderStaffRequests();
@@ -5063,25 +5165,65 @@ function correctRequest(id) {
   }
   const noHandoverEl=document.getElementById('staff-no-handover');
   if(noHandoverEl){ noHandoverEl.checked=!!f.no_handover_needed; document.getElementById('staff-handover-select').disabled=noHandoverEl.checked; }
-  document.getElementById('correction-banner').textContent='Đang bổ sung đơn '+id;
+  // Cho phép tải chứng từ mới: chứng từ cũ vẫn được giữ nếu nhân viên không chọn file khác
+  currentProofContext = null;
+  selectedProofFile = null;
+  activeTestScenario = null;
+  const banner = document.getElementById('correction-banner');
+  if (banner) {
+    const feedback = r.human_feedback_text || r.human_readable_explanation || '';
+    banner.textContent = `Đang bổ sung đơn ${id}.` + (feedback ? ` Lý do cần bổ sung: ${feedback}` : '');
+    banner.classList.remove('d-none');
+  }
+  document.getElementById('staff-from-date')?.dispatchEvent(new Event('change'));
   switchStaffTab('tab-staff-submit');
 }
+window.correctRequest = correctRequest;
 
 
 /* ========================================================================= */
 /* 6. MY REQUESTS & TRACKING (NHÂN VIÊN)                                     */
 /* ========================================================================= */
-async function loadAllRequests(silent = false, force = false) {
+// Danh sách đơn phụ thuộc người đang thao tác (Staff = nhân viên, Manager = vai trò duyệt).
+// Ghi nhớ danh sách đang hiển thị thuộc về ai để không vẽ dữ liệu của người này sang giao diện người kia.
+let requestsLoadSeq = 0;
+let activeRequestsActor = null;
+let lastRequestsSignature = null;
+function currentActorId() {
+  return currentMode === "manager" ? currentManagerRoleId : currentEmployeeId;
+}
+
+// Lần tải do người dùng thao tác (không silent) luôn chạy; chỉ lần tự cập nhật ngầm mới được bỏ qua khi đang có lần tải khác.
+async function loadAllRequests(silent = false, force = !silent) {
+  const actor = currentActorId();
+  if (actor !== activeRequestsActor) {
+    // Đổi người thao tác: xóa danh sách cũ ngay và luôn tải lại
+    activeRequests = [];
+    activeRequestsActor = actor;
+    lastRequestsSignature = null;
+    force = true;
+  }
   if (requestsLoadInFlight && !force) {
     if (Date.now() - lastRequestsLoadTime < 5000) return;
   }
+  const seq = ++requestsLoadSeq;
   requestsLoadInFlight = true;
   lastRequestsLoadTime = Date.now();
   try {
     const res = await apiFetch(`${API_BASE}/api/leave/requests`);
     if (res.ok) {
       const json = await res.json();
+      // Bỏ kết quả cũ: đã có lần tải mới hơn, hoặc người thao tác đã đổi trong lúc chờ
+      if (seq !== requestsLoadSeq || actor !== currentActorId()) return;
       if (json.success && Array.isArray(json.data)) {
+        const signature = JSON.stringify(json.data);
+        const changed = signature !== lastRequestsSignature;
+        // Tự cập nhật ngầm mà không có gì mới: không vẽ lại (giữ nguyên ý kiến quản lý đang gõ, nút đang bấm)
+        if (silent && !changed) return;
+        const hadPrevious = lastRequestsSignature !== null;
+        lastRequestsSignature = signature;
+        // Đơn đổi trạng thái (có thể do người khác duyệt/thu hồi): tải lại số dư phép hiển thị
+        if (changed && hadPrevious) loadEmployees();
         activeRequests = json.data;
         updateBadgesAndCounters();
         if (currentMode === "staff") {
@@ -5100,7 +5242,7 @@ async function loadAllRequests(silent = false, force = false) {
   } catch (err) {
     if (!silent) console.warn("Failed to fetch requests:", err);
   } finally {
-    requestsLoadInFlight = false;
+    if (seq === requestsLoadSeq) requestsLoadInFlight = false;
   }
 }
 
@@ -5112,7 +5254,27 @@ function isActionablePending(r) {
 
 // Đơn đang chờ một cấp khác xử lý: người hiện tại chỉ được xem, không được thao tác.
 function isPendingOnOthers(r) {
-  return r.status === "PENDING_ESCALATION" && !r.can_act && r.employee_id !== currentEmployeeId;
+  const actorId = currentMode === "manager" ? currentManagerRoleId : currentEmployeeId;
+  return r.status === "PENDING_ESCALATION" && !r.can_act && r.employee_id !== actorId;
+}
+
+// Phân loại trạng thái hiển thị của một đơn. Sau khi Quản lý duyệt, backend vẫn giữ
+// decision=AUTO_APPROVE (kết quả đánh giá lại) nhưng ghi human_resolution=APPROVE_OVERRIDE,
+// nên phải xét human_resolution/status trước decision để không nhầm thành "AI tự duyệt".
+function getRecordState(r) {
+  if (r.status === "CANCELLED") return "CANCELLED";
+  if (r.human_resolution === "REVOKED") return "REVOKED";
+  if (r.human_resolution === "REJECT") return "MANAGER_REJECTED";
+  if (r.status === "REJECTED" || r.decision === "AUTO_REJECT") return "AI_REJECTED";
+  if (r.status === "PENDING_ESCALATION") return "PENDING";
+  if (r.status === "PENDING_HANDOVER") return "HANDOVER";
+  if (r.status === "WAITING_EMPLOYEE") return "WAITING_EMPLOYEE";
+  if (r.status === "COMPLETED") {
+    if (r.human_resolution === "APPROVE_OVERRIDE" || r.decision === "APPROVED_BY_HUMAN_OVERRIDE") return "MANAGER_APPROVED";
+    if (r.decision === "AUTO_APPROVE") return "AI_APPROVED";
+    return "COMPLETED";
+  }
+  return "OTHER";
 }
 
 function updateBadgesAndCounters() {
@@ -5189,8 +5351,12 @@ function renderStaffRequests() {
 
     tbody.innerHTML = myRequests.map(req => {
       const cancellable = ['WAITING_EMPLOYEE', 'PENDING_ESCALATION', 'PENDING_HANDOVER'].includes(req.status);
+      // Đơn bị trả về (AI yêu cầu sửa / Quản lý yêu cầu bổ sung): cho nhân viên bổ sung rồi nộp lại cùng đơn
+      const correctBtnHtml = req.status === 'WAITING_EMPLOYEE'
+        ? `<button type="button" class="btn btn-sm btn-outline-warning px-2.5 py-1 me-1" onclick="correctRequest('${req.id}')" title="Bổ sung / sửa đơn rồi nộp lại">Bổ sung</button>`
+        : '';
       const cancelBtnHtml = cancellable
-        ? `<button type="button" class="btn btn-sm btn-outline-danger px-2.5 py-1" onclick="cancelMyRequest('${req.id}')" title="Hủy đơn nghỉ phép này">Hủy đơn</button>`
+        ? `${correctBtnHtml}<button type="button" class="btn btn-sm btn-outline-danger px-2.5 py-1" onclick="cancelMyRequest('${req.id}')" title="Hủy đơn nghỉ phép này">Hủy đơn</button>`
         : `<span class="text-muted">—</span>`;
 
       return `
@@ -5401,6 +5567,9 @@ function renderSingleRequestCard(req, isStaffView=false) {
           </svg>
           Chi tiết
         </button>
+        ${isStaffView && req.status === 'WAITING_EMPLOYEE' ? `
+          <button type="button" class="btn btn-sm btn-outline-warning px-3 py-1 fw-semibold" onclick="correctRequest('${req.id}')" title="Bổ sung / sửa đơn rồi nộp lại">Bổ sung</button>
+        ` : ''}
         ${cancellable ? `
           <button type="button" class="btn btn-sm btn-outline-danger px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" onclick="cancelMyRequest('${req.id}')" title="Hủy đơn nghỉ phép này">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -6240,8 +6409,8 @@ async function openRequestDetailModal(requestId) {
   const hasAttachment = !!(req.proof_id || req.proof_file);
 
   // Đánh giá AI / Quản lý
-  const isAuto = req.decision === "AUTO_APPROVE";
   const isOverride = (req.human_resolution === "APPROVE_OVERRIDE" || req.decision === "APPROVED_BY_HUMAN_OVERRIDE");
+  const isAuto = req.decision === "AUTO_APPROVE" && !isOverride;
   const isRejected = req.status === "REJECTED";
 
   let boxLabel = "Lý do chuyển tiếp:";
@@ -6249,13 +6418,13 @@ async function openRequestDetailModal(requestId) {
 
   if (isAuto) {
     boxLabel = "Đánh giá hệ thống:";
-    rawText = "Đơn đầy đủ điều kiện và được phê duyệt tự động.";
+    rawText = req.human_readable_explanation || "[Tự động duyệt thành công] Đơn thỏa mãn 100% điều kiện chính sách và đã được tự động phê duyệt.";
   } else if (isOverride) {
     boxLabel = "Ý kiến Quản lý:";
-    rawText = req.human_feedback_text || "Đã xem xét và phê duyệt ngoại lệ.";
+    rawText = req.human_feedback_text || "Đã xem xét thực tế và phê duyệt đặc cách theo thẩm quyền.";
   } else if (isRejected) {
     boxLabel = "Lý do từ chối:";
-    rawText = req.human_feedback_text || req.human_readable_explanation || "Không đáp ứng quy chuẩn.";
+    rawText = req.human_feedback_text || req.human_readable_explanation || "[Từ chối tự động] Đơn không đáp ứng điều kiện quy chế của công ty.";
   }
 
   let cleanReason = rawText
@@ -6272,6 +6441,11 @@ async function openRequestDetailModal(requestId) {
     diagnosis: (_vlmDocBase.diagnosis ?? _vlmFields.doc_diagnosis ?? null),
     issuer: (_vlmDocBase.issuer ?? null),
     issue_date: (_vlmDocBase.issue_date ?? null),
+    subject_name: (_vlmDocBase.subject_name ?? null),
+    partner_name: (_vlmDocBase.partner_name ?? null),
+    event_type: (_vlmDocBase.event_type ?? null),
+    relationship: (_vlmDocBase.relationship ?? null),
+    wedding_date: (_vlmDocBase.wedding_date ?? null),
     doctor_recommended_range: (_vlmDocBase.doctor_recommended_range || {})
   };
   const _vlmFlags = _vlm.flags || {};
@@ -6327,6 +6501,8 @@ async function openRequestDetailModal(requestId) {
 
   // ── Dữ liệu theo đối tượng xem (Staff / Manager) ─────────────────────────
   const _llm = req.llm_summary_json || {};
+  const _schemaKey = (_llm.vlm_summary || {}).schema_key || '';
+  const _isWedding = _schemaKey === 'WEDDING';
   const _isManagerAudience = currentMode === 'manager';
   const _riskLevel = _isManagerAudience
     ? ((_llm.manager_summary && _llm.manager_summary.risk_level_vn) || _llm.manager_risk_level_vn || '')
@@ -6349,12 +6525,16 @@ async function openRequestDetailModal(requestId) {
       if (!_isManagerAudience && (node.stage === 'NOTICE' || node.stage === 'TEAM_QUOTA')) return false;
       return true;
     }).reduce(function(acc, node) {
-      // Gộp VLM_INTEGRITY vào node PROOF để không lặp hai dòng "Chứng từ"
-      if (node.stage === 'VLM_INTEGRITY') {
+      // Gộp các kết quả VLM vào node PROOF để tên không thành tiêu chí riêng.
+      if (node.stage === 'VLM_INTEGRITY' || node.stage === 'VLM_PATIENT') {
         const proofNode = acc.find(function(item) { return item.stage === 'PROOF'; });
         if (proofNode) {
           proofNode.note = [String(proofNode.note || ''), String(node.note || '')].filter(Boolean).join(' • ');
-          if (node.status !== 'PASS') proofNode.status = node.status;
+          if (node.status !== 'PASS' && node.status !== 'NOT_RUN') {
+            proofNode.status = node.status;
+            proofNode.passed = node.passed;
+            proofNode.severity = node.severity;
+          }
           return acc;
         }
       }
@@ -6370,7 +6550,7 @@ async function openRequestDetailModal(requestId) {
   // Tiêu chí không đạt → ô chứng từ tương ứng được đánh dấu
   const _fieldWarnText = {
     VLM_PATIENT: 'Tên trên giấy chưa khớp với nhân viên làm đơn',
-    VLM_DATE_COVERAGE: 'Khoảng ngày chỉ định chưa bao phủ ngày xin nghỉ',
+    VLM_DATE_COVERAGE: _isWedding ? 'Ngày cưới trên giấy nằm ngoài khoảng xin nghỉ' : 'Khoảng ngày chỉ định chưa bao phủ ngày xin nghỉ',
     VLM_CORRELATION: 'Chẩn đoán chưa khớp hoàn toàn với lý do nghỉ',
   };
   const _warnFor = (stage) => _reviewStages.has(stage) ? _fieldWarnText[stage] : '';
@@ -6418,23 +6598,31 @@ async function openRequestDetailModal(requestId) {
   let _vlmCard = '';
   if (_hasVlm) {
     const _dr = _vlmDoc.doctor_recommended_range || {};
+    const _couple = [_vlmDoc.subject_name, _vlmDoc.partner_name].filter(Boolean).join(' & ');
     const _readability = { READABLE: 'Rõ nét', UNREADABLE: 'Không đọc được', PARTIAL: 'Mờ một phần' }[_vlmFlags.document_readability] || _vlmFlags.document_readability;
-    const _rangeHtml = (_dr.from && _dr.to)
-      ? escapeHtml(formatSimpleDate(_dr.from)) + ' → ' + escapeHtml(formatSimpleDate(_dr.to)) + (_dr.days !== null && _dr.days !== undefined ? ' (' + _dr.days + ' ngày)' : '')
-      : '<span class="rd-muted">Không đọc được</span>';
+    const _rangeHtml = _isWedding
+      ? (_vlmDoc.wedding_date ? escapeHtml(formatSimpleDate(_vlmDoc.wedding_date)) : '<span class="rd-muted">Không đọc được</span>')
+      : ((_dr.from && _dr.to)
+        ? escapeHtml(formatSimpleDate(_dr.from)) + ' → ' + escapeHtml(formatSimpleDate(_dr.to)) + (_dr.days !== null && _dr.days !== undefined ? ' (' + _dr.days + ' ngày)' : '')
+        : '<span class="rd-muted">Không đọc được</span>');
     const _flagPill = (val, yes, no) => val === true ? _pill('ok', yes) : (val === false ? _pill('bad', no) : '');
+    const _signaturePresent = _isWedding
+      ? _vlmFlags.signature_present_on_scan
+      : (_vlmFlags.has_doctor_signature ?? _vlmFlags.signature_present_on_scan);
     const _docPills = _flagPill(_vlmFlags.has_red_stamp, 'Có dấu đỏ', 'Thiếu dấu đỏ')
-      + _flagPill(_vlmFlags.has_doctor_signature ?? _vlmFlags.signature_present_on_scan, 'Có chữ ký', 'Thiếu chữ ký')
+      + _flagPill(_signaturePresent, _isWedding ? 'Có chữ ký cơ quan' : 'Có chữ ký', _isWedding ? 'Thiếu chữ ký cơ quan' : 'Thiếu chữ ký')
       + (_readability ? _pill(_vlmFlags.document_readability === 'READABLE' ? 'ok' : 'bad', escapeHtml(_readability)) : '');
     const _aside = !_totalChecks ? ''
       : (_docMismatch ? _pill('warn', _docMismatch + ' điểm chưa khớp', 'alert') : _pill('ok', 'Khớp với đơn', 'checkCircle'));
 
     _vlmCard = _card('scan', 'Thông tin trích xuất từ chứng từ', '<div class="row g-3">'
-      + _ff('Tên trên giấy', _txt(_vlmDoc.patient_name, 'Không đọc được'), { warn: _warnFor('VLM_PATIENT') })
+      + _ff(_isWedding ? 'Cặp đôi trên giấy' : 'Tên trên giấy', _txt(_isWedding ? _couple : _vlmDoc.patient_name, 'Không đọc được'), { warn: _warnFor('VLM_PATIENT') })
       + _ff('Nơi cấp', _txt(_vlmDoc.issuer, 'Không đọc được'))
       + _ff('Ngày cấp', _vlmDoc.issue_date ? escapeHtml(formatSimpleDate(_vlmDoc.issue_date)) : '<span class="rd-muted">Không có</span>', { icon: 'calendar' })
-      + _ff('Bác sĩ chỉ định', _rangeHtml, { icon: 'calendar', warn: _warnFor('VLM_DATE_COVERAGE') })
-      + _ff('Chẩn đoán', _txt(_vlmDoc.diagnosis, 'Không đọc được'), { wide: true, warn: _warnFor('VLM_CORRELATION') })
+      + _ff(_isWedding ? 'Ngày cưới trên giấy' : 'Bác sĩ chỉ định', _rangeHtml, { icon: 'calendar', warn: _warnFor('VLM_DATE_COVERAGE') })
+      + (_isWedding
+        ? (_vlmDoc.relationship ? _ff('Quan hệ ghi trên giấy', _txt(_vlmDoc.relationship, 'Không đọc được'), { wide: true }) : '')
+        : _ff('Chẩn đoán', _txt(_vlmDoc.diagnosis, 'Không đọc được'), { wide: true, warn: _warnFor('VLM_CORRELATION') }))
       + (_docPills ? '<div class="col-12"><div class="rd-form-status"><span class="rd-status-left">' + _icon('shield') + '<span>Tình trạng chứng từ:</span></span><span class="rd-pills">' + _docPills + '</span></div></div>' : '')
       + (_vlmErr ? _ff('Lỗi đọc chứng từ', '<span class="rd-bad">' + escapeHtml(_vlmErr) + '</span>', { wide: true }) : '')
       + '</div>', _aside);
@@ -6449,7 +6637,6 @@ async function openRequestDetailModal(requestId) {
       PROOF: 'Chứng từ',
       VLM_INTEGRITY: 'Chứng từ',
       VLM_PATIENT: 'Tên trên chứng từ',
-      VLM_DATE_COVERAGE: 'Khoảng ngày nghỉ',
       VLM_CORRELATION: 'Độ khớp nội dung',
       PROOF_VERIFICATION: 'Xác minh chứng từ',
       NOTICE: 'Thời hạn báo trước',
@@ -6458,7 +6645,6 @@ async function openRequestDetailModal(requestId) {
     // Tiêu chí đạt mà chi tiết đã có ở các khung phía trên → ghi ngắn gọn thay vì lặp lại
     const _passSummary = {
       VALIDATION: 'Thông tin nhân sự và ngày nghỉ hợp lệ',
-      PROOF: 'Chứng từ đầy đủ, khớp với đơn',
       VLM_INTEGRITY: 'Chứng từ đầy đủ, khớp với đơn',
     };
 
@@ -6559,11 +6745,37 @@ async function cancelMyRequest(requestId) {
   }
 }
 
+// Quản lý thu hồi quyết định AI tự duyệt (nút "Hủy Lệnh AI" ở Hồ sơ đơn)
+async function revokeAiApproval(requestId) {
+  const reason = prompt("Nhập lý do thu hồi quyết định tự duyệt của AI:", "Phát hiện xung đột lịch trực hệ thống");
+  if (reason === null) return;
+
+  try {
+    const res = await apiFetch(`${API_BASE}/api/leave/${requestId}/revoke`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: reason || "Quản lý hủy quyết định tự duyệt của AI" })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showToast(`Đã ghi nhận thu hồi đơn [${requestId}].`, "success");
+      await loadAllRequests(false, true);
+      await loadEmployees();
+    } else {
+      showToast(data.detail || "Không thể hủy quyết định!", "error");
+    }
+  } catch (err) {
+    console.error("Revoke error:", err);
+    showToast("Lỗi khi kết nối server để hủy quyết định!", "error");
+  }
+}
+window.revokeAiApproval = revokeAiApproval;
+
 /* ========================================================================= */
 /* 7. MANAGER DASHBOARD & ESCALATION QUEUE (QUẢN LÝ)                         */
 /* ========================================================================= */
 function renderManagerOverviewKPIs() {
-  const autoToday = activeRequests.filter(r => r.decision === "AUTO_APPROVE").length;
+  const autoToday = activeRequests.filter(r => getRecordState(r) === "AI_APPROVED").length;
   const pendingCount = activeRequests.filter(isActionablePending).length;
   const overrideCount = activeRequests.filter(r => r.decision === "APPROVED_BY_HUMAN_OVERRIDE" || r.decision === "REVOKED_BY_ADMIN").length;
   const totalCompleted = activeRequests.filter(r => r.status === "COMPLETED" || r.decision === "AUTO_APPROVE").length;
@@ -6600,6 +6812,16 @@ function renderManagerOverviewKPIs() {
 function renderManagerQueue() {
   const container = document.getElementById('mgr-escalation-inbox-list');
   if (!container) return;
+  // Giữ lại ý kiến quản lý đang gõ dở khi hàng đợi được vẽ lại
+  const typedFeedback = {};
+  container.querySelectorAll('input[id^="esc-feedback-"]').forEach(el => { if (el.value) typedFeedback[el.id] = el.value; });
+  try { renderManagerQueueInner(container); }
+  finally {
+    Object.entries(typedFeedback).forEach(([id, value]) => { const el = document.getElementById(id); if (el) el.value = value; });
+  }
+}
+
+function renderManagerQueueInner(container) {
   const pending = activeRequests.filter(isActionablePending);
   const waitingOthers = activeRequests.filter(isPendingOnOthers);
 
@@ -6797,7 +7019,7 @@ async function submitManagerDecision(id, actionType) {
     const res=await apiFetch(`${API_BASE}/api/leave/${id}/human-decision`,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action_type:actionType,feedback_text:feedback,approver_id:currentManagerRoleId})});
     const data=await res.json();
-    if(!res.ok) {showToast(JSON.stringify(data.detail),'error');return;}
+    if(!res.ok) {showToast(formatApiError(data.detail),'error');return;}
     const updated = data.data;
     const index = activeRequests.findIndex(r => r.id === id);
     if (index >= 0) activeRequests[index] = updated;
@@ -6806,7 +7028,7 @@ async function submitManagerDecision(id, actionType) {
     renderManagerQueue();
     renderManagerAllRequests();
     showToast('Đã ghi nhận: '+updated.status,'info');
-    await Promise.all([loadAllRequests(true), loadEmployees()]);
+    await Promise.all([loadAllRequests(true, true), loadEmployees()]);
   } catch(e) {showToast(e.message,'error');}
 }
 
@@ -6843,15 +7065,13 @@ function renderManagerAllRequests() {
 
   // ─── Filter by status ─────────────────────────────────────────────────────
   let list = activeRequests;
-  if (mgrRecordsFilter === "AUTO_APPROVE") {
-    list = list.filter(r => r.decision === "AUTO_APPROVE");
-  } else if (mgrRecordsFilter === "PENDING_ESCALATION") {
-    list = list.filter(r => r.status === "PENDING_ESCALATION");
-  } else if (mgrRecordsFilter === "COMPLETED") {
-    list = list.filter(r => r.status === "COMPLETED" && r.decision !== "AUTO_APPROVE");
-  } else if (mgrRecordsFilter === "REJECTED") {
-    list = list.filter(r => r.decision === "AUTO_REJECT" || r.status === "REJECTED");
-  }
+  const filterStates = {
+    AUTO_APPROVE: ["AI_APPROVED"],
+    PENDING_ESCALATION: ["PENDING"],
+    COMPLETED: ["MANAGER_APPROVED", "COMPLETED", "REVOKED", "HANDOVER", "WAITING_EMPLOYEE"],
+    REJECTED: ["AI_REJECTED", "MANAGER_REJECTED"],
+  }[mgrRecordsFilter];
+  if (filterStates) list = list.filter(r => filterStates.includes(getRecordState(r)));
 
   // ─── Empty state ──────────────────────────────────────────────────────────
   if (list.length === 0) {
@@ -6869,16 +7089,26 @@ function renderManagerAllRequests() {
   // Status shown as an outline pill with the same shape as the "Chi tiết" button
   const getDecisionTag = (req) => {
     const pill = (variant, label) => `<span class="btn btn-sm btn-outline-${variant} mgr-status-pill">${label}</span>`;
-    if (req.decision === "AUTO_APPROVE") return pill("success", "AI Tự duyệt");
-    if (req.decision === "AUTO_REJECT") return pill("danger", "AI Từ chối");
-    if (req.decision === "ESCALATE" || req.status === "PENDING_ESCALATION") return pill("warning", "Chờ duyệt");
-    if (req.status === "COMPLETED") return pill("teal", "Đã duyệt");
-    if (req.human_resolution === "REVOKED") return pill("orange", "Thu hồi");
-    if (req.status === "REJECTED") return pill("danger", "Từ chối");
-    return pill("secondary", escapeHtml(req.status || "—"));
+    switch (getRecordState(req)) {
+      case "AI_APPROVED": return pill("success", "AI Tự duyệt");
+      case "MANAGER_APPROVED": return pill("teal", "Quản lý đã duyệt");
+      case "COMPLETED": return pill("teal", "Đã duyệt");
+      case "PENDING":
+        // Đơn chờ cấp khác (vd CEO): ghi rõ đang chờ ai, tránh hiểu nhầm là việc của người đang xem
+        return req.can_act === false && req.target_role
+          ? pill("warning", "Chờ " + escapeHtml(getRoleLabel(req.target_role)))
+          : pill("warning", "Chờ duyệt");
+      case "HANDOVER": return pill("azure", "Chờ bàn giao");
+      case "WAITING_EMPLOYEE": return pill("yellow", req.human_resolution === "HANDOVER_DECLINED" ? "Bàn giao bị từ chối" : "Chờ bổ sung");
+      case "AI_REJECTED": return pill("danger", "AI Từ chối");
+      case "MANAGER_REJECTED": return pill("danger", "Quản lý từ chối");
+      case "REVOKED": return pill("orange", "Đã thu hồi");
+      case "CANCELLED": return pill("secondary", "Đã hủy");
+      default: return pill("secondary", escapeHtml(req.status || "—"));
+    }
   };
 
-  const revokeBtn = (req) => req.decision === "AUTO_APPROVE"
+  const revokeBtn = (req) => getRecordState(req) === "AI_APPROVED"
     ? `<button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); revokeAiApproval('${req.id}')" title="Thu hồi quyết định AI">Hủy Lệnh AI</button>`
     : `<span class="text-secondary">—</span>`;
 
@@ -7132,7 +7362,7 @@ async function openAttachmentModal(id) {
   modal.style.display='flex';modal.classList.add('active');
   const res=await apiFetch(`${API_BASE}/api/leave/${id}/analysis`);
   const data=await res.json();
-  if(!res.ok){content.textContent=JSON.stringify(data.detail);return;}
+  if(!res.ok){content.textContent=formatApiError(data.detail);return;}
   const actorId=currentMode==='staff'?currentEmployeeId:currentManagerRoleId;
   const isHR=currentMode==='manager' && employeesCache.find(e=>e.employee_id===actorId)?.actor_roles?.some(r=>r.role==='HR');
   const token=await getActorToken(actorId);
@@ -7170,7 +7400,7 @@ async function openAttachmentModal(id) {
       for(const k of ['issue_date','recommended_from_date','recommended_to_date','issuer','patient_name']) values[k]=values[k] || null;
       for(const k of ['signature_present','digital_signature_present']) values[k]=form.elements.namedItem(k).checked;
       const response=await apiFetch(`/api/leave/proofs/${req.proof_id}/verify`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(values)});
-      const outcome=await response.json();if(!response.ok){showToast(JSON.stringify(outcome.detail),'error');return;}
+      const outcome=await response.json();if(!response.ok){showToast(formatApiError(outcome.detail),'error');return;}
       modal.style.display='none'; await loadAllRequests();showToast('Đã xác minh chứng từ.','success');
     };
   }
@@ -7388,7 +7618,7 @@ function initCustomVerify() {
       handover_person_id:document.getElementById('custom-handover').value || null};
     const res=await apiFetch('/api/verify/custom',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const data=await res.json(); const card=document.getElementById('custom-result-card');card.style.display='block';
-    card.innerHTML=res.ok?`<h4>${escapeHtml(DECISION_LABELS[data.decision])}</h4><p>${escapeHtml(data.plain_reason)}</p><pre>${escapeHtml(JSON.stringify(data,null,2))}</pre>`:`<p>${escapeHtml(JSON.stringify(data.detail))}</p>`;
+    card.innerHTML=res.ok?`<h4>${escapeHtml(DECISION_LABELS[data.decision])}</h4><p>${escapeHtml(data.plain_reason)}</p><pre>${escapeHtml(JSON.stringify(data,null,2))}</pre>`:`<p>${escapeHtml(formatApiError(data.detail))}</p>`;
   };
 }
 
@@ -7526,7 +7756,7 @@ function getStatusBadgeHtml(req) {
     label = 'Không cần xin phép (0 ngày)';
     customStyle = "background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;";
   } else if (req.status === 'COMPLETED') {
-    label = (req.human_resolution === 'APPROVE_OVERRIDE' || req.decision === 'APPROVED_BY_HUMAN_OVERRIDE') ? 'Đã đủ cấp phê duyệt' : 'Tự động duyệt';
+    label = (req.human_resolution === 'APPROVE_OVERRIDE' || req.decision === 'APPROVED_BY_HUMAN_OVERRIDE') ? 'Quản lý đã duyệt' : 'Tự động duyệt';
     customStyle = "background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;";
   } else if (req.status === 'PENDING_ESCALATION' || req.decision === 'ESCALATE') {
     label = 'Chờ người có thẩm quyền';

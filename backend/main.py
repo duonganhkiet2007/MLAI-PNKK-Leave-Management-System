@@ -117,15 +117,18 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         GLOBAL_INSPECTION_SERVICE.stop_worker()
-        print(f"🛑 [BACKEND SHUTDOWN] Đang giải phóng model {VLM_TARGET_MODEL} khỏi GPU VRAM...")
-        try:
-            res = subprocess.run(["ollama", "stop", VLM_TARGET_MODEL], capture_output=True, text=True, timeout=10)
-            if res.returncode == 0:
-                print(f"✅ [BACKEND SHUTDOWN] Đã giải phóng {VLM_TARGET_MODEL} khỏi GPU.")
-            else:
-                print(f"⚠️ [BACKEND SHUTDOWN] ollama stop (code {res.returncode}): {res.stderr.strip()}")
-        except Exception as e:
-            print(f"⚠️ [BACKEND SHUTDOWN] Lỗi khi giải phóng model: {e}")
+        # Không gỡ model Ollama khi tắt app: --reload và bộ test khởi động/tắt app liên tục, còn GPU dùng chung với
+        # người khác nên gỡ ra rồi nạp lại dễ bị OOM. Model đã nạp với keep_alive=-1. Bật VLM_UNLOAD_ON_SHUTDOWN=1 nếu muốn gỡ.
+        if os.getenv("VLM_UNLOAD_ON_SHUTDOWN", "0").lower() in ("1", "true", "yes"):
+            print(f"🛑 [BACKEND SHUTDOWN] Đang giải phóng model {VLM_TARGET_MODEL} khỏi GPU VRAM...")
+            try:
+                res = subprocess.run(["ollama", "stop", VLM_TARGET_MODEL], capture_output=True, text=True, timeout=10)
+                if res.returncode == 0:
+                    print(f"✅ [BACKEND SHUTDOWN] Đã giải phóng {VLM_TARGET_MODEL} khỏi GPU.")
+                else:
+                    print(f"⚠️ [BACKEND SHUTDOWN] ollama stop (code {res.returncode}): {res.stderr.strip()}")
+            except Exception as e:
+                print(f"⚠️ [BACKEND SHUTDOWN] Lỗi khi giải phóng model: {e}")
 
 
 

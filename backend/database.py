@@ -20,12 +20,43 @@ EMPLOYEES_JSON_PATH = os.path.join(
 )
 
 
+_NETWORK_FS_TYPES = {"nfs", "nfs4", "cifs", "smbfs", "smb3", "fuse.sshfs", "9p", "glusterfs", "ceph", "lustre"}
+_network_fs_cache: dict = {}
+
+
+def _is_network_filesystem(path: str) -> bool:
+    """WAL của SQLite cần shared memory (mmap file -shm), không an toàn trên NFS/ổ mạng → phát hiện để tránh."""
+    directory = os.path.dirname(os.path.realpath(path)) or "."
+    if directory in _network_fs_cache:
+        return _network_fs_cache[directory]
+    best_mount, best_type = "", ""
+    try:
+        with open("/proc/mounts", "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) < 3:
+                    continue
+                mount_point = parts[1].replace("\\040", " ")
+                if (directory == mount_point or directory.startswith(mount_point.rstrip("/") + "/")) and len(mount_point) >= len(best_mount):
+                    best_mount, best_type = mount_point, parts[2]
+    except OSError:
+        pass
+    result = best_type in _NETWORK_FS_TYPES
+    _network_fs_cache[directory] = result
+    if result:
+        print(f"⚠️ [DATABASE] {path} nằm trên ổ mạng ({best_type}); dùng journal_mode=DELETE thay vì WAL. "
+              f"Nên đặt LEAVE_DATA_DIR sang ổ cục bộ.")
+    return result
+
+
 def get_db_connection() -> sqlite3.Connection:
-    """Tạo kết nối tới SQLite DB với row_factory dạng dict-like và bật WAL mode (nếu file system hỗ trợ)."""
+    """Tạo kết nối tới SQLite DB với row_factory dạng dict-like; bật WAL khi DB nằm trên ổ cục bộ."""
     conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=60)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
     try:
+        if _is_network_filesystem(DB_PATH):
+            raise sqlite3.OperationalError("network filesystem: WAL disabled")
         conn.execute("PRAGMA journal_mode=WAL")
     except sqlite3.OperationalError:
         try:
@@ -229,6 +260,10 @@ def _init_legacy_schema():
                 completed_at TEXT
             )
         """)
+        existing_job_cols = {r[1].lower() for r in conn.execute("PRAGMA table_info(proof_inspection_jobs)").fetchall()}
+        for col_name in ("leave_type_hint", "reason_category_hint"):
+            if col_name not in existing_job_cols:
+                conn.execute(f"ALTER TABLE proof_inspection_jobs ADD COLUMN {col_name} TEXT")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_inspection_jobs_status ON proof_inspection_jobs(status, created_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_inspection_jobs_proof ON proof_inspection_jobs(proof_id)")
         conn.commit()
@@ -240,7 +275,9 @@ def _init_legacy_schema():
 
 def seed_demo_request():
     """Tự động nạp 5 đơn demo cho 5 nhân viên khác nhau nếu bảng leave_requests còn trống."""
-    if os.getenv("SEED_DEMO_DATA", "true").lower() in ("false", "0", "no") or os.getenv("APP_ENV") == "test":
+    # Mặc định tắt: các đơn mẫu cũ gắn sai mã nhân viên (vd "Nguyễn Văn An" = EMP012) và bỏ qua rule engine,
+    # khiến Manager thấy đơn mà nhân viên không thấy. Bật SEED_DEMO_DATA=true nếu cần.
+    if os.getenv("SEED_DEMO_DATA", "false").lower() in ("false", "0", "no") or os.getenv("APP_ENV") == "test":
         return
     conn = get_db_connection()
     try:
@@ -364,8 +401,9 @@ def reset_all_data(include_demo: bool = False):
     conn = get_db_connection()
     try:
         tables_to_clear = [
-            "leave_requests", "proof_documents", "audit_logs", 
-            "approval_steps", "leave_transactions", "leave_bookings"
+            "leave_requests", "proof_documents", "audit_logs",
+            "approval_steps", "leave_transactions", "leave_bookings",
+            "proof_inspection_jobs",  # job của chứng từ đã xóa sẽ treo mãi trong hàng đợi nếu không dọn
         ]
         for tbl in tables_to_clear:
             try:
@@ -396,9 +434,10 @@ def reset_all_data(include_demo: bool = False):
                         emp.get("hire_date")
                     ))
         conn.commit()
+        sync_employment_fields(conn, overwrite=True)
 
-        # Dọn dẹp thư mục uploads nếu có
-        uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+        # Dọn đúng thư mục upload đang dùng (LEAVE_UPLOAD_DIR); giữ lại thư mục con vlm_cache.
+        uploads_dir = os.getenv("LEAVE_UPLOAD_DIR", os.path.join(os.path.dirname(DB_PATH), "uploads"))
         if os.path.exists(uploads_dir):
             for fname in os.listdir(uploads_dir):
                 fpath = os.path.join(uploads_dir, fname)
@@ -416,6 +455,31 @@ def reset_all_data(include_demo: bool = False):
     print("✅ [DATABASE RESET] Đã xóa sạch toàn bộ đơn nghỉ phép và khôi phục database về 0 đơn.")
 
 
+_EMPLOYMENT_FIELDS = ("employment_status", "employment_start_date", "probation_start_date",
+                      "probation_end_date", "calendar_review_required")
+
+
+def sync_employment_fields(conn, overwrite: bool = False):
+    """Nạp trạng thái thử việc / ngày thử việc từ employees.json. Các cột này được thêm bởi migrate() SAU bước
+    nạp nhân viên ban đầu, nên trước đây không bao giờ được ghi (mọi người đều thành nhân viên chính thức,
+    quy tắc PROBATION_ANNUAL_RESTRICTED không bao giờ chạy). overwrite=False chỉ điền ô đang trống."""
+    if not os.path.exists(EMPLOYEES_JSON_PATH):
+        return
+    existing = {r[1] for r in conn.execute("PRAGMA table_info(employees)")}
+    fields = [f for f in _EMPLOYMENT_FIELDS if f in existing]
+    if not fields:
+        return
+    with open(EMPLOYEES_JSON_PATH, "r", encoding="utf-8") as f:
+        employees_data = json.load(f)
+    for emp in employees_data:
+        values = {k: emp.get(k) for k in fields if emp.get(k) is not None}
+        if not values:
+            continue
+        assign = ", ".join(f"{k}=?" if overwrite else f"{k}=COALESCE({k}, ?)" for k in values)
+        conn.execute(f"UPDATE employees SET {assign} WHERE employee_id=?", (*values.values(), emp.get("employee_id")))
+    conn.commit()
+
+
 def init_db():
     from migrations import backup_if_needed, migrate
     backup_if_needed(DB_PATH)
@@ -423,6 +487,7 @@ def init_db():
     conn = get_db_connection()
     try:
         migrate(conn)
+        sync_employment_fields(conn)
         normalize_pending_approval_roles(conn)
     finally:
         conn.close()

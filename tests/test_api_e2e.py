@@ -109,6 +109,35 @@ def test_analysis_uses_vietnamese_labels(client):
     label_text=json.dumps(analysis['vlm_fields_labels'], ensure_ascii=False)
     assert 'Correlation score' not in label_text
     assert 'Mức độ khớp nội dung' in label_text or 'độ khớp nội dung' in label_text.lower()
+    nodes={node['stage']:node for node in analysis['decision_tree_checklist']}
+    assert 'TEAM_QUOTA' in nodes
+    assert 'Số dư phép hiện tại trước khi trừ: 100 ngày' in nodes['BALANCE']['note']
+    assert nodes['TEAM_QUOTA']['status']=='PASS'
+    assert '1 / 12 người nghỉ (8,3%) < Giới hạn 30%' == nodes['TEAM_QUOTA']['note']
+
+def test_analysis_flags_team_quota_above_30_percent(client,isolated_db):
+    for index in range(3):
+        legacy_approval(isolated_db,f'ABS{index}',f'EMP{index}', ['2026-10-05'])
+    response=client.post('/api/leave/request',headers={'X-Actor-ID':'E'},
+        json=payload(from_date='2026-10-05',to_date='2026-10-05'))
+    assert response.status_code==200,response.text
+    request_id=response.json()['data']['id']
+    analysis=client.get(f'/api/leave/{request_id}/analysis',headers={'X-Actor-ID':'E'})
+    assert analysis.status_code==200,analysis.text
+    nodes={node['stage']:node for node in analysis.json()['decision_tree_checklist']}
+    assert nodes['TEAM_QUOTA']['status']=='WARN'
+    assert '4 / 12 người nghỉ (33,3%) > Giới hạn 30% - Quản lý cần xem xét.' == nodes['TEAM_QUOTA']['note']
+
+def test_analysis_hides_quota_when_annual_request_needs_no_leave(client):
+    response=client.post('/api/leave/request',headers={'X-Actor-ID':'E'},
+        json=payload(from_date='2026-10-17',to_date='2026-10-18'))
+    assert response.status_code==200,response.text
+    assert response.json()['data']['decision']=='NO_LEAVE_REQUIRED'
+    request_id=response.json()['data']['id']
+    analysis=client.get(f'/api/leave/{request_id}/analysis',headers={'X-Actor-ID':'E'})
+    assert analysis.status_code==200,analysis.text
+    stages={node['stage'] for node in analysis.json()['decision_tree_checklist']}
+    assert 'TEAM_QUOTA' not in stages
 
 
 def test_duplicate_partial_and_atomic_rollback(service,isolated_db,monkeypatch):

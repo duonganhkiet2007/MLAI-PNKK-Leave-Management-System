@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from services.orchestration import LeaveOrchestratorService
 from services.inspection_service import GLOBAL_INSPECTION_SERVICE
 from metrics import GLOBAL_METRICS
-from domain import RequestFacts, ProofType, ProofExtraction, VerifiedProof, EditableFields, LeaveType, ReasonCategory, names_approximately_match, should_deduct_annual_balance
+from domain import RequestFacts, ProofType, ProofExtraction, VerifiedProof, EditableFields, LeaveType, ReasonCategory, names_approximately_match, should_deduct_annual_balance, TEAM_ABSENCE_THRESHOLD
 import database as db
 import storage as st
 from auth import verify_token, legacy_actor_header_allowed, demo_login_enabled
@@ -311,11 +311,17 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             except Exception:
                 pass
         shows_balance = should_deduct_annual_balance(leave_type_value)
+        team_quota_required = (
+            leave_type_value in {'ANNUAL', 'UNPAID_OTHER'}
+            and str(req.get('decision') or '').upper() != 'NO_LEAVE_REQUIRED'
+        )
         employee_row = conn.execute(
             'SELECT remaining_leave_days FROM employees WHERE employee_id=?',
             (req.get('employee_id'),)
         ).fetchone()
         remaining_leave_days = float(employee_row['remaining_leave_days']) if employee_row and employee_row['remaining_leave_days'] is not None else None
+        balance_change = float(req.get('annual_balance_change') or 0)
+        balance_before_request = remaining_leave_days - balance_change if remaining_leave_days is not None else None
         shows_proof = leave_type_value in {
             'SPECIAL_PAID', 'STATUTORY_UNPAID', 'SICK_MEDICAL',
             'MEDICAL_EMERGENCY', 'WORK_ACCIDENT', 'MATERNITY',
@@ -334,15 +340,15 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                                title_vi="Xác thực thông tin nhân viên & đơn nghỉ",
                        severity="SUCCESS" if has_basic else "CRITICAL")
         # ===== NODE 2. BALANCE (Quota check) =====
-        rem = float(remaining_leave_days) if remaining_leave_days is not None else 0.0
+        rem = float(balance_before_request) if balance_before_request is not None else 0.0
         # Phép năm trừ theo NGÀY LÀM VIỆC (không tính cuối tuần / ngày lễ), không phải ngày lịch
         req_days = float(req.get('requested_working_days') if req.get('requested_working_days') is not None else (req.get('workdays') or 0))
         lt_code = str(req.get('canonical_leave_type') or req.get('leave_type') or '')
-        b_pass = (lt_code != 'ANNUAL') or (remaining_leave_days is None or remaining_leave_days >= req_days)
+        b_pass = (lt_code != 'ANNUAL') or (balance_before_request is None or balance_before_request >= req_days)
         b_status = "PASS" if b_pass else "FAIL"
         rem_display = f"{rem:g}"
         req_days_display = f"{req_days:g}"
-        b_note = (f"Số dư phép hiện tại: {rem_display} ngày • Số ngày làm việc xin nghỉ: {req_days_display} ngày."
+        b_note = (f"Số dư phép hiện tại trước khi trừ: {rem_display} ngày • Số ngày làm việc xin nghỉ: {req_days_display} ngày."
               if shows_balance else
               f"Số dư phép hiện tại: {rem_display} ngày • Đơn nghỉ này không trừ vào phép năm.")
         add_node(2,"BALANCE",b_status, b_pass, b_note,
@@ -748,7 +754,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             w = ('Lý do escalate: ' + _s(why)) if (decision_raw == 'escalate' and why) else '',
         )
         add_node(8,"PROOF_VERIFICATION",pv_status, pv_pass, pv_note,
-                               title_vi="Trạng thái xác minh chứng từ (VERIFIED / UNVERIFIED / REJECTED)",
+                       title_vi="Trạng thái xử lý hồ sơ",
                        severity=pv_severity, include=shows_proof)
         # ===== NODE 9. AUTHORITY =====
         tr = req.get('target_role') or 'NONE'
@@ -813,31 +819,67 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                                title_vi="Kiểm tra thời hạn báo trước & cảnh báo hoạt động",
                                severity=n_severity))
         # ===== NODE 11. TEAM QUOTA (30% rule) =====
+        # Chỉ áp dụng cho các trường hợp quy tắc quota phòng ban thực sự có ý nghĩa:
+        # - Nghỉ phép năm (ANNUAL)
+        # - Nghỉ không lương khác / UNSPECIFIED UNPAID (UNPAID_OTHER)
+        # Các loại nghỉ BHXH, lễ tang, kết hôn theo luật định không cần xét quota team.
         # Lấy số liệu thực tế: sau khi người này được duyệt nghỉ thì team có bao nhiêu người nghỉ / tổng
         _dept = req.get('department') or ''
         _leave_from = req.get('from_date') or ''
-        _team_on_leave_now = 0
         _team_total = 1
+        _requested_team_days = []
         try:
-            if _dept and _leave_from:
-                _team_on_leave_now = db.get_team_absent_count(_dept, _leave_from[:10])
+            result_data = req.get('result_json') or {}
+            _requested_team_days = result_data.get('working_dates') if isinstance(result_data, dict) else []
+            if not _requested_team_days and req.get('from_date') and req.get('to_date'):
+                from datetime import date as _date
+                from calendar_service import CalendarService
+                _requested_team_days = [day.isoformat() for day in CalendarService().working_dates(
+                    _date.fromisoformat(req['from_date']), _date.fromisoformat(req['to_date'])
+                )]
+            if _dept and _requested_team_days:
                 _team_total = db.get_department_total_members(_dept)
         except Exception:
             pass
-        # +1 để tính cả người hiện tại (sau khi duyệt, bao gồm họ)
-        _after_on_leave = _team_on_leave_now + 1
+        _requested_team_days = sorted(set(str(day)[:10] for day in _requested_team_days))
+        _approved_team_rows = []
+        if _dept and _requested_team_days:
+            _approved_team_rows = conn.execute(
+                """SELECT id, employee_id, from_date, to_date FROM leave_requests
+                   WHERE department=? AND status='COMPLETED' AND decision!='NO_LEAVE_REQUIRED'
+                     AND (decision IN ('AUTO_APPROVE','APPROVED_BY_HUMAN_OVERRIDE')
+                          OR human_resolution='APPROVE_OVERRIDE')
+                     AND id!=? AND from_date<=? AND to_date>=?""",
+                (_dept, request_id, max(_requested_team_days), min(_requested_team_days))
+            ).fetchall()
+        _team_counts_by_day = {}
+        for _day in _requested_team_days:
+            _absent_employee_ids = {
+                row['employee_id'] for row in _approved_team_rows
+                if row['from_date'] <= _day <= row['to_date']
+            }
+            _team_counts_by_day[_day] = len(_absent_employee_ids) + 1
+        _quota_peak_date, _after_on_leave = max(
+            _team_counts_by_day.items(), key=lambda item: item[1], default=('', 1)
+        )
         _ratio_after = _after_on_leave / _team_total if _team_total > 0 else 0.0
-        quota_breach = 'TEAM' in (req.get('error_code') or '').upper() or any('TEAM' in str(x).upper() for x in (list((llm.get('applied_policy_clauses') if isinstance(llm,dict) else []) or [])[:5]))
-        _ratio_str = f"{_after_on_leave}/{_team_total} người nghỉ"
-        if quota_breach:
-            q_status='WARN'; q_pass=True; q_severity='WARNING'
-            q_note = f'Phát hiện team đang có nhiều nhân viên nghỉ đồng thời • Sau khi duyệt: {_ratio_str} • Tỷ lệ {_ratio_after:.1%} — vượt ngưỡng 30% • Trưởng bộ phận cần đối chiếu và xác nhận.'
+        quota_breach = _ratio_after > TEAM_ABSENCE_THRESHOLD
+        _ratio_str = f"{_after_on_leave} / {_team_total} người nghỉ"
+        _ratio_percent = f"{_ratio_after:.1%}".replace('.', ',')
+        _quota_operator = '>' if quota_breach else ('=' if _ratio_after == TEAM_ABSENCE_THRESHOLD else '<')
+        if not team_quota_required:
+            q_status='NOT_RUN'; q_pass=False; q_severity='INFO'
+            q_note = 'Loại nghỉ này không thuộc danh mục cần xét quota nhóm / tỷ lệ nghỉ đồng thời trong phòng ban.'
+        elif quota_breach:
+            q_status='WARN'; q_pass=False; q_severity='WARNING'
+            q_note = f'{_ratio_str} ({_ratio_percent}) {_quota_operator} Giới hạn 30% - Quản lý cần xem xét.'
         else:
             q_status='PASS'; q_pass=True; q_severity='SUCCESS'
-            q_note = f'Team KHÔNG vi phạm giới hạn nghỉ đồng thời • Sau khi duyệt đơn này: {_ratio_str} • Tỷ lệ {_ratio_after:.1%} — ngưỡng an toàn < 30%.'
-        checklist.append(_node(11,"TEAM_QUOTA",q_status, q_pass, q_note,
-                               title_vi="Kiểm tra tỷ lệ nhân sự nghỉ đồng thời trong team (quy tắc 30%)",
-                               severity=q_severity))
+            q_note = f'{_ratio_str} ({_ratio_percent}) {_quota_operator} Giới hạn 30%'
+        if team_quota_required:
+            checklist.append(_node(11,"TEAM_QUOTA",q_status, q_pass, q_note,
+                                   title_vi="Kiểm tra tỷ lệ nhân sự nghỉ đồng thời trong team (quy tắc 30%)",
+                                   severity=q_severity))
         # ===== NODE 12. FINAL DECISION =====
         d = (req.get('decision') or '').upper() or 'NOT_RUN'
         DEC_VI = {

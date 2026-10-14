@@ -5594,6 +5594,13 @@ select option:checked {
   padding: 4px 0;
   border-bottom: 1px solid #eef2f6;
 }
+.rd-detail-line-single {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
 .rd-detail-line:first-child { padding-top: 0; }
 .rd-detail-line:last-child { padding-bottom: 0; border-bottom: 0; }
 .rd-detail-line strong { color: #64748b; font-size: 14px; font-weight: 600; }

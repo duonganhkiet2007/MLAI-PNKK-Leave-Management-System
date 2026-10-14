@@ -1060,7 +1060,7 @@ const STAFF_TEST_CASES = [
     title: "TC-VLM-03: Bác sĩ chỉ định 1 ngày nhưng đơn xin 3 ngày (Lệch số ngày)",
     badge: "Bẫy VLM · Lệch ngày",
     badgeClass: "bg-danger-lt",
-    desc: "Giấy chứng nhận chỉ cho nghỉ 1 ngày (12/10) nhưng nhân viên nộp xin 3 ngày -> Bắt lỗi MEDICAL_DAYS_MISMATCH, yêu cầu sửa đơn.",
+    desc: "Giấy chứng nhận chỉ cho nghỉ 1 ngày (26/10) nhưng nhân viên nộp xin 3 ngày (26–28/10) -> Bắt lỗi MEDICAL_DAYS_MISMATCH, yêu cầu sửa đơn.",
     payload: {
       leave_type: "SICK_MEDICAL",
       from_date: "2026-10-26",
@@ -1069,7 +1069,7 @@ const STAFF_TEST_CASES = [
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Đa khoa Hồng Ngọc",
+        issuer: "Bệnh viện Đa khoa Quốc tế Hà Nội",
         recommended_from_date: "2026-10-26",
         recommended_to_date: "2026-10-26",
         signature_present: true,
@@ -1182,10 +1182,10 @@ const STAFF_TEST_CASES = [
   {
     id: "TC-VLM-01",
     primaryEmpId: "EMP005",
-    title: "TC-VLM-01: Khám ngoại trú 2 ngày phòng khám Medlatec hợp lệ",
+    title: "TC-VLM-01: Khám ngoại trú 3 ngày phòng khám Medlatec hợp lệ",
     badge: "Chứng từ · Hợp lệ",
     badgeClass: "bg-info-lt",
-    desc: "Đơn nghỉ ốm 3 ngày (14–16/10) kèm chứng từ PK Đa khoa Medlatec có chữ ký bác sĩ & dấu mộc -> Chuyển Quản lý duyệt.",
+    desc: "Đơn nghỉ ốm 3 ngày (28–30/10) kèm chứng từ PK Đa khoa Medlatec có chữ ký bác sĩ & dấu mộc -> Chuyển Quản lý duyệt.",
     payload: {
       leave_type: "SICK_MEDICAL",
       from_date: "2026-10-28",
@@ -1205,7 +1205,7 @@ const STAFF_TEST_CASES = [
     expected: {
       decision: "ESCALATE",
       target_role: "DIRECT_MANAGER",
-      note: "Chứng từ hợp lệ (2 ngày ốm): Chuyển Quản lý duyệt theo quy chế"
+      note: "Chứng từ hợp lệ (3 ngày ốm): Chuyển Quản lý duyệt theo quy chế"
     }
   },
   {
@@ -1294,7 +1294,7 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP006-01: Nghỉ ốm 2 ngày tiêu chuẩn BV Đa khoa Đống Đa",
     badge: "BHXH · Ngoại trú chuẩn",
     badgeClass: "bg-info-lt",
-    desc: "Nghỉ ốm 2 ngày điều trị viêm xoang có Giấy chứng nhận nghỉ việc hưởng BHXH BV Đống Đa -> Chuyển Quản lý duyệt.",
+    desc: "Nghỉ ốm 2 ngày điều trị viêm amidan hốc mủ cấp tính có Giấy chứng nhận nghỉ việc hưởng BHXH BV Đa khoa Đống Đa -> Chuyển Quản lý duyệt.",
     payload: {
       leave_type: "SICK_MEDICAL",
       from_date: "2026-10-29",
@@ -1323,7 +1323,7 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP006-02: Giấy cấp cứu ban đêm tai nạn nhẹ BV E (Hỗ trợ khẩn cấp)",
     badge: "Khẩn cấp · Ban đêm",
     badgeClass: "bg-danger-lt",
-    desc: "Nhập Khoa Cấp cứu BV E lúc 06:15 sáng 15/10 vì đau bụng cấp -> Phiếu cấp cứu hợp lệ (đủ tên, nơi cấp, ngày, chữ ký) cho 1 ngày nghỉ: AI tự duyệt theo quy chế §3.1.",
+    desc: "Nhập Khoa Cấp cứu BV E lúc 06:15 sáng 29/10 vì đau bụng cấp -> Phiếu cấp cứu hợp lệ (đủ tên, nơi cấp, ngày, chữ ký) cho 1 ngày nghỉ: AI tự duyệt theo quy chế §3.1.",
     payload: {
       leave_type: "SICK_MEDICAL",
       from_date: "2026-10-29",
@@ -1423,7 +1423,7 @@ const STAFF_TEST_CASES = [
     expected: {
       decision: "AUTO_APPROVE",
       target_role: "AI",
-      note: "Thử việc có chứng từ y tế hợp lệ: Chuyển Quản lý duyệt chế độ BHXH"
+      note: "Thử việc có chứng từ y tế hợp lệ (1 ngày): AI tự động phê duyệt chế độ BHXH"
     }
   },
   {
@@ -1486,7 +1486,7 @@ const STAFF_TEST_CASES = [
     expected: {
       decision: "ESCALATE",
       target_role: "CEO",
-      note: "Chế độ thai sản BHXH: Chuyển Quản lý duyệt theo Luật BHXH"
+      note: "Chế độ thai sản BHXH: Chuyển Tổng Giám đốc (CEO) phê duyệt theo quy chế"
     }
   },
   {
@@ -1495,7 +1495,7 @@ const STAFF_TEST_CASES = [
     title: "TC-EMP008-02: Tang lễ tứ thân phụ mẫu 3 ngày hưởng nguyên lương",
     badge: "Nguyên lương · Tang chế",
     badgeClass: "bg-dark-lt",
-    desc: "Nghỉ việc riêng hưởng nguyên lương do mẹ đẻ qua đời (18/10) kèm Giấy chứng tử -> Quản lý duyệt 3 ngày nguyên lương theo Điều 115 BLLĐ.",
+    desc: "Nghỉ việc riêng hưởng nguyên lương do mẹ đẻ qua đời (01/11) kèm Giấy chứng tử -> Quản lý duyệt 3 ngày nguyên lương theo Điều 115 BLLĐ.",
     payload: {
       leave_type: "SPECIAL_PAID",
       reason_category: "PARENT_DEATH",
@@ -1707,10 +1707,10 @@ const STAFF_TEST_CASES = [
   {
     id: "TC-EMP010-02",
     primaryEmpId: "EMP010",
-    title: "TC-EMP010-02: Nghỉ ốm 3 ngày tiêu chuẩn BV Vinmec Times City",
-    badge: "BHXH · Vinmec Times City",
+    title: "TC-EMP010-02: Nghỉ ốm 3 ngày tiêu chuẩn BV Thanh Nhàn",
+    badge: "BHXH · BV Thanh Nhàn",
     badgeClass: "bg-info-lt",
-    desc: "Nghỉ ốm ngoại trú 3 ngày (21–23/10) kèm chứng từ BV Thanh Nhàn -> Quản lý duyệt chế độ BHXH.",
+    desc: "Nghỉ ốm ngoại trú 3 ngày (04–06/11) kèm chứng từ BV Thanh Nhàn -> Quản lý duyệt chế độ BHXH.",
     payload: {
       leave_type: "SICK_MEDICAL",
       from_date: "2026-11-04",
@@ -1719,7 +1719,7 @@ const STAFF_TEST_CASES = [
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện ĐKQT Vinmec Times City",
+        issuer: "Bệnh viện Thanh Nhàn",
         issue_date: "2026-11-04",
         signature_present: true,
         document_readability: "READABLE"
@@ -1770,10 +1770,10 @@ const STAFF_TEST_CASES = [
   {
     id: "TC-EMP011-02",
     primaryEmpId: "EMP011",
-    title: "TC-EMP011-02: Tai nạn giao thông nhẹ trên đường đi làm (Thẩm định tai nạn)",
+    title: "TC-EMP011-02: Tai nạn lao động tại văn phòng công ty (Thẩm định tai nạn)",
     badge: "Thẩm định · Tai nạn LĐ",
     badgeClass: "bg-warning-lt",
-    desc: "Tai nạn lao động: trượt ngã cầu thang tòa nhà công ty, có phiếu tiếp nhận sơ cứu -> Chuyển Quản lý thẩm định chế độ tai nạn lao động.",
+    desc: "Tai nạn lao động: trượt ngã cầu thang bộ tầng 6 tòa nhà công ty, có phiếu tiếp nhận sơ cứu BV Giao thông Vận tải -> Chuyển Quản lý thẩm định chế độ tai nạn lao động.",
     payload: {
       leave_type: "WORK_ACCIDENT",
       from_date: "2026-11-05",
@@ -1793,7 +1793,7 @@ const STAFF_TEST_CASES = [
     expected: {
       decision: "ESCALATE",
       target_role: "DIRECT_MANAGER",
-      note: "Hồ sơ tai nạn trên đường đi làm: Quản lý thẩm định biên bản & lộ trình"
+      note: "Hồ sơ tai nạn lao động tại văn phòng: Quản lý thẩm định biên bản & chứng từ y tế"
     }
   },
   {
@@ -1848,10 +1848,10 @@ const STAFF_TEST_CASES = [
   {
     id: "TC-EMP012-02",
     primaryEmpId: "EMP012",
-    title: "TC-EMP012-02: Con ốm 2 ngày hưởng trợ cấp BHXH (Con dưới 7 tuổi)",
+    title: "TC-EMP012-02: Con ốm 1 ngày hưởng trợ cấp BHXH (Con dưới 7 tuổi)",
     badge: "BHXH · Chăm sóc con ốm",
     badgeClass: "bg-info-lt",
-    desc: "Nghỉ chăm sóc con gái 4 tuổi bị viêm phế quản kèm Giấy chứng nhận BV Nhi Trung ương -> Chuyển Quản lý duyệt hưởng chế độ con ốm.",
+    desc: "Nghỉ chăm sóc con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh kèm Giấy chứng nhận BV Nhi Trung ương -> Chuyển Quản lý duyệt hưởng chế độ con ốm.",
     payload: {
       leave_type: "SICK_MEDICAL",
       from_date: "2026-11-06",
@@ -2017,8 +2017,8 @@ const TESTCASE_SPRINT1_METADATA = {
     group: "AUTHORITY_ESCALATION",
     groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    leaveTypeFriendly: "Nghỉ ốm ngoại trú 2 ngày (Medlatec)",
-    actionableQuestion: "Nhân viên khám ngoại trú viêm dạ dày 2 ngày có giấy chứng nhận PK Medlatec hợp lệ. Quản lý trực tiếp có phê duyệt chế độ ốm đau BHXH không?"
+    leaveTypeFriendly: "Nghỉ ốm ngoại trú 3 ngày (Medlatec)",
+    actionableQuestion: "Nhân viên khám ngoại trú sốt xuất huyết Dengue 3 ngày có giấy chứng nhận PK Đa khoa Medlatec hợp lệ. Quản lý trực tiếp có phê duyệt chế độ ốm đau BHXH không?"
   },
   "TC-EMP005-02": {
     group: "OUT_OF_POLICY",
@@ -2045,8 +2045,8 @@ const TESTCASE_SPRINT1_METADATA = {
     group: "AUTHORITY_ESCALATION",
     groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    leaveTypeFriendly: "Nghỉ ốm 2 ngày BV Đống Đa",
-    actionableQuestion: "Nhân viên điều trị ngoại trú viêm phế quản 2 ngày kèm Giấy chứng nhận BV Đống Đa. Quản lý có phê duyệt chế độ ốm đau BHXH không?"
+    leaveTypeFriendly: "Nghỉ ốm 2 ngày BV Đa khoa Đống Đa",
+    actionableQuestion: "Nhân viên điều trị ngoại trú viêm amidan hốc mủ cấp tính 2 ngày kèm Giấy chứng nhận BV Đa khoa Đống Đa. Quản lý có phê duyệt chế độ ốm đau BHXH không?"
   },
   "TC-EMP006-02": {
     group: "AUTHORITY_ESCALATION",
@@ -2086,16 +2086,16 @@ const TESTCASE_SPRINT1_METADATA = {
   "TC-EMP008-01": {
     group: "AUTHORITY_ESCALATION",
     groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
+    shortPrefix: "Vượt thẩm quyền (Cấp CEO)",
     leaveTypeFriendly: "Khám thai định kỳ 1 ngày (BV Phụ sản)",
-    actionableQuestion: "Nhân viên mang thai tuần 28 xin nghỉ 1 ngày khám thai định kỳ kèm sổ y bạ. Quản lý có phê duyệt 1 ngày nghỉ chế độ thai sản BHXH không?"
+    actionableQuestion: "Nhân viên mang thai tuần 28 xin nghỉ 1 ngày khám thai định kỳ kèm chứng nhận y tế BV Phụ sản Hà Nội. Tổng Giám đốc (CEO) có phê duyệt 1 ngày nghỉ chế độ thai sản BHXH không?"
   },
   "TC-EMP008-02": {
     group: "AUTHORITY_ESCALATION",
     groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    leaveTypeFriendly: "Nghỉ đặc biệt hưởng lương (Tang lễ bố ruột)",
-    actionableQuestion: "Nhân viên xin nghỉ 3 ngày lo tang lễ cho bố ruột kèm giấy tờ xác nhận. Quản lý trực tiếp có phê duyệt 03 ngày nghỉ nguyên lương theo Điều 115 BLLĐ không?"
+    leaveTypeFriendly: "Nghỉ đặc biệt hưởng lương (Tang lễ mẹ ruột)",
+    actionableQuestion: "Nhân viên xin nghỉ 3 ngày lo tang lễ cho mẹ ruột (Trần Thị Lan) kèm giấy tờ xác nhận. Quản lý trực tiếp có phê duyệt 03 ngày nghỉ nguyên lương theo Điều 115 BLLĐ không?"
   },
   "TC-EMP008-03": {
     group: "ROUTINE",
@@ -2116,7 +2116,7 @@ const TESTCASE_SPRINT1_METADATA = {
     groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
     shortPrefix: "Chưa rõ (Sai tên người bệnh)",
     leaveTypeFriendly: "Nghỉ ốm (Tên trên giấy khám không khớp)",
-    actionableQuestion: "Họ tên bệnh nhân trên chứng từ y tế là 'Nguyễn Văn Nam', không khớp với tên nhân viên 'Võ Minh Khang'. Nhân viên có nộp nhầm giấy khám bệnh của người khác không?"
+    actionableQuestion: "Họ tên bệnh nhân trên chứng từ y tế là 'Võ Hoàng Long', không khớp với tên nhân viên 'Võ Minh Khang'. Nhân viên có nộp nhầm giấy khám bệnh của người khác không?"
   },
   "TC-EMP009-03": {
     group: "AUTHORITY_ESCALATION",
@@ -2150,8 +2150,8 @@ const TESTCASE_SPRINT1_METADATA = {
     group: "AUTHORITY_ESCALATION",
     groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    leaveTypeFriendly: "Nghỉ ốm 3 ngày tiêu chuẩn BV Đống Đa",
-    actionableQuestion: "Nhân viên viêm amidan cấp sốt cao điều trị 3 ngày có giấy tờ bệnh viện. Quản lý trực tiếp có phê duyệt chế độ ốm đau BHXH không?"
+    leaveTypeFriendly: "Nghỉ ốm 3 ngày tiêu chuẩn BV Thanh Nhàn",
+    actionableQuestion: "Nhân viên sốt virus hô hấp điều trị 3 ngày có giấy chứng nhận BV Thanh Nhàn. Quản lý trực tiếp có phê duyệt chế độ ốm đau BHXH không?"
   },
   "TC-AI-02": {
     group: "ROUTINE",
@@ -2164,8 +2164,8 @@ const TESTCASE_SPRINT1_METADATA = {
     group: "OUT_OF_POLICY",
     groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
     shortPrefix: "Ngoài quy định (Tai nạn lao động)",
-    leaveTypeFriendly: "Nghỉ do va quệt xe trên đường đi làm",
-    actionableQuestion: "Nhân viên bị tai nạn giao thông trên đường đi làm nộp biên bản/giấy chứng nhận. Quản lý và Phòng Nhân sự có xác nhận theo diện hỗ trợ tai nạn lao động không?"
+    leaveTypeFriendly: "Nghỉ tai nạn lao động tại văn phòng (Trượt ngã cầu thang)",
+    actionableQuestion: "Nhân viên trượt ngã cầu thang bộ tầng 6 tòa nhà công ty bị bong gân có phiếu sơ cứu BV Giao thông Vận tải. Quản lý có phê duyệt chế độ tai nạn lao động không?"
   },
   "TC-EMP011-03": {
     group: "ROUTINE",
@@ -2178,15 +2178,15 @@ const TESTCASE_SPRINT1_METADATA = {
     group: "AUTHORITY_ESCALATION",
     groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Vượt thẩm quyền (Cấp CEO)",
-    leaveTypeFriendly: "Nghỉ không lương dài hạn 29 ngày",
-    actionableQuestion: "Nhân viên xin nghỉ việc riêng không lương dài hạn 29 ngày làm việc. Tổng Giám đốc (CEO) có phê duyệt trường hợp nghỉ không lương dài ngày này không?"
+    leaveTypeFriendly: "Nghỉ không lương dài hạn 21 ngày làm việc",
+    actionableQuestion: "Nhân viên xin nghỉ việc riêng không lương dài hạn 21 ngày làm việc (19/10 - 16/11/2026). Tổng Giám đốc (CEO) có phê duyệt trường hợp nghỉ không lương dài ngày này không?"
   },
   "TC-EMP012-02": {
     group: "AUTHORITY_ESCALATION",
     groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    leaveTypeFriendly: "Nghỉ chăm con gái 4 tuổi ốm 2 ngày",
-    actionableQuestion: "Nhân viên nghỉ chăm con gái 4 tuổi điều trị viêm phế quản kèm giấy tờ y tế. Quản lý có phê duyệt chế độ con ốm đau BHXH không?"
+    leaveTypeFriendly: "Nghỉ chăm con trai 3 tuổi ốm 1 ngày",
+    actionableQuestion: "Nhân viên nghỉ chăm con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh kèm Giấy chứng nhận y tế BV Nhi Trung ương. Quản lý có phê duyệt chế độ con ốm đau BHXH không?"
   },
   "TC-EMP012-03": {
     group: "OUT_OF_POLICY",
@@ -5465,15 +5465,15 @@ const BENCHMARK_CASES_DATA = {
     employee_id: "EMP008",
     department: "Marketing & Operations",
     leave_type: "ANNUAL",
-    from_date: "2026-10-08",
-    to_date: "2026-10-09",
+    from_date: "2026-10-22",
+    to_date: "2026-10-23",
     requested_working_days: 2,
     workdays: 2,
     remaining_leave_days: 12,
     handover_person_id: "EMP010",
-    handover_person_name: "Nguyễn Văn Cường (EMP010 - Marketing & Operations)",
+    handover_person_name: "Phan Thảo My (EMP010 - Marketing & Operations)",
     reason: "Nghỉ phép thường niên",
-    submitted_at: "2026-10-01T08:00:00+07:00",
+    submitted_at: "2026-10-16T17:00:00+07:00",
     status: "APPROVED",
     decision: "AUTO_APPROVE",
     human_readable_explanation: "Đơn đầy đủ điều kiện và được phê duyệt tự động: Phép năm 2 ngày có bàn giao công việc hợp lệ cho nhân sự cùng phòng (EMP010), nhân viên đủ số dư phép (12 ngày).",
@@ -5497,15 +5497,15 @@ const BENCHMARK_CASES_DATA = {
     employee_id: "EMP006",
     department: "Engineering",
     leave_type: "ANNUAL",
-    from_date: "2026-10-05",
-    to_date: "2026-10-06",
+    from_date: "2026-10-19",
+    to_date: "2026-10-20",
     requested_working_days: 2,
     workdays: 2,
     remaining_leave_days: 1,
     handover_person_id: null,
     handover_person_name: "Không yêu cầu",
     reason: "Nghỉ việc gia đình 2 ngày",
-    submitted_at: "2026-10-01T08:00:00+07:00",
+    submitted_at: "2026-10-16T17:00:00+07:00",
     status: "REJECTED",
     decision: "AUTO_REJECT",
     human_readable_explanation: "Hệ thống AI tự động từ chối (BALANCE_EXCEEDED): Số ngày nghỉ yêu cầu (2 ngày) vượt quá số dư phép năm còn lại của nhân viên (hiện chỉ còn 1 ngày). Nhân viên có thể gửi lại đơn 1 ngày hoặc xin nghỉ không lương.",
@@ -5529,8 +5529,8 @@ const BENCHMARK_CASES_DATA = {
     employee_id: "EMP004",
     department: "Engineering",
     leave_type: "SICK_MEDICAL",
-    from_date: "2026-10-12",
-    to_date: "2026-10-14",
+    from_date: "2026-10-26",
+    to_date: "2026-10-28",
     requested_working_days: 3,
     workdays: 3,
     remaining_leave_days: 10,
@@ -5540,18 +5540,18 @@ const BENCHMARK_CASES_DATA = {
     proof_id: "proof_emp004_sick_days_mismatch.png",
     proof_file: "proof_emp004_sick_days_mismatch.png",
     attachment_type: "proof_emp004_sick_days_mismatch.png",
-    submitted_at: "2026-10-12T07:30:00+07:00",
+    submitted_at: "2026-10-26T07:30:00+07:00",
     status: "PENDING",
     decision: "NEED_CORRECTION",
-    human_readable_explanation: "Chuyển tiếp cần sửa đơn (Lệch chứng từ y tế): Giấy chứng nhận nghỉ việc hưởng BHXH của BV Đa khoa Hồng Ngọc chỉ định nghỉ 1 ngày (12/10), nhưng đơn xin nghỉ 3 ngày (12/10 - 14/10). Nhân viên cần điều chỉnh số ngày hoặc Quản lý xem xét nghỉ không lương 2 ngày còn lại.",
+    human_readable_explanation: "Chuyển tiếp cần sửa đơn (Lệch chứng từ y tế): Giấy chứng nhận nghỉ việc hưởng BHXH của BV Đa khoa Quốc tế Hà Nội chỉ định nghỉ 1 ngày (26/10), nhưng đơn xin nghỉ 3 ngày (26/10 - 28/10). Nhân viên cần điều chỉnh số ngày hoặc Quản lý xem xét nghỉ không lương 2 ngày còn lại.",
     actionable_question: "Đơn xin nghỉ 3 ngày (26/10 - 28/10) nhưng giấy chứng nhận y tế chỉ chỉ định nghỉ 1 ngày (26/10). Quản lý có chấp thuận cho nhân viên nghỉ không lương 2 ngày còn lại hoặc yêu cầu nhân viên điều chỉnh lại ngày nghỉ theo chứng từ?",
     vlm_analysis_json: {
       document_summary: {
         patient_name: "Lê Văn Nam",
-        issuer: "Bệnh viện Đa khoa Hồng Ngọc",
+        issuer: "Bệnh viện Đa khoa Quốc tế Hà Nội",
         diagnosis: "Rối loạn tiêu hóa cấp, theo dõi ngộ độc thức ăn",
-        issue_date: "2026-10-12",
-        doctor_recommended_range: { from: "2026-10-12", to: "2026-10-12", days: 1 }
+        issue_date: "2026-10-26",
+        doctor_recommended_range: { from: "2026-10-26", to: "2026-10-26", days: 1 }
       },
       flags: { has_red_stamp: true, has_doctor_signature: true, document_readability: "CLEAR" },
       inspection_mode: "OLLAMA_REAL_QWEN25_VL_3B"
@@ -5559,9 +5559,9 @@ const BENCHMARK_CASES_DATA = {
     llm_summary_json: {
       decision: "NEED_CORRECTION",
       correlation_tier_vn: "Chưa xác định thực tế (Lệch ảnh & Text)",
-      summary_natural_vn: "Đơn xin nghỉ ốm 3 ngày (12/10 - 14/10) nhưng giấy chứng nhận y tế Bệnh viện Hồng Ngọc chỉ định nghỉ 1 ngày (12/10). Đơn cần được chỉnh sửa ngày cho khớp chứng từ.",
+      summary_natural_vn: "Đơn xin nghỉ ốm 3 ngày (26/10 - 28/10) nhưng giấy chứng nhận y tế Bệnh viện Đa khoa Quốc tế Hà Nội chỉ định nghỉ 1 ngày (26/10). Đơn cần được chỉnh sửa ngày cho khớp chứng từ.",
       staff_summary: {
-        errors_vn: ["Thời gian xin nghỉ (3 ngày: 12/10 - 14/10) không khớp với chỉ định của bác sĩ trên giấy khám (1 ngày: 12/10)."]
+        errors_vn: ["Thời gian xin nghỉ (3 ngày: 26/10 - 28/10) không khớp với chỉ định của bác sĩ trên giấy khám (1 ngày: 26/10)."]
       },
       manager_summary: {
         suspicions_vn: ["Lệch số ngày giữa đơn xin (3 ngày) và giấy bác sĩ chỉ định (1 ngày)"],
@@ -5569,8 +5569,8 @@ const BENCHMARK_CASES_DATA = {
       },
       quick_action_options_vn: ["Yêu cầu nhân viên sửa đơn về 1 ngày", "Chấp thuận duyệt 1 ngày hưởng BHXH + 2 ngày không lương"],
       decision_tree_checklist: [
-        { node_id: "RULE_01", node_name: "Xác thực chứng từ y tế", result: "PASSED", note: "Có dấu mộc đỏ BV Hồng Ngọc, có chữ ký bác sĩ" },
-        { node_id: "RULE_02", node_name: "Đối soát số ngày chỉ định", result: "FAILED", note: "Bác sĩ chỉ định 1 ngày (12/10) != Đơn xin 3 ngày (12-14/10)" }
+        { node_id: "RULE_01", node_name: "Xác thực chứng từ y tế", result: "PASSED", note: "Có dấu mộc đỏ BV Đa khoa Quốc tế Hà Nội, có chữ ký bác sĩ" },
+        { node_id: "RULE_02", node_name: "Đối soát số ngày chỉ định", result: "FAILED", note: "Bác sĩ chỉ định 1 ngày (26/10) != Đơn xin 3 ngày (26-28/10)" }
       ]
     }
   },
@@ -5580,8 +5580,8 @@ const BENCHMARK_CASES_DATA = {
     employee_id: "EMP009",
     department: "Marketing & Operations",
     leave_type: "SPECIAL_PAID",
-    from_date: "2026-10-05",
-    to_date: "2026-10-07",
+    from_date: "2026-11-02",
+    to_date: "2026-11-04",
     requested_working_days: 3,
     workdays: 3,
     remaining_leave_days: 12,
@@ -5591,7 +5591,7 @@ const BENCHMARK_CASES_DATA = {
     proof_id: "proof_emp009_wedding_valid.png",
     proof_file: "proof_emp009_wedding_valid.png",
     attachment_type: "proof_emp009_wedding_valid.png",
-    submitted_at: "2026-10-01T08:00:00+07:00",
+    submitted_at: "2026-10-16T17:00:00+07:00",
     status: "PENDING",
     decision: "ESCALATE",
     human_readable_explanation: "Vượt thẩm quyền AI (Chuyển Quản lý duyệt): Chế độ nghỉ kết hôn 3 ngày hưởng 100% lương theo Điều 115 Bộ luật Lao động, kèm Giấy chứng nhận kết hôn hợp lệ. Đơn được chuyển Quản lý trực tiếp xem xét phê duyệt.",
@@ -5601,8 +5601,8 @@ const BENCHMARK_CASES_DATA = {
         patient_name: "Võ Minh Khang",
         issuer: "UBND Phường Dịch Vọng Hậu",
         diagnosis: "Giấy chứng nhận kết hôn",
-        issue_date: "2026-09-20",
-        doctor_recommended_range: { from: "2026-10-05", to: "2026-10-07", days: 3 }
+        issue_date: "2026-11-03",
+        doctor_recommended_range: { from: "2026-11-02", to: "2026-11-04", days: 3 }
       },
       flags: { has_red_stamp: true, has_doctor_signature: true, document_readability: "CLEAR" },
       inspection_mode: "OLLAMA_REAL_QWEN25_VL_3B"
@@ -6420,8 +6420,13 @@ async function openRequestDetailModal(requestId) {
     const _displayTreeNodes = _treeNodes.filter(function(node) {
       if (_hiddenTreeStages.has(node.stage)) return false;
       if (String(req.decision || '').toUpperCase() === 'AUTO_APPROVE' && node.stage === 'PROOF_VERIFICATION') return false;
-      // NOTICE & TEAM_QUOTA: Chỉ hiển thị trên giao diện Quản lý (Manager)
-      if (!_isManagerAudience && (node.stage === 'NOTICE' || node.stage === 'TEAM_QUOTA')) return false;
+      // NOTICE chỉ hiển thị trên giao diện Quản lý (Manager)
+      if (!_isManagerAudience && node.stage === 'NOTICE') return false;
+      // TEAM_QUOTA chỉ áp dụng cho các loại nghỉ có tính toán quota team thực sự
+      // (Nghỉ phép năm và nghỉ không lương khác); các loại BHXH / gia đình / hình sự không cần hiển thị.
+      const teamQuotaApplies = ['ANNUAL', 'UNPAID_OTHER'].includes(String(req.leave_type || req.canonical_leave_type || '').toUpperCase());
+      if (node.stage === 'TEAM_QUOTA' && !teamQuotaApplies) return false;
+      if (node.stage === 'TEAM_QUOTA' && String(req.decision || '').toUpperCase() === 'NO_LEAVE_REQUIRED') return false;
       return true;
     }).reduce(function(acc, node) {
       // Gộp các kết quả VLM vào node PROOF để tên không thành tiêu chí riêng.
@@ -6464,7 +6469,7 @@ async function openRequestDetailModal(requestId) {
   // Kết luận hồ sơ độc lập với trạng thái duyệt hoặc trạng thái chờ xử lý.
   const _decision = String(req.decision || '').toUpperCase();
   const _failedNode = _reviewNodes.find(function(node) { return node.status === 'FAIL' || node.status === 'REJECTED'; });
-  const _warningNode = _reviewNodes.find(function(node) { return node.status === 'WARN' || node.status === 'WAITING'; });
+  const _warningNode = _reviewNodes.find(function(node) { return node.status === 'WARN' || node.status === 'WAITING' || node.status === 'ESCALATED'; });
   const _isProcessing = req.status === 'PROCESSING' || req.status === 'PENDING_INSPECTION';
   let _conclusion = 'Hợp lệ';
   let _issueSentence = '';
@@ -6477,11 +6482,20 @@ async function openRequestDetailModal(requestId) {
     VLM_PATIENT: 'Tên trên chứng từ',
     VLM_CORRELATION: 'Mức độ khớp nội dung',
     VLM_DATE_COVERAGE: 'Đối chiếu thời gian nghỉ',
-    PROOF_VERIFICATION: 'Xác minh chứng từ',
+    PROOF_VERIFICATION: 'Trạng thái xử lý',
     NOTICE: 'Thời hạn báo trước',
     TEAM_QUOTA: 'Tỷ lệ nghỉ trong phòng ban'
   };
-  if (_isProcessing) {
+  const _unreadableDoc = _reviewNodes.some(function(node) {
+    return ['PROOF', 'VLM_INTEGRITY', 'VLM_PATIENT', 'VLM_DATE_COVERAGE', 'PROOF_VERIFICATION'].includes(node.stage)
+      && /không đọc được|chưa đọc được|không thể xác minh|không xác minh được/i.test(String(node.note || ''));
+  });
+
+  if (_unreadableDoc) {
+    _conclusion = 'Không đọc được chứng từ';
+    _issueSentence = 'Ảnh/chứng từ không đọc được; hệ thống không thể xác minh tên, ngày hoặc nội dung giấy tờ để duyệt.';
+    _issueBullets = [];
+  } else if (_isProcessing) {
     _conclusion = 'Đang kiểm tra';
   } else if (req.status === 'CANCELLED') {
     _conclusion = 'Đã hủy';
@@ -6515,10 +6529,16 @@ async function openRequestDetailModal(requestId) {
       const sentenceEnd = reason.search(/[.!?](?:\s|$)/);
       _issueSentence = sentenceEnd >= 0 ? reason.slice(0, sentenceEnd + 1) : `${reason.replace(/[;•].*$/, '').replace(/[.!?]+$/, '')}.`;
     }
-  } else if (_warningNode || req.status === 'WAITING_EMPLOYEE' || _decision === 'NEED_CORRECTION') {
+  } else if (_warningNode || req.status === 'WAITING_EMPLOYEE' || _decision === 'NEED_CORRECTION' || _decision === 'ESCALATE') {
     _conclusion = 'Cần xem xét';
     _issueSentence = _warningNode?.stage === 'VLM_CORRELATION'
       ? 'Chẩn đoán trên chứng từ chưa khớp hoàn toàn với lý do xin nghỉ.'
+      : _warningNode?.stage === 'TEAM_QUOTA'
+        ? 'Tỷ lệ nhân sự nghỉ đồng thời vượt ngưỡng 30%; quản lý cần xem xét trước khi duyệt.'
+      : _decision === 'ESCALATE'
+        ? localizeResponseText(cleanReason || `Đơn cần ${req.target_role || 'cấp có thẩm quyền'} xem xét trước khi duyệt.`)
+      : _warningNode?.stage === 'PROOF_VERIFICATION'
+        ? 'Hồ sơ đang được chuyển cấp có thẩm quyền xem xét.'
       : 'Hồ sơ cần được kiểm tra hoặc bổ sung thêm.';
   }
 
@@ -6527,6 +6547,11 @@ async function openRequestDetailModal(requestId) {
         return '<li><strong>' + escapeHtml(item.stage) + '</strong>: ' + escapeHtml(item.text) + '</li>';
       }).join('') + '</ul>'
     : '';
+
+  if (_unreadableDoc) {
+    _issueBullets = [];
+    _issueSentence = 'Ảnh/chứng từ không đọc được; hệ thống không thể xác minh tên, ngày hoặc nội dung giấy tờ để duyệt.';
+  }
 
   const _verdict = '<div class="rd-verdict">'
     + '<p class="rd-verdict-text"><strong>Kết luận: ' + escapeHtml(_conclusion) + '</strong></p>'
@@ -6689,7 +6714,7 @@ async function openRequestDetailModal(requestId) {
       VLM_PATIENT: 'Tên trên chứng từ',
       VLM_CORRELATION: 'Mức độ khớp nội dung',
       VLM_DATE_COVERAGE: 'Đối chiếu thời gian nghỉ',
-      PROOF_VERIFICATION: 'Xác minh chứng từ',
+      PROOF_VERIFICATION: 'Trạng thái xử lý',
       NOTICE: 'Thời hạn báo trước',
       TEAM_QUOTA: 'Tỷ lệ nghỉ trong phòng ban',
     };
@@ -6697,9 +6722,32 @@ async function openRequestDetailModal(requestId) {
     const _passSummary = {
       VALIDATION: 'Thông tin nhân sự và ngày nghỉ hợp lệ',
       VLM_INTEGRITY: 'Chứng từ đầy đủ, khớp với đơn',
+      VLM_PATIENT: 'Tên trên chứng từ khớp với thông tin nhân sự',
     };
 
     function _nodeNoteItems(node, isReview) {
+      if (node.stage === 'VLM_PATIENT' && node.status === 'PASS') {
+        return ['Tên trên chứng từ khớp với thông tin nhân sự'];
+      }
+      if (node.stage === 'PROOF_VERIFICATION') {
+        if (node.status === 'PASS') return ['Đã hoàn tất xử lý'];
+        const roleLabels = {
+          DIRECT_MANAGER: 'Quản lý trực tiếp',
+          DEPARTMENT_HEAD: 'Trưởng bộ phận',
+          HR: 'HR',
+          HRD: 'Giám đốc Nhân sự',
+          CEO: 'Tổng Giám đốc',
+          EMPLOYEE: 'Nhân viên'
+        };
+        const role = roleLabels[String(req.target_role || '').toUpperCase()] || 'cấp có thẩm quyền';
+        return [node.status === 'ESCALATED' ? `Chuyển ${role} xem xét` : `Đang chờ ${role} xử lý`];
+      }
+      if (node.stage === 'PROOF' && /không đọc được|chưa đọc được|không thể xác minh/i.test(String(node.note || ''))) {
+        return ['Không đọc được thông tin trên chứng từ'];
+      }
+      if (node.stage === 'VLM_PATIENT' && /không đọc được|chưa đọc được|không thể xác minh/i.test(String(node.note || ''))) {
+        return ['Không xác minh được tên trên giấy'];
+      }
       if (node.stage === 'VLM_CORRELATION') {
         const noteScore = String(node.note || '').match(/Mức độ khớp nội dung:\s*([0-9]+(?:[.,][0-9]+)?)/i)?.[1]?.replace(',', '.');
         const rawScore = req.correlation_score ?? req.vlm_analysis_json?.correlation_analysis?.score ?? noteScore;
@@ -6721,6 +6769,13 @@ async function openRequestDetailModal(requestId) {
         .replace(/\s*[•·;]\s*/g, ' • ')
         .replace(/\s+/g, ' '));
       if (!compactNote) return [];
+
+      const unreadableStages = new Set(['PROOF', 'VLM_INTEGRITY', 'VLM_PATIENT', 'VLM_DATE_COVERAGE', 'VLM_CORRELATION']);
+      const unreadableText = /không đọc được|chưa đọc được|không thể xác minh|không xác minh được/i;
+      if (unreadableStages.has(node.stage) && unreadableText.test(compactNote)) {
+        return ['Không đọc được thông tin trên chứng từ; không thể xác minh tên bệnh nhân, nơi cấp, ngày cấp hoặc khoảng thời gian bác sĩ chỉ định.'];
+      }
+
       return compactNote.split(' • ').map(function(item) {
         const clean = item.trim().replace(/\.+$/, '');
         if (!clean) return '';
@@ -6736,7 +6791,7 @@ async function openRequestDetailModal(requestId) {
         return '<div class="rd-detail-line"><strong>' + escapeHtml(item.slice(0, colonAt))
           + '</strong><span>' + escapeHtml(item.slice(colonAt + 1).trim()) + '</span></div>';
       }
-      return '<div class="rd-detail-line">' + escapeHtml(item) + '</div>';
+      return '<div class="rd-detail-line rd-detail-line-single">' + escapeHtml(item) + '</div>';
     }
 
     function _dedupeItems(items) {

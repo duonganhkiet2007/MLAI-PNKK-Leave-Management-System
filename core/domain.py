@@ -70,6 +70,8 @@ LEAVE_POLICY_METADATA = {
     },
 }
 
+TEAM_ABSENCE_THRESHOLD = 0.30
+
 
 def leave_policy_metadata(leave_type):
     if isinstance(leave_type, Enum):

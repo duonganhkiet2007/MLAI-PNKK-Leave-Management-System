@@ -6106,7 +6106,7 @@
       "source": "repository_case_bank",
       "source_case_id": "TC-VLM-03",
       "title": "TC-VLM-03: Bác sĩ chỉ định 1 ngày nhưng đơn xin 3 ngày (Lệch số ngày)",
-      "description": "Giấy chứng nhận chỉ cho nghỉ 1 ngày (12/10) nhưng nhân viên nộp xin 3 ngày -> Bắt lỗi MEDICAL_DAYS_MISMATCH, yêu cầu sửa đơn.",
+      "description": "Giấy chứng nhận chỉ cho nghỉ 1 ngày (26/10) nhưng nhân viên nộp xin 3 ngày (26–28/10) -> Bắt lỗi MEDICAL_DAYS_MISMATCH, yêu cầu sửa đơn.",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP004",
@@ -6118,7 +6118,7 @@
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
-          "issuer": "Bệnh viện Đa khoa Hồng Ngọc",
+          "issuer": "Bệnh viện Đa khoa Quốc tế Hà Nội",
           "recommended_from_date": "2026-10-26",
           "recommended_to_date": "2026-10-26",
           "signature_present": true,
@@ -6140,7 +6140,7 @@
         "image_sha256": "fc6e61211d7ba2b5a0b2cb9d3e2a0accd193ce9e7f1554adf13d33609f3b4834",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-          "issuer": "Bệnh viện Đa khoa Hồng Ngọc",
+          "issuer": "Bệnh viện Đa khoa Quốc tế Hà Nội",
           "recommended_from_date": "2026-10-26",
           "recommended_to_date": "2026-10-26",
           "signature_present": true,
@@ -6282,8 +6282,8 @@
       "id": "repo:TC-VLM-01",
       "source": "repository_case_bank",
       "source_case_id": "TC-VLM-01",
-      "title": "TC-VLM-01: Khám ngoại trú 2 ngày phòng khám Medlatec hợp lệ",
-      "description": "Đơn nghỉ ốm 3 ngày (14–16/10) kèm chứng từ PK Đa khoa Medlatec có chữ ký bác sĩ & dấu mộc -> Chuyển Quản lý duyệt.",
+      "title": "TC-VLM-01: Khám ngoại trú 3 ngày phòng khám Medlatec hợp lệ",
+      "description": "Đơn nghỉ ốm 3 ngày (28–30/10) kèm chứng từ PK Đa khoa Medlatec có chữ ký bác sĩ & dấu mộc -> Chuyển Quản lý duyệt.",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP005",
@@ -6306,7 +6306,7 @@
       "expected": {
         "decision": "ESCALATE",
         "target_role": "DIRECT_MANAGER",
-        "note": "Chứng từ hợp lệ (2 ngày ốm): Chuyển Quản lý duyệt theo quy chế"
+        "note": "Chứng từ hợp lệ (3 ngày ốm): Chuyển Quản lý duyệt theo quy chế"
       },
       "synthetic": true,
       "evidence": {
@@ -6361,7 +6361,7 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP005-02.png",
-        "image_sha256": "306d7a3c12a6e76236af1fcae33963c8b1f84a195e4b9c0071a84e2a60fa3156",
+        "image_sha256": "355bf1a3fcb53d01ca000c2e5b7553668117eed97b3e26dd9d09ee1a5e241258",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Đa khoa Quốc tế Thu Cúc",
@@ -6444,7 +6444,7 @@
       "source": "repository_case_bank",
       "source_case_id": "TC-EMP006-01",
       "title": "TC-EMP006-01: Nghỉ ốm 2 ngày tiêu chuẩn BV Đa khoa Đống Đa",
-      "description": "Nghỉ ốm 2 ngày điều trị viêm xoang có Giấy chứng nhận nghỉ việc hưởng BHXH BV Đống Đa -> Chuyển Quản lý duyệt.",
+      "description": "Nghỉ ốm 2 ngày điều trị viêm amidan hốc mủ cấp tính có Giấy chứng nhận nghỉ việc hưởng BHXH BV Đa khoa Đống Đa -> Chuyển Quản lý duyệt.",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP006",
@@ -6473,7 +6473,7 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP006-01.png",
-        "image_sha256": "d9b637e08ff39ad3b3453a591ad1b49a5d078fc24f563829b1e3fa711e48d3d9",
+        "image_sha256": "f411cb3b7e42196e00bbc5ef306d35635f8948b957e0209e8a65fa37ca233356",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Đa khoa Đống Đa",
@@ -6492,7 +6492,7 @@
       "source": "repository_case_bank",
       "source_case_id": "TC-EMP006-02",
       "title": "TC-EMP006-02: Giấy cấp cứu ban đêm tai nạn nhẹ BV E (Hỗ trợ khẩn cấp)",
-      "description": "Nhập Khoa Cấp cứu BV E lúc 06:15 sáng 15/10 vì đau bụng cấp -> Phiếu cấp cứu hợp lệ (đủ tên, nơi cấp, ngày, chữ ký) cho 1 ngày nghỉ: AI tự duyệt theo quy chế §3.1.",
+      "description": "Nhập Khoa Cấp cứu BV E lúc 06:15 sáng 29/10 vì đau bụng cấp -> Phiếu cấp cứu hợp lệ (đủ tên, nơi cấp, ngày, chữ ký) cho 1 ngày nghỉ: AI tự duyệt theo quy chế §3.1.",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP006",
@@ -6628,13 +6628,13 @@
       "expected": {
         "decision": "AUTO_APPROVE",
         "target_role": "AI",
-        "note": "Thử việc có chứng từ y tế hợp lệ: Chuyển Quản lý duyệt chế độ BHXH"
+        "note": "Thử việc có chứng từ y tế hợp lệ (1 ngày): AI tự động phê duyệt chế độ BHXH"
       },
       "synthetic": true,
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP007-01.png",
-        "image_sha256": "de574bcef2ccd4c5955964e1c04873ade5fe53c469f4b20bdaa0602d55ea1188",
+        "image_sha256": "c2bb360eeca519d8cdd4bfb086e7b7bfbc68ad0545be7c97c1f08d748c67182d",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Phòng khám Đa khoa Medlatec Cầu Giấy",
@@ -6683,7 +6683,7 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP007-02.png",
-        "image_sha256": "139204849c52159f9a55f0513e2e19cc4021eea18d7eeb7acf8da761e998b4dc",
+        "image_sha256": "01b9e903e0cb244c7937a1aea5f25c5bc648a12cbcc8af8a32d8cf3386c0e29c",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Giao thông Vận tải",
@@ -6725,7 +6725,7 @@
       "expected": {
         "decision": "ESCALATE",
         "target_role": "CEO",
-        "note": "Chế độ thai sản BHXH: Chuyển Quản lý duyệt theo Luật BHXH"
+        "note": "Chế độ thai sản BHXH: Chuyển Tổng Giám đốc (CEO) phê duyệt theo quy chế"
       },
       "synthetic": true,
       "evidence": {
@@ -6750,7 +6750,7 @@
       "source": "repository_case_bank",
       "source_case_id": "TC-EMP008-02",
       "title": "TC-EMP008-02: Tang lễ tứ thân phụ mẫu 3 ngày hưởng nguyên lương",
-      "description": "Nghỉ việc riêng hưởng nguyên lương do mẹ đẻ qua đời (18/10) kèm Giấy chứng tử -> Quản lý duyệt 3 ngày nguyên lương theo Điều 115 BLLĐ.",
+      "description": "Nghỉ việc riêng hưởng nguyên lương do mẹ đẻ qua đời (01/11) kèm Giấy chứng tử -> Quản lý duyệt 3 ngày nguyên lương theo Điều 115 BLLĐ.",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP008",
@@ -6913,7 +6913,7 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-VLM-02.png",
-        "image_sha256": "2c8ea32b9ae9039c7f963f11db230e89a70d1fa0581ec2ae379c7a98d5c395cb",
+        "image_sha256": "66fee46fcb1b2e298af1f5a27584f2bb7a442543b5b1634b12aefd4bec8cd8f7",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Đa khoa Medlatec",
@@ -7077,8 +7077,8 @@
       "id": "repo:TC-EMP010-02",
       "source": "repository_case_bank",
       "source_case_id": "TC-EMP010-02",
-      "title": "TC-EMP010-02: Nghỉ ốm 3 ngày tiêu chuẩn BV Vinmec Times City",
-      "description": "Nghỉ ốm ngoại trú 3 ngày (21–23/10) kèm chứng từ BV Thanh Nhàn -> Quản lý duyệt chế độ BHXH.",
+      "title": "TC-EMP010-02: Nghỉ ốm 3 ngày tiêu chuẩn BV Thanh Nhàn",
+      "description": "Nghỉ ốm ngoại trú 3 ngày (04–06/11) kèm chứng từ BV Thanh Nhàn -> Quản lý duyệt chế độ BHXH.",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP010",
@@ -7090,7 +7090,7 @@
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
-          "issuer": "Bệnh viện ĐKQT Vinmec Times City",
+          "issuer": "Bệnh viện Thanh Nhàn",
           "issue_date": "2026-11-04",
           "signature_present": true,
           "document_readability": "READABLE"
@@ -7110,7 +7110,7 @@
         "image_sha256": "cb1f9ef17fe729d0c24a3c28a37635bae861086e9a18989457cfe562ea7e7c36",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-          "issuer": "Bệnh viện ĐKQT Vinmec Times City",
+          "issuer": "Bệnh viện Thanh Nhàn",
           "issue_date": "2026-11-04",
           "signature_present": true,
           "document_readability": "READABLE"
@@ -7156,7 +7156,7 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-AI-02.png",
-        "image_sha256": "dd4df1fed16cbe5ad76083277b17234efa27abf17ee254c00a16774d7643fc27",
+        "image_sha256": "3c9c12da990c7005833fc50ec52caa46ac6a8b36ce82541fe1175c42df50f204",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Đa khoa Quốc tế Hà Nội",
@@ -7174,8 +7174,8 @@
       "id": "repo:TC-EMP011-02",
       "source": "repository_case_bank",
       "source_case_id": "TC-EMP011-02",
-      "title": "TC-EMP011-02: Tai nạn giao thông nhẹ trên đường đi làm (Thẩm định tai nạn)",
-      "description": "Tai nạn lao động: trượt ngã cầu thang tòa nhà công ty, có phiếu tiếp nhận sơ cứu -> Chuyển Quản lý thẩm định chế độ tai nạn lao động.",
+      "title": "TC-EMP011-02: Tai nạn lao động tại văn phòng công ty (Thẩm định tai nạn)",
+      "description": "Tai nạn lao động: trượt ngã cầu thang bộ tầng 6 tòa nhà công ty, có phiếu tiếp nhận sơ cứu BV Giao thông Vận tải -> Chuyển Quản lý thẩm định chế độ tai nạn lao động.",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP011",
@@ -7198,7 +7198,7 @@
       "expected": {
         "decision": "ESCALATE",
         "target_role": "DIRECT_MANAGER",
-        "note": "Hồ sơ tai nạn trên đường đi làm: Quản lý thẩm định biên bản & lộ trình"
+        "note": "Hồ sơ tai nạn lao động tại văn phòng: Quản lý thẩm định biên bản & chứng từ y tế"
       },
       "synthetic": true,
       "evidence": {
@@ -7290,8 +7290,8 @@
       "id": "repo:TC-EMP012-02",
       "source": "repository_case_bank",
       "source_case_id": "TC-EMP012-02",
-      "title": "TC-EMP012-02: Con ốm 2 ngày hưởng trợ cấp BHXH (Con dưới 7 tuổi)",
-      "description": "Nghỉ chăm sóc con gái 4 tuổi bị viêm phế quản kèm Giấy chứng nhận BV Nhi Trung ương -> Chuyển Quản lý duyệt hưởng chế độ con ốm.",
+      "title": "TC-EMP012-02: Con ốm 1 ngày hưởng trợ cấp BHXH (Con dưới 7 tuổi)",
+      "description": "Nghỉ chăm sóc con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh kèm Giấy chứng nhận BV Nhi Trung ương -> Chuyển Quản lý duyệt hưởng chế độ con ốm.",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP012",

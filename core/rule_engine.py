@@ -3,7 +3,8 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from pydantic import Field
 from domain import (RequestFacts, VerifiedProof, LeaveType,
-                    names_approximately_match, should_deduct_annual_balance)
+                    names_approximately_match, should_deduct_annual_balance,
+                    TEAM_ABSENCE_THRESHOLD)
 from calendar_service import CalendarService, CalendarUnavailable, calculate_workdays
 from taxonomy import (DecisionType as D, UncertaintyCategory as C, TargetApproverRole as R,
                       ErrorCode as E, EscalationDetail, ApprovalResult)
@@ -244,7 +245,7 @@ class LeaveRuleEngine:
         if q.leave_type == 'ANNUAL' and getattr(q, 'has_abuse_pattern', False):
             operational.append((E.FLAG_ABUSE_PATTERN, '[Phát hiện chuỗi đơn nghỉ ngắn lặp lại] Bạn đã nộp nhiều đơn nghỉ 1–2 ngày rời rạc trong cùng một tháng, vượt hạn mức tự duyệt tích lũy của hệ thống. Đơn chuyển tới Quản lý trực tiếp xem xét kế hoạch nghỉ phép.', 'ABUSE-01'))
             trace('ANTI_ABUSE', 'FAIL', 'Gắn cờ FLAG_ABUSE_PATTERN')
-        quota_dates = [d for d in result.working_dates if (q.team_absences_by_date.get(d,q.team_absent_count)+1)/q.total_team_members > .30]
+        quota_dates = [d for d in result.working_dates if (q.team_absences_by_date.get(d,q.team_absent_count)+1)/q.total_team_members > TEAM_ABSENCE_THRESHOLD]
         if quota_dates:
             message = f'[Tỷ lệ vắng mặt phòng ban vượt ngưỡng an toàn] Tỷ lệ nhân sự vắng mặt đồng thời vượt ngưỡng 30% vào các ngày: {", ".join(quota_dates)}. Đơn chuyển tới Quản lý trực tiếp để cân đối phân công công việc.'
             if q.leave_type in OPERATIONAL: operational.append((E.TEAM_QUOTA_EXCEEDED,message,'OPS-01'))

@@ -714,7 +714,7 @@ def main():
         start_date="15/05/2026",
         end_date="18/05/2026",
         days_count=4,
-        issuer="BỆNH VIỆN ĐA KHOA QUỐC TẾ HÀ NỘI",
+        issuer="BỆNH VIỆN ĐA KHOA QUỐC TẾ THU CÚC",
         diagnosis="Viêm họng phế quản cấp",
         has_stamp=True,
         extra_note="[LƯU Ý: Giấy cấp đợt khám bệnh tháng 05/2026 đã quá hạn áp dụng]"
@@ -728,7 +728,7 @@ def main():
         start_date="29/10/2026",
         end_date="30/10/2026",
         days_count=2,
-        issuer="BỆNH VIỆN GIAO THÔNG VẬN TẢI",
+        issuer="BỆNH VIỆN ĐA KHOA ĐỐNG ĐA",
         diagnosis="Viêm amidan hốc mủ cấp tính (J03.9)",
         has_stamp=True
     )
@@ -749,7 +749,7 @@ def main():
         start_date="30/10/2026",
         end_date="30/10/2026",
         days_count=1,
-        issuer="BỆNH VIỆN ĐẠI HỌC Y HÀ NỘI",
+        issuer="PHÒNG KHÁM ĐA KHOA MEDLATEC CẦU GIẤY",
         diagnosis="Hội chứng Migraine tiền đình cấp, hạ đường huyết",
         has_stamp=True
     )
@@ -760,7 +760,7 @@ def main():
         start_date="30/10/2026",
         end_date="30/10/2026",
         days_count=1,
-        issuer="BỆNH VIỆN ĐA KHOA QUỐC TẾ HÀ NỘI",
+        issuer="BỆNH VIỆN GIAO THÔNG VẬN TẢI",
         diagnosis="Cúm mùa A (J10.1)",
         has_stamp=True,
         has_signature=False
@@ -798,7 +798,7 @@ def main():
         start_date="03/11/2026",
         end_date="05/11/2026",
         days_count=3,
-        issuer="BỆNH VIỆN BẠCH MAI",
+        issuer="BỆNH VIỆN ĐA KHOA MEDLATEC",
         diagnosis="Viêm họng hạt cấp tính",
         has_stamp=True
     )
@@ -835,7 +835,7 @@ def main():
         start_date="05/11/2026",
         end_date="05/11/2026",
         days_count=1,
-        issuer="BỆNH VIỆN ĐA KHOA QUỐC TẾ THU CÚC",
+        issuer="BỆNH VIỆN ĐA KHOA QUỐC TẾ HÀ NỘI",
         diagnosis="Viêm dạ dày ruột cấp tính, mất nước nhẹ",
         has_stamp=True
     )

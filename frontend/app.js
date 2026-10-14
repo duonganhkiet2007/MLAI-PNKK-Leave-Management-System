@@ -4632,9 +4632,11 @@ function initFileUploadDropzone() {
 let _progressInterval = null;
 let _progressHasFile = false;
 
+let _submitProgressStartedAt = 0;
+
 function showSubmitProgress(hasFile = false) {
   _progressHasFile = !!hasFile;
-  const startedAt = performance.now();
+  _submitProgressStartedAt = performance.now();
   const modal = document.getElementById("modal-submit-progress");
   if (!modal) return;
   modal.style.display = "block";
@@ -4645,8 +4647,8 @@ function showSubmitProgress(hasFile = false) {
   const sub = document.getElementById("progress-modal-sub");
   if (sub) {
     sub.textContent = hasFile
-      ? "AI Engine đọc chứng từ ~12s (8–18s) · đối soát <0.3s"
-      : "Không chứng từ: AI Engine bỏ qua bước đọc chứng từ · đối soát <0.3s";
+      ? "⏱ Đang thẩm định: 0.0s · AI Engine đọc chứng từ & đối soát chính sách"
+      : "⏱ Đang xử lý: 0.0s · AI Engine đối soát chính sách";
   }
   if (bar) bar.style.background = "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)";
 
@@ -4656,10 +4658,10 @@ function showSubmitProgress(hasFile = false) {
   _setStepState(4, "waiting", "Chờ");
   _setStepState(5, "waiting", "Chờ");
 
-  const UPLOAD_MS = 1000;
-  const VLM_MS = 12000;
-  const RECV_MS = 250;
-  const RULE_MS = 250;
+  const UPLOAD_MS = 600;
+  const VLM_MS = 4000;
+  const RECV_MS = 150;
+  const RULE_MS = 200;
 
   const paint = (pct, label) => {
     const display = Math.max(0, Math.min(96, Math.round(pct)));
@@ -4672,29 +4674,32 @@ function showSubmitProgress(hasFile = false) {
   };
 
   const tick = () => {
-    const elapsed = performance.now() - startedAt;
+    const elapsed = performance.now() - _submitProgressStartedAt;
+    const elapsedSec = (elapsed / 1000).toFixed(1);
     const dots = ".".repeat((Math.floor(elapsed / 400) % 4) + 1);
+
+    if (sub) {
+      sub.textContent = hasFile
+        ? `⏱ Thời gian xử lý: ${elapsedSec}s · AI Engine đang thẩm định chứng từ`
+        : `⏱ Thời gian xử lý: ${elapsedSec}s · AI Engine đang đối soát chính sách`;
+    }
 
     if (hasFile) {
       if (elapsed < UPLOAD_MS) {
         _setStepState(1, "processing", "Đang tải lên");
-        paint((elapsed / UPLOAD_MS) * 6, "Bước 1: Tải chứng từ lên máy chủ...");
+        paint((elapsed / UPLOAD_MS) * 15, "Bước 1: Tải chứng từ lên máy chủ...");
         return;
       }
       _setStepState(1, "done", "Xong ✓");
-      _setStepState(2, "processing", "Đang OCR");
+      _setStepState(2, "processing", `${elapsedSec}s`);
       const vlmElapsed = elapsed - UPLOAD_MS;
       let pct;
-      let remainLabel;
       if (vlmElapsed < VLM_MS) {
-        pct = 6 + (vlmElapsed / VLM_MS) * 80;
-        remainLabel = `~${Math.max(1, Math.ceil((VLM_MS - vlmElapsed) / 1000))}s`;
+        pct = 15 + (vlmElapsed / VLM_MS) * 70;
       } else {
-        pct = 86 + 10 * (1 - Math.exp(-(vlmElapsed - VLM_MS) / 8000));
-        remainLabel = "vượt mốc 12s";
+        pct = 85 + 10 * (1 - Math.exp(-(vlmElapsed - VLM_MS) / 5000));
       }
-      _setStepState(2, "processing", remainLabel);
-      paint(pct, `Bước 2: AI Engine đang đọc chứng từ (${remainLabel})${dots}`);
+      paint(pct, `Bước 2: AI Engine đang đọc & đối soát (${elapsedSec}s)${dots}`);
       return;
     }
 
@@ -4714,7 +4719,7 @@ function showSubmitProgress(hasFile = false) {
     _setStepState(4, "processing", "Đang ghi nhận");
     _setStepState(5, "processing", "Đang lưu");
     const extra = elapsed - RECV_MS - RULE_MS;
-    paint(75 + 21 * (1 - Math.exp(-extra / 400)), `Bước 4–5: Tổng hợp template & lưu hồ sơ${dots}`);
+    paint(75 + 21 * (1 - Math.exp(-extra / 400)), `Bước 4–5: Tổng hợp & lưu hồ sơ (${elapsedSec}s)${dots}`);
   };
 
   clearInterval(_progressInterval);
@@ -4722,18 +4727,29 @@ function showSubmitProgress(hasFile = false) {
   _progressInterval = setInterval(tick, 100);
 }
 
-function finishSubmitProgress(success = true, callback) {
+function finishSubmitProgress(success = true, callback, serverMs = null) {
   clearInterval(_progressInterval);
   const bar = document.getElementById("submit-progress-bar");
   const pLabel = document.getElementById("progress-percent-label");
   const sLabel = document.getElementById("progress-step-label");
+  const sub = document.getElementById("progress-modal-sub");
+
+  const totalClientMs = performance.now() - _submitProgressStartedAt;
+  const elapsedSec = (totalClientMs / 1000).toFixed(2);
+  const serverSec = serverMs ? (serverMs / 1000).toFixed(2) : null;
+  const timeLabel = serverSec ? `${serverSec}s` : `${elapsedSec}s`;
 
   if (bar) {
     bar.style.width = "100%";
     bar.style.background = success ? "#10b981" : "#ef4444";
   }
   if (pLabel) pLabel.innerText = "100%";
-  if (sLabel) sLabel.innerText = success ? "Hoàn tất thẩm định!" : "Xử lý thất bại";
+  if (sLabel) sLabel.innerText = success ? `Hoàn tất thẩm định (${timeLabel})` : "Xử lý thất bại";
+  if (sub) {
+    sub.textContent = success
+      ? `⏱ Thời gian xử lý: ${timeLabel} · Pipeline hoàn tất thành công`
+      : `⏱ Xử lý gặp lỗi sau ${elapsedSec}s`;
+  }
 
   _setStepState(1, "done", "Xong ✓");
   _setStepState(2, "done", _progressHasFile ? "Xong ✓" : "Bỏ qua (không chứng từ)");
@@ -4748,7 +4764,7 @@ function finishSubmitProgress(success = true, callback) {
       bar.style.background = "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)";
     }
     if (callback) callback();
-  }, 400);
+  }, 450);
 }
 
 function _setStepState(stepNum, state, text) {
@@ -4954,8 +4970,10 @@ async function submitLeaveToBackend(payload, hasFile = false) {
         NEED_CORRECTION: 'Đơn cần được bổ sung hoặc chỉnh sửa.',
         NO_LEAVE_REQUIRED: 'Đơn không phát sinh phép.'
       };
-      showToast(statusMessage[submission.status] || decisionMessage[dec]
-        || (submission.status === 'COMPLETED' ? 'Đơn đã được xử lý.' : 'Đơn đã được tiếp nhận. Xem chi tiết trong danh sách đơn nghỉ.'), 'info');
+      const baseMsg = statusMessage[submission.status] || decisionMessage[dec]
+        || (submission.status === 'COMPLETED' ? 'Đơn đã được xử lý.' : 'Đơn đã được tiếp nhận. Xem chi tiết trong danh sách đơn nghỉ.');
+      const timeSuffix = result.total_api_ms ? ` (Thời gian xử lý: ${(result.total_api_ms / 1000).toFixed(2)}s)` : '';
+      showToast(baseMsg + timeSuffix, 'info');
 
       // Cập nhật ngay lập tức vào activeRequests local để người dùng nhìn thấy đơn tức thì không độ trễ
       if (result.data && result.data.id) {
@@ -4982,7 +5000,7 @@ async function submitLeaveToBackend(payload, hasFile = false) {
 
       await loadAllRequests(false, true);
       await loadEmployees();
-    });
+    }, result.total_api_ms);
     return true;
   } catch(err) {
     finishSubmitProgress(false, () => showToast('Không gửi được đơn: '+err.message,'error'));

@@ -28,12 +28,11 @@ import os
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
-# Xuất ra cả 2 thư mục: tests/assets/proofs và frontend/assets/proofs
+# Thư mục lưu trữ chuẩn (canonical) của proofs: frontend/assets/proofs
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR.parent / "frontend"
 
 OUTPUT_DIRS = [
-    BASE_DIR / "assets" / "proofs",
     FRONTEND_DIR / "assets" / "proofs"
 ]
 

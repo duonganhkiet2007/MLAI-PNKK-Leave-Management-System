@@ -19,7 +19,7 @@ from taxonomy import DecisionType as D, ErrorCode as E, TargetApproverRole as R
 from calendar_service import CalendarService
 import storage as st
 
-ASSETS_DIR = Path(__file__).resolve().parent / "assets" / "proofs"
+ASSETS_DIR = Path(__file__).resolve().parents[1] / "frontend" / "assets" / "proofs"
 EMPLOYEES_FILE = Path(__file__).resolve().parents[1] / "core" / "employees.json"
 
 @pytest.fixture(scope="module")
@@ -604,7 +604,7 @@ def test_tc_vlm_06_blur_gate_early_exit_no_hallucination(monkeypatch):
     # conftest bật VLM_FORCE_MOCK; blur gate chỉ chạy trên luồng thật (và thoát sớm, không gọi Ollama).
     monkeypatch.setattr(vlm_inspector, "VLM_FORCE_MOCK", False)
 
-    blur_img = "tests/assets/proofs/proof_blurry_illegible.png"
+    blur_img = str(ASSETS_DIR / "proof_blurry_illegible.png")
     assert os.path.exists(blur_img), f"File {blur_img} must exist"
 
     is_blurry, score = detect_image_blur(blur_img, threshold=50.0)
@@ -641,7 +641,7 @@ def test_tc_vlm_07_sha256_inference_cache(monkeypatch):
 
     monkeypatch.setattr(vlm_inspector, "VLM_FORCE_MOCK", False)
 
-    img_path = "tests/assets/proofs/proof_sick_valid_3days.png"
+    img_path = str(ASSETS_DIR / "proof_sick_valid_3days.png")
     h = _compute_file_sha256(img_path)
     assert h is not None
     assert len(h) == 64

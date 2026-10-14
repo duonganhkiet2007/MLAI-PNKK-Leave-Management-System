@@ -395,9 +395,9 @@ class ProofInspectionService:
         except Exception as exc:
             vlm_sec = time.perf_counter() - t0
             GLOBAL_METRICS.record_vlm_duration(vlm_sec)
-            err_msg = f"{type(exc).__name__}: {exc}"
-            logger.warning(f"VLM inspection exception for job {job_id}: {err_msg}")
-            self._apply_inspection_failure(job, err_msg)
+            err_type = type(exc).__name__
+            logger.warning(f"VLM inspection exception for job {job_id}: {err_type}")
+            self._apply_inspection_failure(job, err_type)
 
     def _apply_inspection_success(
         self,

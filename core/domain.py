@@ -179,6 +179,10 @@ class ProofExtraction(BaseModel):
     discharge_date: date | None = None
     doc_diagnosis: str | None = None
     emergency_diagnosis: str | None = None
+    patient_name_match: Literal['MATCH', 'MISMATCH', 'UNCERTAIN', 'NOT_APPLICABLE'] | None = None
+    patient_name_match_reason: str | None = None
+    reason_diagnosis_match: Literal['MATCH', 'PARTIAL', 'MISMATCH', 'UNCERTAIN', 'NOT_APPLICABLE'] | None = None
+    reason_diagnosis_match_reason: str | None = None
     days_granted_by_doctor: int | None = None
     deceased_name: str | None = None
     subject_name: str | None = None

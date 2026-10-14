@@ -5856,8 +5856,8 @@
         "employee_id": "EMP003",
         "employee_name": "Trần Quốc Hưng",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-12",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-26",
         "handover_person_id": "EMP004",
         "handover": {
           "employee_id": "EMP004",
@@ -5866,7 +5866,7 @@
           "absent_dates": []
         },
         "reason": "Nghỉ du lịch gia đình dài ngày",
-        "submitted_at": "2026-09-10T08:00:00+07:00",
+        "submitted_at": "2026-09-24T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -5895,17 +5895,17 @@
         "employee_name": "Trần Quốc Hưng",
         "leave_type": "SPECIAL_PAID",
         "reason_category": "CHILD_MARRIAGE",
-        "from_date": "2026-10-12",
-        "to_date": "2026-10-12",
+        "from_date": "2026-10-26",
+        "to_date": "2026-10-26",
         "reason": "Nghỉ tham dự lễ thành hôn của con trai ruột (Trần Quốc Anh)",
         "proof": {
           "proof_type": "MARRIAGE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "UBND Phường Dịch Vọng Hậu",
-          "issue_date": "2026-10-01",
+          "issue_date": "2026-10-15",
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-05T08:00:00+07:00",
+        "submitted_at": "2026-10-19T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -5917,11 +5917,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP003-01.png",
-        "image_sha256": "6189d7d4ff0d60e2097f5a7a307941ca2c2f9e1b68a0033bbdfa2aa77aaaa4c1",
+        "image_sha256": "10b89aab04cc082441ab64cd8d6574b0e81de201733d3bbaa3c42eff987bb512",
         "annotation": {
           "proof_type": "MARRIAGE_CERTIFICATE",
           "issuer": "UBND Phường Dịch Vọng Hậu",
-          "issue_date": "2026-10-01",
+          "issue_date": "2026-10-15",
           "document_readability": "READABLE"
         },
         "trusted_metadata": {
@@ -5941,18 +5941,18 @@
         "employee_id": "EMP003",
         "employee_name": "Trần Quốc Hưng",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-08",
-        "to_date": "2026-10-11",
+        "from_date": "2026-10-22",
+        "to_date": "2026-10-25",
         "reason": "Phẫu thuật tán sỏi nội soi ngược dòng tại Bệnh viện Bạch Mai",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện Bạch Mai",
-          "issue_date": "2026-10-11",
+          "issue_date": "2026-10-25",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-12T08:00:00+07:00",
+        "submitted_at": "2026-10-26T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -5964,11 +5964,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP003-02.png",
-        "image_sha256": "67faff3f37d72e99a8372111a84c022821e7cd591524a4577c105a9fa29cab1f",
+        "image_sha256": "34f2daff8ae9772048c0454f3cadb7155b23c0b244b7a2ee0320311b9887c2e7",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Bạch Mai",
-          "issue_date": "2026-10-11",
+          "issue_date": "2026-10-25",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -5989,8 +5989,8 @@
         "employee_id": "EMP004",
         "employee_name": "Lê Văn Nam",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-08",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-22",
         "handover_person_id": "EMP003",
         "handover": {
           "employee_id": "EMP003",
@@ -5999,7 +5999,7 @@
           "absent_dates": []
         },
         "reason": "Nghỉ phép thường niên",
-        "submitted_at": "2026-09-25T08:00:00+07:00",
+        "submitted_at": "2026-10-09T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6026,8 +6026,8 @@
         "employee_id": "EMP004",
         "employee_name": "Lê Văn Nam",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-07",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-21",
         "handover_person_id": "EMP009",
         "handover": {
           "employee_id": "EMP009",
@@ -6036,7 +6036,7 @@
           "absent_dates": []
         },
         "reason": "Nghỉ phép thường niên",
-        "submitted_at": "2026-09-25T08:00:00+07:00",
+        "submitted_at": "2026-10-09T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6064,8 +6064,8 @@
         "employee_id": "EMP004",
         "employee_name": "Lê Văn Nam",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-12",
-        "to_date": "2026-10-14",
+        "from_date": "2026-10-26",
+        "to_date": "2026-10-28",
         "reason": "Viêm xoang hàm cấp tính có mủ, điều trị ngoại trú",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
@@ -6075,7 +6075,7 @@
           "digital_signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-12T07:30:00+07:00",
+        "submitted_at": "2026-10-26T07:30:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6087,7 +6087,7 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-VLM-05.png",
-        "image_sha256": "0bf8405f1448307d6e84fc5f5813bb8523daa1134a71ff3d5295e2ad9378a9dd",
+        "image_sha256": "95920704185b5f874a24b3033adfc005f43d4f7b371b6be1a8944fc88c40cf47",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Đa khoa Hồng Ngọc",
@@ -6112,19 +6112,19 @@
         "employee_id": "EMP004",
         "employee_name": "Lê Văn Nam",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-12",
-        "to_date": "2026-10-14",
+        "from_date": "2026-10-26",
+        "to_date": "2026-10-28",
         "reason": "Rối loạn tiêu hóa cấp, theo dõi ngộ độc thức ăn",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện Đa khoa Hồng Ngọc",
-          "recommended_from_date": "2026-10-12",
-          "recommended_to_date": "2026-10-12",
+          "recommended_from_date": "2026-10-26",
+          "recommended_to_date": "2026-10-26",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-12T07:30:00+07:00",
+        "submitted_at": "2026-10-26T07:30:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6137,12 +6137,12 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-VLM-03.png",
-        "image_sha256": "d49d34a1795fc05b8b38cfde3f90bbeecb1d8c497b5105b6d3b2f07a9ea0365f",
+        "image_sha256": "fc6e61211d7ba2b5a0b2cb9d3e2a0accd193ce9e7f1554adf13d33609f3b4834",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Đa khoa Hồng Ngọc",
-          "recommended_from_date": "2026-10-12",
-          "recommended_to_date": "2026-10-12",
+          "recommended_from_date": "2026-10-26",
+          "recommended_to_date": "2026-10-26",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -6157,16 +6157,16 @@
       "source": "repository_case_bank",
       "source_case_id": "TC-AI-01",
       "title": "TC-AI-01: Phép năm 1 ngày tự động duyệt (1-2 ngày đủ số dư)",
-      "description": "Nguyễn Văn An xin 1 ngày phép năm (05/10/2026), báo trước đúng hạn, đủ số dư phép -> AI Cấp 0 tự động duyệt, trừ 1 ngày phép.",
+      "description": "Nguyễn Văn An xin 1 ngày phép năm (19/10/2026), báo trước đúng hạn, đủ số dư phép -> AI Cấp 0 tự động duyệt, trừ 1 ngày phép.",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP005",
         "employee_name": "Nguyễn Văn An",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-05",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-19",
         "reason": "Việc riêng gia đình",
-        "submitted_at": "2026-10-01T08:00:00+07:00",
+        "submitted_at": "2026-10-16T17:00:00+07:00",
         "total_team_members": 6,
         "team_absent_count": 0
       },
@@ -6226,10 +6226,10 @@
         "employee_id": "EMP005",
         "employee_name": "Nguyễn Văn An",
         "leave_type": "STATUTORY_UNPAID",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-05",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-19",
         "reason": "Về quê lo việc họ hàng",
-        "submitted_at": "2026-10-01T08:00:00+07:00",
+        "submitted_at": "2026-10-15T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6257,11 +6257,11 @@
         "employee_id": "EMP005",
         "employee_name": "Nguyễn Văn An",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-19",
-        "to_date": "2026-10-19",
+        "from_date": "2026-11-02",
+        "to_date": "2026-11-02",
         "has_abuse_pattern": true,
         "reason": "Nghỉ việc riêng",
-        "submitted_at": "2026-10-15T08:00:00+07:00",
+        "submitted_at": "2026-10-29T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6289,18 +6289,18 @@
         "employee_id": "EMP005",
         "employee_name": "Nguyễn Văn An",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-14",
-        "to_date": "2026-10-16",
+        "from_date": "2026-10-28",
+        "to_date": "2026-10-30",
         "reason": "Sốt xuất huyết Dengue điều trị ngoại trú",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Phòng khám Đa khoa Medlatec",
-          "issue_date": "2026-10-14",
+          "issue_date": "2026-10-28",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-14T07:30:00+07:00",
+        "submitted_at": "2026-10-28T07:30:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6312,11 +6312,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-VLM-01.png",
-        "image_sha256": "17b0c051014f3a2d6693931de3a8713a7cc8208b9badd1826bbc713a08195c01",
+        "image_sha256": "f9bd7cbcdae7d08a6f74f30fa6173fa33d1685d4bb888a9f76f8a0929f38d0b6",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Phòng khám Đa khoa Medlatec",
-          "issue_date": "2026-10-14",
+          "issue_date": "2026-10-28",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -6331,7 +6331,7 @@
       "source": "repository_case_bank",
       "source_case_id": "TC-EMP005-02",
       "title": "TC-EMP005-02: [Bẫy quá hạn] Nộp chứng từ y tế quá thời hạn 3 ngày làm việc",
-      "description": "Giấy khám bệnh từ đợt ốm 15–18/05/2026 nhưng đến 05/10 mới nộp đơn -> Báo nghỉ ốm trễ hạn (NOTICE_PERIOD_VIOLATED), chuyển Quản lý xem xét.",
+      "description": "Giấy khám bệnh từ đợt ốm 15–18/05/2026 nhưng đến 19/10 mới nộp đơn -> Báo nghỉ ốm trễ hạn (NOTICE_PERIOD_VIOLATED), chuyển Quản lý xem xét.",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP005",
@@ -6348,7 +6348,7 @@
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-05T08:00:00+07:00",
+        "submitted_at": "2026-10-19T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6386,11 +6386,11 @@
         "employee_id": "EMP006",
         "employee_name": "Bùi Tuấn Kiệt",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-05",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-19",
         "remaining_leave_days": 1,
         "reason": "Giải quyết việc cá nhân",
-        "submitted_at": "2026-10-01T08:00:00+07:00",
+        "submitted_at": "2026-10-16T17:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6418,11 +6418,11 @@
         "employee_id": "EMP006",
         "employee_name": "Bùi Tuấn Kiệt",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-06",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-20",
         "remaining_leave_days": 1,
         "reason": "Nghỉ việc gia đình 2 ngày",
-        "submitted_at": "2026-10-01T08:00:00+07:00",
+        "submitted_at": "2026-10-16T17:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6450,18 +6450,18 @@
         "employee_id": "EMP006",
         "employee_name": "Bùi Tuấn Kiệt",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-15",
-        "to_date": "2026-10-16",
+        "from_date": "2026-10-29",
+        "to_date": "2026-10-30",
         "reason": "Viêm amidan hốc mủ cấp tính điều trị ngoại trú",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện Đa khoa Đống Đa",
-          "issue_date": "2026-10-15",
+          "issue_date": "2026-10-29",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-15T07:30:00+07:00",
+        "submitted_at": "2026-10-29T07:30:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6473,11 +6473,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP006-01.png",
-        "image_sha256": "84cfef7790aa7985181c53f6ff57d5f8c31afe5bcf5613c3f5b258dfce23a834",
+        "image_sha256": "d9b637e08ff39ad3b3453a591ad1b49a5d078fc24f563829b1e3fa711e48d3d9",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Đa khoa Đống Đa",
-          "issue_date": "2026-10-15",
+          "issue_date": "2026-10-29",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -6498,18 +6498,18 @@
         "employee_id": "EMP006",
         "employee_name": "Bùi Tuấn Kiệt",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-15",
-        "to_date": "2026-10-15",
+        "from_date": "2026-10-29",
+        "to_date": "2026-10-29",
         "reason": "Cấp cứu đau bụng cấp hố chậu phải nghi viêm ruột thừa tại Khoa Cấp cứu BV E",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện E - Khoa Cấp cứu",
-          "issue_date": "2026-10-15",
+          "issue_date": "2026-10-29",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-15T07:15:00+07:00",
+        "submitted_at": "2026-10-29T07:15:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6521,11 +6521,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP006-02.png",
-        "image_sha256": "c64c8bc716c62621f7bc53cf8ac4fedf6126d831834fb260e5b9992c289e599f",
+        "image_sha256": "a5d12c07440e6591dc90fec11956af982dd3c719325406d68d7251c15efd66e1",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện E - Khoa Cấp cứu",
-          "issue_date": "2026-10-15",
+          "issue_date": "2026-10-29",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -6546,12 +6546,12 @@
         "employee_id": "EMP007",
         "employee_name": "Lê Thị Hương",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-05",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-19",
         "employment_status": "PROBATION",
         "remaining_leave_days": 0,
         "reason": "Nghỉ phép năm",
-        "submitted_at": "2026-10-01T08:00:00+07:00",
+        "submitted_at": "2026-10-16T17:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6579,12 +6579,12 @@
         "employee_id": "EMP007",
         "employee_name": "Lê Thị Hương",
         "leave_type": "UNPAID_OTHER",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-05",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-19",
         "employment_status": "PROBATION",
         "remaining_leave_days": 0,
         "reason": "Giải quyết việc cá nhân đột xuất",
-        "submitted_at": "2026-09-20T08:00:00+07:00",
+        "submitted_at": "2026-10-04T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6611,18 +6611,18 @@
         "employee_id": "EMP007",
         "employee_name": "Lê Thị Hương",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-16",
-        "to_date": "2026-10-16",
+        "from_date": "2026-10-30",
+        "to_date": "2026-10-30",
         "reason": "Migraine tiền đình cấp, hạ đường huyết điều trị ngoại trú",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Phòng khám Đa khoa Medlatec Cầu Giấy",
-          "issue_date": "2026-10-16",
+          "issue_date": "2026-10-30",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-16T08:10:00+07:00",
+        "submitted_at": "2026-10-30T08:10:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6634,11 +6634,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP007-01.png",
-        "image_sha256": "9937ee09bae64ed66a50584eb64a1f6192789ec754b4a527a2a1a560655e021f",
+        "image_sha256": "de574bcef2ccd4c5955964e1c04873ade5fe53c469f4b20bdaa0602d55ea1188",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Phòng khám Đa khoa Medlatec Cầu Giấy",
-          "issue_date": "2026-10-16",
+          "issue_date": "2026-10-30",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -6659,18 +6659,18 @@
         "employee_id": "EMP007",
         "employee_name": "Lê Thị Hương",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-16",
-        "to_date": "2026-10-16",
+        "from_date": "2026-10-30",
+        "to_date": "2026-10-30",
         "reason": "Nghỉ ốm theo dõi",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện Giao thông Vận tải",
-          "issue_date": "2026-10-16",
+          "issue_date": "2026-10-30",
           "signature_present": false,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-16T08:15:00+07:00",
+        "submitted_at": "2026-10-30T08:15:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6683,11 +6683,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP007-02.png",
-        "image_sha256": "d4256c44d03064713ae9dc504b96db226390bd072e97954dc80f885008142272",
+        "image_sha256": "139204849c52159f9a55f0513e2e19cc4021eea18d7eeb7acf8da761e998b4dc",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Giao thông Vận tải",
-          "issue_date": "2026-10-16",
+          "issue_date": "2026-10-30",
           "signature_present": false,
           "document_readability": "READABLE"
         },
@@ -6708,18 +6708,18 @@
         "employee_id": "EMP008",
         "employee_name": "Nguyễn Thị Kim Ngân",
         "leave_type": "MATERNITY",
-        "from_date": "2026-10-19",
-        "to_date": "2026-10-19",
+        "from_date": "2026-11-02",
+        "to_date": "2026-11-02",
         "reason": "Khám thai định kỳ tuần thứ 28 tại BV Phụ sản Hà Nội",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện Phụ sản Hà Nội",
-          "issue_date": "2026-10-19",
+          "issue_date": "2026-11-02",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-19T08:00:00+07:00",
+        "submitted_at": "2026-11-02T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6731,11 +6731,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP008-01.png",
-        "image_sha256": "024669f1f31fe69693bdb18c05ef19037adfb2460110520ced0f8038bb2ef5b0",
+        "image_sha256": "911be2714bc41ceb3b033fd64bafef096f9cf404daaace864f93599e49013d80",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Phụ sản Hà Nội",
-          "issue_date": "2026-10-19",
+          "issue_date": "2026-11-02",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -6757,17 +6757,17 @@
         "employee_name": "Nguyễn Thị Kim Ngân",
         "leave_type": "SPECIAL_PAID",
         "reason_category": "PARENT_DEATH",
-        "from_date": "2026-10-19",
-        "to_date": "2026-10-21",
+        "from_date": "2026-11-02",
+        "to_date": "2026-11-04",
         "reason": "Lo tang lễ cho mẹ ruột (Trần Thị Lan) tại quê nhà",
         "proof": {
           "proof_type": "OTHER",
           "proof_verification_status": "VERIFIED",
           "issuer": "UBND Xã Hải Hậu, Tỉnh Nam Định",
-          "issue_date": "2026-10-18",
+          "issue_date": "2026-11-01",
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-19T06:30:00+07:00",
+        "submitted_at": "2026-11-02T06:30:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6779,11 +6779,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP008-02.png",
-        "image_sha256": "ebe430809ebd069876bc8f39767362e43a92b41ffc3744d0b138722b5ef949eb",
+        "image_sha256": "cea30a5701b0134c93712578b681a545425acac4cd1b0b398565b96c0355bf39",
         "annotation": {
           "proof_type": "OTHER",
           "issuer": "UBND Xã Hải Hậu, Tỉnh Nam Định",
-          "issue_date": "2026-10-18",
+          "issue_date": "2026-11-01",
           "document_readability": "READABLE"
         },
         "trusted_metadata": {
@@ -6803,8 +6803,8 @@
         "employee_id": "EMP008",
         "employee_name": "Nguyễn Thị Kim Ngân",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-08",
-        "to_date": "2026-10-09",
+        "from_date": "2026-10-22",
+        "to_date": "2026-10-23",
         "handover_person_id": "EMP010",
         "handover": {
           "employee_id": "EMP010",
@@ -6813,7 +6813,7 @@
           "absent_dates": []
         },
         "reason": "Nghỉ phép thường niên",
-        "submitted_at": "2026-10-01T08:00:00+07:00",
+        "submitted_at": "2026-10-15T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6842,17 +6842,17 @@
         "employee_name": "Võ Minh Khang",
         "leave_type": "SPECIAL_PAID",
         "reason_category": "SELF_MARRIAGE",
-        "from_date": "2026-10-19",
-        "to_date": "2026-10-21",
+        "from_date": "2026-11-02",
+        "to_date": "2026-11-04",
         "reason": "Nghỉ đám cưới bản thân (Lễ thành hôn)",
         "proof": {
           "proof_type": "MARRIAGE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "UBND Phường Dịch Vọng Hậu",
-          "issue_date": "2026-10-20",
+          "issue_date": "2026-11-03",
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-12T08:00:00+07:00",
+        "submitted_at": "2026-10-26T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6864,11 +6864,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-MGR-03.png",
-        "image_sha256": "231ae24ee0946369127a8e38f72a8fb0069d0b612e7f4ac9463e20fc6a1b536c",
+        "image_sha256": "d6fce9298fa8c8b1295d9eeda74b4960d9752f70f2b06ceabca0c72c35c44250",
         "annotation": {
           "proof_type": "MARRIAGE_CERTIFICATE",
           "issuer": "UBND Phường Dịch Vọng Hậu",
-          "issue_date": "2026-10-20",
+          "issue_date": "2026-11-03",
           "document_readability": "READABLE"
         },
         "trusted_metadata": {
@@ -6888,19 +6888,19 @@
         "employee_id": "EMP009",
         "employee_name": "Võ Minh Khang",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-20",
-        "to_date": "2026-10-22",
+        "from_date": "2026-11-03",
+        "to_date": "2026-11-05",
         "reason": "Nghỉ ốm điều trị",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện Đa khoa Medlatec",
           "patient_name": "Võ Hoàng Long",
-          "issue_date": "2026-10-20",
+          "issue_date": "2026-11-03",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-20T07:30:00+07:00",
+        "submitted_at": "2026-11-03T07:30:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6913,12 +6913,12 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-VLM-02.png",
-        "image_sha256": "c587bd882d786b014e6eb924031fe7e8c8eaa3227d96b13015bb113367d778e2",
+        "image_sha256": "2c8ea32b9ae9039c7f963f11db230e89a70d1fa0581ec2ae379c7a98d5c395cb",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Đa khoa Medlatec",
           "patient_name": "Võ Hoàng Long",
-          "issue_date": "2026-10-20",
+          "issue_date": "2026-11-03",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -6939,8 +6939,8 @@
         "employee_id": "EMP009",
         "employee_name": "Võ Minh Khang",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-19",
-        "to_date": "2026-10-21",
+        "from_date": "2026-11-02",
+        "to_date": "2026-11-04",
         "handover_person_id": "EMP008",
         "handover": {
           "employee_id": "EMP008",
@@ -6949,7 +6949,7 @@
           "absent_dates": []
         },
         "reason": "Nghỉ việc gia đình",
-        "submitted_at": "2026-10-10T08:00:00+07:00",
+        "submitted_at": "2026-10-24T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -6976,8 +6976,8 @@
         "employee_id": "EMP010",
         "employee_name": "Phan Thảo My",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-08",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-22",
         "handover_person_id": "EMP008",
         "handover": {
           "employee_id": "EMP008",
@@ -6986,7 +6986,7 @@
           "absent_dates": []
         },
         "reason": "Nghỉ phép cá nhân",
-        "submitted_at": "2026-09-25T08:00:00+07:00",
+        "submitted_at": "2026-10-09T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -7013,12 +7013,12 @@
         "employee_id": "EMP010",
         "employee_name": "Phan Thảo My",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-05",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-19",
         "team_absent_count": 2,
         "total_team_members": 6,
         "reason": "Nghỉ cá nhân",
-        "submitted_at": "2026-10-01T08:00:00+07:00"
+        "submitted_at": "2026-10-16T17:00:00+07:00"
       },
       "expected": {
         "decision": "ESCALATE",
@@ -7045,14 +7045,14 @@
         "employee_id": "EMP010",
         "employee_name": "Phan Thảo My",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-21",
-        "to_date": "2026-10-23",
+        "from_date": "2026-11-04",
+        "to_date": "2026-11-06",
         "reason": "Nghỉ ốm điều trị",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "document_readability": "ILLEGIBLE"
         },
-        "submitted_at": "2026-10-21T07:30:00+07:00",
+        "submitted_at": "2026-11-04T07:30:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -7064,7 +7064,7 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-VLM-04.png",
-        "image_sha256": "ef3df8b1cf6c0dbcb17902439517ec30417c144d211be6ecff1b751d3fc1db7b",
+        "image_sha256": "cf786c1463e6c089a1145bf27c969bd3ed4335e4d20af6e3c601afa517394d0d",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "document_readability": "ILLEGIBLE"
@@ -7084,18 +7084,18 @@
         "employee_id": "EMP010",
         "employee_name": "Phan Thảo My",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-21",
-        "to_date": "2026-10-23",
+        "from_date": "2026-11-04",
+        "to_date": "2026-11-06",
         "reason": "Sốt virus nhiễm khuẩn hô hấp cấp điều trị ngoại trú",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện ĐKQT Vinmec Times City",
-          "issue_date": "2026-10-21",
+          "issue_date": "2026-11-04",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-21T07:30:00+07:00",
+        "submitted_at": "2026-11-04T07:30:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -7107,11 +7107,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP010-02.png",
-        "image_sha256": "3eb3a6228d51f54a64fd89a984fa3798c4cee569cf6d180ff9086c8ccab42fb4",
+        "image_sha256": "cb1f9ef17fe729d0c24a3c28a37635bae861086e9a18989457cfe562ea7e7c36",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện ĐKQT Vinmec Times City",
-          "issue_date": "2026-10-21",
+          "issue_date": "2026-11-04",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -7132,15 +7132,15 @@
         "employee_id": "EMP011",
         "employee_name": "Hoàng Kim Yến",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-22",
-        "to_date": "2026-10-22",
+        "from_date": "2026-11-05",
+        "to_date": "2026-11-05",
         "reason": "Viêm dạ dày ruột cấp tính, mất nước nhẹ",
-        "submitted_at": "2026-10-22T07:45:00+07:00",
+        "submitted_at": "2026-11-05T07:45:00+07:00",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện Đa khoa Quốc tế Hà Nội",
-          "issue_date": "2026-10-22",
+          "issue_date": "2026-11-05",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -7156,11 +7156,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-AI-02.png",
-        "image_sha256": "862bc0a6644c73b57b14251c16760e6b997f4f100839ca621fee12b95adcba29",
+        "image_sha256": "dd4df1fed16cbe5ad76083277b17234efa27abf17ee254c00a16774d7643fc27",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Đa khoa Quốc tế Hà Nội",
-          "issue_date": "2026-10-22",
+          "issue_date": "2026-11-05",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -7181,18 +7181,18 @@
         "employee_id": "EMP011",
         "employee_name": "Hoàng Kim Yến",
         "leave_type": "WORK_ACCIDENT",
-        "from_date": "2026-10-22",
-        "to_date": "2026-10-23",
+        "from_date": "2026-11-05",
+        "to_date": "2026-11-06",
         "reason": "Trượt ngã cầu thang bộ tầng 6 tòa nhà công ty, bong gân cổ chân phải",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện Giao thông Vận tải",
-          "issue_date": "2026-10-22",
+          "issue_date": "2026-11-05",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-22T09:00:00+07:00",
+        "submitted_at": "2026-11-05T09:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -7204,11 +7204,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP011-02.png",
-        "image_sha256": "826c5a58d7729a8ff7221cbf3071ac0897157954207bf4a56805b657c09ad653",
+        "image_sha256": "cc2b57a6aa4c2d046acad261a097780e0a8f9a4dd4e014de9b1b4f14d1ea86a1",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Giao thông Vận tải",
-          "issue_date": "2026-10-22",
+          "issue_date": "2026-11-05",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -7229,10 +7229,10 @@
         "employee_id": "EMP011",
         "employee_name": "Hoàng Kim Yến",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-23",
-        "to_date": "2026-10-23",
+        "from_date": "2026-11-06",
+        "to_date": "2026-11-06",
         "reason": "Việc riêng gia đình",
-        "submitted_at": "2026-10-18T08:00:00+07:00",
+        "submitted_at": "2026-11-01T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -7254,14 +7254,14 @@
       "source": "repository_case_bank",
       "source_case_id": "TC-HARD-02",
       "title": "TC-HARD-02: Nghỉ dài hạn 21 ngày làm việc -> Bắt buộc Tổng Giám đốc (Boss)",
-      "description": "Lê Mai Loan xin 21 ngày làm việc (01-29/10/2026) có bàn giao -> Thẩm quyền bắt buộc là Tổng Giám đốc (CEO/Boss).",
+      "description": "Lê Mai Loan xin 21 ngày làm việc (19/10 - 16/11/2026) có bàn giao -> Thẩm quyền bắt buộc là Tổng Giám đốc (CEO/Boss).",
       "kind": "leave_request",
       "request": {
         "employee_id": "EMP012",
         "employee_name": "Lê Mai Loan",
         "leave_type": "UNPAID_OTHER",
-        "from_date": "2026-10-01",
-        "to_date": "2026-10-29",
+        "from_date": "2026-10-19",
+        "to_date": "2026-11-16",
         "handover_person_id": "EMP010",
         "handover": {
           "employee_id": "EMP010",
@@ -7270,7 +7270,7 @@
           "absent_dates": []
         },
         "reason": "Nghỉ việc riêng dài hạn",
-        "submitted_at": "2026-09-01T08:00:00+07:00",
+        "submitted_at": "2026-09-15T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -7297,18 +7297,18 @@
         "employee_id": "EMP012",
         "employee_name": "Lê Mai Loan",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-23",
-        "to_date": "2026-10-23",
+        "from_date": "2026-11-06",
+        "to_date": "2026-11-06",
         "reason": "Nghỉ chăm sóc con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh",
         "proof": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "Bệnh viện Nhi Trung ương",
-          "issue_date": "2026-10-23",
+          "issue_date": "2026-11-06",
           "signature_present": true,
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-23T07:30:00+07:00",
+        "submitted_at": "2026-11-06T07:30:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -7320,11 +7320,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP012-02.png",
-        "image_sha256": "8cb29896354cabfe7e019166e2f3d3c23c66c186be4cccd6f272bc300220d1a3",
+        "image_sha256": "b7a151f9669ed4117e5643104e25615c6c44540d0a48f4322d7524556cc0ce0f",
         "annotation": {
           "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
           "issuer": "Bệnh viện Nhi Trung ương",
-          "issue_date": "2026-10-23",
+          "issue_date": "2026-11-06",
           "signature_present": true,
           "document_readability": "READABLE"
         },
@@ -7346,17 +7346,17 @@
         "employee_name": "Lê Mai Loan",
         "leave_type": "SPECIAL_PAID",
         "reason_category": "SIBLING_MARRIAGE",
-        "from_date": "2026-10-23",
-        "to_date": "2026-10-23",
+        "from_date": "2026-11-06",
+        "to_date": "2026-11-06",
         "reason": "Tham dự lễ thành hôn của em gái ruột (Lê Mai Linh)",
         "proof": {
           "proof_type": "MARRIAGE_CERTIFICATE",
           "proof_verification_status": "VERIFIED",
           "issuer": "UBND Phường Quan Hoa, Quận Cầu Giấy",
-          "issue_date": "2026-10-10",
+          "issue_date": "2026-10-24",
           "document_readability": "READABLE"
         },
-        "submitted_at": "2026-10-15T08:00:00+07:00",
+        "submitted_at": "2026-10-29T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {
@@ -7369,11 +7369,11 @@
       "evidence": {
         "present": true,
         "image_path": "benchmarks/datasets/unified_proofs/repo-TC-EMP012-03.png",
-        "image_sha256": "6e9c0d3a4c17ebde6eadb6de16e3a0132ca976cce0299e9eb3ceb1beabad6438",
+        "image_sha256": "a349edcac6bf642c7a480ef2b9795f829e1384bf2a713d335a87e94d9fb26f18",
         "annotation": {
           "proof_type": "MARRIAGE_CERTIFICATE",
           "issuer": "UBND Phường Quan Hoa, Quận Cầu Giấy",
-          "issue_date": "2026-10-10",
+          "issue_date": "2026-10-24",
           "document_readability": "READABLE"
         },
         "trusted_metadata": {
@@ -7393,11 +7393,11 @@
         "employee_id": "EMP001",
         "employee_name": "Đỗ Hoàng Long",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-05",
-        "to_date": "2026-10-07",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-21",
         "reason": "Nghỉ phép cá nhân",
         "handover_person_id": "EMP003",
-        "submitted_at": "2026-09-25T08:00:00+07:00",
+        "submitted_at": "2026-10-09T08:00:00+07:00",
         "total_team_members": 6
       },
       "expected": {

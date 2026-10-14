@@ -54,6 +54,10 @@ def _vlm_output_from_json(cj, proof_type_raw=None):
             requires_followup_proof=_ds.get('requires_followup_proof'),
             admission_date=_safe_date(_ds.get('admission_date')),
             discharge_date=_safe_date(_ds.get('discharge_date')),
+            patient_name_match=_ca.get('patient_name_match'),
+            patient_name_match_reason=_ca.get('patient_name_match_reason'),
+            reason_diagnosis_match=_ca.get('reason_diagnosis_match'),
+            reason_diagnosis_match_reason=_ca.get('reason_diagnosis_match_reason'),
             deceased_name=_ds.get('deceased_name'),
             subject_name=_ds.get('subject_name'),
             partner_name=_ds.get('partner_name'),
@@ -398,6 +402,11 @@ class LeaveOrchestratorService:
                             diagnosis=vlm_out.doc_diagnosis,
                             days_granted_by_doctor=vlm_out.days_granted_by_doctor,
                             requested_workdays=wd,
+                            patient_name_on_doc=pe.patient_name,
+                            patient_name_match=pe.patient_name_match,
+                            patient_name_match_reason=pe.patient_name_match_reason,
+                            reason_diagnosis_match=pe.reason_diagnosis_match,
+                            reason_diagnosis_match_reason=pe.reason_diagnosis_match_reason,
                         )
                         if new_score is not None:
                             vlm_dict = dict(vlm_out.vlm_analysis_json or {})

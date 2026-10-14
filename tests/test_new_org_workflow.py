@@ -85,9 +85,9 @@ def test_tc_ai_01_annual_single_day_auto_approve(employees_data):
         employee_name=emp["name"],
         department=emp["department"],
         remaining_leave_days=emp["remaining_leave_days"],
-        submitted_at=datetime(2026, 10, 1, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",  # Thứ 2
-        to_date="2026-10-05",    # 1 ngày làm việc
+        submitted_at=datetime(2026, 10, 16, 17, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",  # Thứ 2
+        to_date="2026-10-19",    # 1 ngày làm việc
         leave_type="ANNUAL",
         reason="Việc riêng gia đình",
         total_team_members=6,
@@ -107,9 +107,9 @@ def test_tc_ai_02_sick_single_day_with_prescription(employees_data):
         proof_verification_status="VERIFIED",
         issuer="Bệnh viện Đa khoa Quốc tế Hà Nội",
         patient_name=emp["name"],
-        issue_date=date(2026, 10, 5),
-        recommended_from_date=date(2026, 10, 5),
-        recommended_to_date=date(2026, 10, 5),
+        issue_date=date(2026, 11, 5),
+        recommended_from_date=date(2026, 11, 5),
+        recommended_to_date=date(2026, 11, 5),
         signature_present=True,
         document_readability="READABLE"
     )
@@ -118,9 +118,9 @@ def test_tc_ai_02_sick_single_day_with_prescription(employees_data):
         employee_name=emp["name"],
         department=emp["department"],
         remaining_leave_days=emp["remaining_leave_days"],
-        submitted_at=datetime(2026, 10, 5, 7, 45, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-05",
+        submitted_at=datetime(2026, 11, 5, 7, 45, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-11-05",
+        to_date="2026-11-05",
         leave_type="SICK_MEDICAL",
         reason="Bị sốt cảm cúm đột xuất",
         proof=proof,
@@ -142,9 +142,9 @@ def test_tc_ai_03_balance_boundary_kiet(employees_data):
         employee_name=emp["name"],
         department=emp["department"],
         remaining_leave_days=emp["remaining_leave_days"],
-        submitted_at=datetime(2026, 10, 1, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-05",
+        submitted_at=datetime(2026, 10, 16, 17, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",
+        to_date="2026-10-19",
         leave_type="ANNUAL",
         total_team_members=6
     )
@@ -157,9 +157,9 @@ def test_tc_ai_03_balance_boundary_kiet(employees_data):
         employee_name=emp["name"],
         department=emp["department"],
         remaining_leave_days=emp["remaining_leave_days"],
-        submitted_at=datetime(2026, 10, 1, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-06",
+        submitted_at=datetime(2026, 10, 16, 17, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",
+        to_date="2026-10-20",
         leave_type="ANNUAL",
         total_team_members=6
     )
@@ -180,9 +180,9 @@ def test_tc_ai_04_probation_restriction_huong(employees_data):
         department=emp["department"],
         remaining_leave_days=0.0,
         employment_status="PROBATION",
-        submitted_at=datetime(2026, 10, 1, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-05",
+        submitted_at=datetime(2026, 10, 16, 17, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",
+        to_date="2026-10-19",
         leave_type="ANNUAL",
         total_team_members=6
     )
@@ -197,9 +197,9 @@ def test_tc_ai_04_probation_restriction_huong(employees_data):
         department=emp["department"],
         remaining_leave_days=0.0,
         employment_status="PROBATION",
-        submitted_at=datetime(2026, 9, 20, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-05",
+        submitted_at=datetime(2026, 10, 16, 17, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",
+        to_date="2026-10-19",
         leave_type="UNPAID_OTHER",
         reason="Giải quyết việc cá nhân đột xuất",
         total_team_members=6
@@ -215,9 +215,9 @@ def test_tc_ai_05_weekend_and_holiday_no_leave_required():
         employee_name="Nguyễn Văn An",
         department="Engineering",
         remaining_leave_days=8.0,
-        submitted_at=datetime(2026, 4, 20, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-04-26",  # Giỗ Tổ Hùng Vương (Chủ Nhật)
-        to_date="2026-04-27",    # Nghỉ bù (Thứ Hai)
+        submitted_at=datetime(2026, 10, 17, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-24",  # Thứ Bảy
+        to_date="2026-10-25",    # Chủ Nhật
         leave_type="ANNUAL",
         total_team_members=6
     )
@@ -239,9 +239,9 @@ def test_tc_mgr_01_engineering_manager_routing(employees_data):
         employee_name=emp["name"],
         department="Engineering",
         remaining_leave_days=emp["remaining_leave_days"],
-        submitted_at=datetime(2026, 9, 25, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-08",  # 4 ngày làm việc
+        submitted_at=datetime(2026, 10, 17, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-26",
+        to_date="2026-10-29",  # 4 ngày làm việc
         leave_type="ANNUAL",
         reason="Nghỉ phép thường niên",
         handover_person_id=handover_colleague["employee_id"],
@@ -267,9 +267,9 @@ def test_tc_mgr_02_marketing_manager_routing(employees_data):
         employee_name=emp["name"],
         department="Marketing & Operations",
         remaining_leave_days=emp["remaining_leave_days"],
-        submitted_at=datetime(2026, 9, 25, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-08",  # 4 ngày làm việc
+        submitted_at=datetime(2026, 10, 9, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",
+        to_date="2026-10-22",  # 4 ngày làm việc
         leave_type="ANNUAL",
         reason="Nghỉ phép cá nhân",
         handover_person_id=handover_colleague["employee_id"],
@@ -293,12 +293,12 @@ def test_tc_mgr_03_special_paid_wedding(employees_data):
         proof_type=ProofType.MARRIAGE_CERTIFICATE,
         proof_verification_status="UNVERIFIED",
         issuer="UBND Phường Dịch Vọng Hậu",
-        issue_date=date(2026, 9, 20),
+        issue_date=date(2026, 10, 31),
         document_readability="READABLE",
         subject_name=emp["name"],
         partner_name="Nguyễn Thu Thảo",
         event_type="SELF_MARRIAGE",
-        wedding_date=date(2026, 10, 6),
+        wedding_date=date(2026, 11, 3),
         has_red_stamp=True,
         signature_present=True,
         is_tampered=False,
@@ -309,9 +309,9 @@ def test_tc_mgr_03_special_paid_wedding(employees_data):
         employee_name=emp["name"],
         department="Marketing & Operations",
         remaining_leave_days=emp["remaining_leave_days"],
-        submitted_at=datetime(2026, 9, 25, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-07",  # 3 ngày kết hôn hưởng nguyên lương
+        submitted_at=datetime(2026, 10, 26, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-11-02",
+        to_date="2026-11-04",  # 3 ngày kết hôn hưởng nguyên lương
         leave_type="SPECIAL_PAID",
         reason="Nghỉ đám cưới bản thân",
         reason_category="SELF_MARRIAGE",
@@ -332,9 +332,9 @@ def test_tc_mgr_04_statutory_unclear_relationship():
         employee_name="Nguyễn Văn An",
         department="Engineering",
         remaining_leave_days=8.0,
-        submitted_at=datetime(2026, 10, 1, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-05",
+        submitted_at=datetime(2026, 10, 15, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",
+        to_date="2026-10-19",
         leave_type="STATUTORY_UNPAID",
         reason="Về quê lo việc họ hàng",
         reason_category=None,
@@ -366,9 +366,9 @@ def test_tc_hard_02_long_term_leave_over_20_days_routes_to_boss():
         employee_name="Lê Mai Loan",
         department="Marketing & Operations",
         remaining_leave_days=12.0,
-        submitted_at=datetime(2026, 9, 1, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-01",
-        to_date="2026-10-29",  # 21 ngày làm việc
+        submitted_at=datetime(2026, 9, 15, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",
+        to_date="2026-11-16",  # 21 ngày làm việc
         leave_type="UNPAID_OTHER",
         reason="Nghỉ việc riêng dài hạn",
         handover_person_id="EMP010",
@@ -388,9 +388,9 @@ def test_tc_hard_03_extended_consecutive_leave_over_5_days():
         employee_name="Trần Quốc Hưng",
         department="Engineering",
         remaining_leave_days=18.0,
-        submitted_at=datetime(2026, 9, 10, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-12",  # 6 ngày làm việc liên tiếp
+        submitted_at=datetime(2026, 10, 8, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",
+        to_date="2026-10-26",  # 6 ngày làm việc liên tiếp
         leave_type="ANNUAL",
         reason="Nghỉ du lịch gia đình dài ngày",
         handover_person_id="EMP004",
@@ -409,9 +409,9 @@ def test_tc_hard_04_flag_abuse_pattern_fragmented_leaves():
         employee_name="Nguyễn Văn An",
         department="Engineering",
         remaining_leave_days=8.0,
-        submitted_at=datetime(2026, 10, 15, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-19",
-        to_date="2026-10-19",  # 1 ngày (lẽ ra AI tự duyệt)
+        submitted_at=datetime(2026, 10, 29, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-11-02",
+        to_date="2026-11-02",  # 1 ngày (lẽ ra AI tự duyệt)
         leave_type="ANNUAL",
         has_abuse_pattern=True,  # Đã tích lũy quá hạn tự duyệt trong tháng
         total_team_members=6
@@ -428,9 +428,9 @@ def test_tc_hard_05_team_quota_exceeded_over_30_percent():
         employee_name="Phan Thảo My",
         department="Marketing & Operations",
         remaining_leave_days=10.0,
-        submitted_at=datetime(2026, 10, 1, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-05",
+        submitted_at=datetime(2026, 10, 16, 17, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",
+        to_date="2026-10-19",
         leave_type="ANNUAL",
         total_team_members=6,
         team_absent_count=2  # Đã có 2/6 = 33% vắng mặt
@@ -447,9 +447,9 @@ def test_tc_hard_06_invalid_handover_cross_department():
         employee_name="Lê Văn Nam",
         department="Engineering",
         remaining_leave_days=14.0,
-        submitted_at=datetime(2026, 9, 25, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-10-05",
-        to_date="2026-10-07",  # 3 ngày làm việc (bắt buộc bàn giao)
+        submitted_at=datetime(2026, 10, 15, 8, 0, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-19",
+        to_date="2026-10-21",  # 3 ngày làm việc (bắt buộc bàn giao)
         leave_type="ANNUAL",
         handover_person_id="EMP009",  # Nhân viên phòng Marketing!
         handover={
@@ -490,9 +490,9 @@ def test_tc_vlm_02_name_mismatch_detection():
         proof_verification_status="VERIFIED",
         issuer="Bệnh viện Đa khoa Medlatec",
         patient_name="Phạm Quốc Dũng",  # Hoàn toàn không khớp Nguyễn Văn An
-        issue_date=date(2026, 9, 22),
-        recommended_from_date=date(2026, 9, 22),
-        recommended_to_date=date(2026, 9, 24),
+        issue_date=date(2026, 10, 26),
+        recommended_from_date=date(2026, 10, 26),
+        recommended_to_date=date(2026, 10, 28),
         signature_present=True,
         document_readability="READABLE"
     )
@@ -501,9 +501,9 @@ def test_tc_vlm_02_name_mismatch_detection():
         employee_name="Nguyễn Văn An",
         department="Engineering",
         remaining_leave_days=8.0,
-        submitted_at=datetime(2026, 9, 22, 7, 30, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-09-22",
-        to_date="2026-09-24",
+        submitted_at=datetime(2026, 10, 26, 7, 30, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-26",
+        to_date="2026-10-28",
         leave_type="SICK_MEDICAL",
         proof=proof,
         total_team_members=6
@@ -519,9 +519,9 @@ def test_tc_vlm_03_medical_days_mismatch_detection():
         proof_verification_status="VERIFIED",
         issuer="Bệnh viện Đa khoa Quốc tế Hà Nội",
         patient_name="Nguyễn Văn An",
-        issue_date=date(2026, 9, 22),
-        recommended_from_date=date(2026, 9, 22),
-        recommended_to_date=date(2026, 9, 23),  # Chỉ cho 2 ngày
+        issue_date=date(2026, 10, 26),
+        recommended_from_date=date(2026, 10, 26),
+        recommended_to_date=date(2026, 10, 27),  # Chỉ cho 2 ngày
         signature_present=True,
         document_readability="READABLE"
     )
@@ -530,9 +530,9 @@ def test_tc_vlm_03_medical_days_mismatch_detection():
         employee_name="Nguyễn Văn An",
         department="Engineering",
         remaining_leave_days=8.0,
-        submitted_at=datetime(2026, 9, 22, 7, 30, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-09-22",
-        to_date="2026-09-24",  # Xin 3 ngày
+        submitted_at=datetime(2026, 10, 26, 7, 30, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-26",
+        to_date="2026-10-28",  # Xin 3 ngày
         leave_type="SICK_MEDICAL",
         proof=proof,
         total_team_members=6
@@ -552,9 +552,9 @@ def test_tc_vlm_04_blurry_illegible_proof():
         employee_name="Nguyễn Văn An",
         department="Engineering",
         remaining_leave_days=8.0,
-        submitted_at=datetime(2026, 9, 22, 7, 30, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-09-22",
-        to_date="2026-09-24",
+        submitted_at=datetime(2026, 10, 26, 7, 30, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-26",
+        to_date="2026-10-28",
         leave_type="SICK_MEDICAL",
         proof=proof,
         total_team_members=6
@@ -571,9 +571,9 @@ def test_tc_vlm_05_digital_signature_valid_without_red_stamp():
         proof_verification_status="VERIFIED",
         issuer="Bệnh viện Đa khoa Quốc tế Hà Nội",
         patient_name="Nguyễn Văn An",
-        issue_date=date(2026, 9, 22),
-        recommended_from_date=date(2026, 9, 22),
-        recommended_to_date=date(2026, 9, 24),
+        issue_date=date(2026, 10, 26),
+        recommended_from_date=date(2026, 10, 26),
+        recommended_to_date=date(2026, 10, 28),
         signature_present=False,          # Không có chữ ký tay
         digital_signature_present=True,   # Có chữ ký số hợp lệ
         document_readability="READABLE"
@@ -583,9 +583,9 @@ def test_tc_vlm_05_digital_signature_valid_without_red_stamp():
         employee_name="Nguyễn Văn An",
         department="Engineering",
         remaining_leave_days=8.0,
-        submitted_at=datetime(2026, 9, 22, 7, 30, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
-        from_date="2026-09-22",
-        to_date="2026-09-24",  # 3 ngày
+        submitted_at=datetime(2026, 10, 26, 7, 30, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")),
+        from_date="2026-10-26",
+        to_date="2026-10-28",  # 3 ngày
         leave_type="SICK_MEDICAL",
         proof=proof,
         total_team_members=6
@@ -661,17 +661,17 @@ def test_tc_vlm_07_sha256_inference_cache(monkeypatch):
         "proof_extra": {
             "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
             "issuer": "Bệnh viện Đa khoa Quốc tế Hà Nội",
-            "issue_date": "2026-09-22",
-            "recommended_from_date": "2026-09-22",
-            "recommended_to_date": "2026-09-24",
+            "issue_date": "2026-10-26",
+            "recommended_from_date": "2026-10-26",
+            "recommended_to_date": "2026-10-28",
             "signature_present": True,
             "digital_signature_present": False,
             "document_readability": "READABLE",
             "fields_detected": ["patient_name", "diagnosis", "issuer", "issue_date", "signature"],
         },
     }
-    _write_vlm_cache(h, "SICK_MEDICAL", cached_payload)
-    read_back = _read_vlm_cache(h, "SICK_MEDICAL")
+    _write_vlm_cache(h, "SICK_MEDICAL", cached_payload, employee_name="Nguyễn Văn An", reason="Nghỉ ốm điều trị")
+    read_back = _read_vlm_cache(h, "SICK_MEDICAL", employee_name="Nguyễn Văn An", reason="Nghỉ ốm điều trị")
     assert read_back is not None
     assert read_back["doc_patient_name"] == "Nguyễn Văn An"
 

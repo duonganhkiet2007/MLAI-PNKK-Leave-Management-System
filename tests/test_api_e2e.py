@@ -98,6 +98,19 @@ def test_form_no_model_and_protected_context(client,isolated_db):
         assert response.status_code==422
     assert isolated_db.get_employee('E')['remaining_leave_days']==98
 
+
+def test_analysis_uses_vietnamese_labels(client):
+    r=client.post('/api/leave/request',headers={'X-Actor-ID':'E'},json=payload())
+    assert r.status_code==200,r.text
+    request_id=r.json()['data']['id']
+    res=client.get(f'/api/leave/{request_id}/analysis',headers={'X-Actor-ID':'E'})
+    assert res.status_code==200,res.text
+    analysis=res.json()
+    label_text=json.dumps(analysis['vlm_fields_labels'], ensure_ascii=False)
+    assert 'Correlation score' not in label_text
+    assert 'Mức độ khớp nội dung' in label_text or 'độ khớp nội dung' in label_text.lower()
+
+
 def test_duplicate_partial_and_atomic_rollback(service,isolated_db,monkeypatch):
     first=service.process_new_request(employee_id='E',structured_data=payload())
     duplicate=service.process_new_request(employee_id='E',structured_data=payload())
@@ -278,14 +291,17 @@ def test_child_marriage_analysis_uses_event_not_medical_fields(client,isolated_d
     analysis=response.json()
     nodes={node['stage']:node for node in analysis['decision_tree_checklist']}
 
-    assert '(Không trừ)' in nodes['BALANCE']['note']
+    assert 'Số dư phép hiện tại: 100 ngày' in nodes['BALANCE']['note']
+    assert 'Đơn nghỉ này không trừ vào phép năm.' in nodes['BALANCE']['note']
     assert nodes['VLM_DATE_COVERAGE']['status']=='FAIL'
     assert 'Ngày cưới trên giấy' in nodes['VLM_DATE_COVERAGE']['note']
     assert 'Bác sĩ chỉ định' not in nodes['VLM_DATE_COVERAGE']['note']
     assert nodes['VLM_CORRELATION']['status']=='NOT_RUN'
     assert nodes['VLM_PATIENT']['status']=='NOT_RUN'
+    assert nodes['VLM_DATE_COVERAGE']['title_vi']=='Đối chiếu ngày cưới với ngày nghỉ'
     assert 'TRẦN QUỐC ANH' in nodes['PROOF']['note']
     assert 'Chữ ký người có thẩm quyền: Có' in nodes['VLM_INTEGRITY']['note']
+    assert all('Correlation score' not in node['note'] for node in analysis['decision_tree_checklist'])
     assert all('y tế' not in item.casefold() for item in analysis['llm_summary']['info_missing_vn'])
 
 def test_upload_limits_and_fake_mime(client):

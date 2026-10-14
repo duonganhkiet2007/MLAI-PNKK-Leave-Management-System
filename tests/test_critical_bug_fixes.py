@@ -178,3 +178,15 @@ def test_vlm_cache_requires_leave_type(tmp_path, monkeypatch):
     vi._write_vlm_cache('deadbeef', '', {'x': 1})
     assert vi._read_vlm_cache('deadbeef', '') is None
     assert not list((tmp_path / 'vlm_cache').glob('deadbeef*'))
+
+
+def test_vlm_cache_separates_comparison_context(tmp_path, monkeypatch):
+    monkeypatch.setenv('LEAVE_UPLOAD_DIR', str(tmp_path))
+    import vlm_inspector as vi
+
+    first = vi._vlm_cache_path('deadbeef', 'SICK_MEDICAL', '', 'Lê Thị Hương', 'Migraine')
+    other_employee = vi._vlm_cache_path('deadbeef', 'SICK_MEDICAL', '', 'Nguyễn Văn An', 'Migraine')
+    other_reason = vi._vlm_cache_path('deadbeef', 'SICK_MEDICAL', '', 'Lê Thị Hương', 'Đau bụng')
+
+    assert first != other_employee
+    assert first != other_reason

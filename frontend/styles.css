@@ -3173,7 +3173,7 @@ select option:checked {
   color: #64748b;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0;
   margin-bottom: 2px;
 }
 
@@ -3266,7 +3266,7 @@ select option:checked {
   font-size: 0.73rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -5372,13 +5372,18 @@ select option:checked {
 /* ========================================================================= */
 /* CHI TIẾT ĐƠN NGHỈ PHÉP (modal-request-detail)                             */
 /* ========================================================================= */
+#modal-request-detail {
+  font-family: "Times New Roman", Times, serif;
+}
+#modal-request-detail .modal-title { font-size: 20px; }
 .rd-body {
   display: flex;
   flex-direction: column;
   gap: 20px;
   color: #0f172a;
-  font-size: 0.9rem;
+  font-size: 16px;
   line-height: 1.55;
+  font-family: "Times New Roman", Times, serif;
 }
 .rd-icon { flex-shrink: 0; }
 .rd-muted { color: #94a3b8; }
@@ -5403,6 +5408,7 @@ select option:checked {
 }
 .rd-verdict-text { margin: 0; color: #334155; }
 .rd-verdict-text strong { color: #0f172a; font-weight: 600; }
+.rd-verdict-detail { margin-top: 3px; }
 .rd-question {
   display: flex;
   gap: 12px;
@@ -5444,7 +5450,7 @@ select option:checked {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.85rem;
+  font-size: 16px;
   font-weight: 700;
   color: #0f172a;
   text-transform: uppercase;
@@ -5481,7 +5487,7 @@ select option:checked {
 
 /* ── Form-style fields (khớp form "Tạo đơn nghỉ phép") ── */
 .rd-form-label {
-  font-size: 0.875rem;
+  font-size: 14px;
   font-weight: 600;
   color: #1e293b;
   margin-bottom: 6px;
@@ -5496,6 +5502,7 @@ select option:checked {
   padding: 9px 14px;
   min-height: 42px;
   color: #0f172a;
+  font-size: 16px;
   word-break: break-word;
 }
 .rd-form-value { flex: 1; min-width: 0; }
@@ -5569,17 +5576,28 @@ select option:checked {
 .rd-grid thead th {
   background: #f8fafc;
   color: #475569;
-  font-size: 0.75rem;
+  font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.rd-grid td { color: #334155; font-size: 0.875rem; }
-.rd-grid tr.is-fail td { background: #fef7f7; }
+.rd-grid td { color: #334155; font-size: 16px; }
 .rd-check-name { font-weight: 600; color: #0f172a !important; }
 .rd-check-result { font-weight: 600; }
 .rd-grid td.rd-good { color: #047857; }
 .rd-grid td.rd-bad { color: #b91c1c; }
+.rd-grid td.rd-warn { color: #a16207; }
+.rd-detail-line {
+  display: grid;
+  grid-template-columns: minmax(105px, 22%) minmax(0, 1fr);
+  gap: 10px;
+  padding: 4px 0;
+  border-bottom: 1px solid #eef2f6;
+}
+.rd-detail-line:first-child { padding-top: 0; }
+.rd-detail-line:last-child { padding-bottom: 0; border-bottom: 0; }
+.rd-detail-line strong { color: #64748b; font-size: 14px; font-weight: 600; }
+.rd-detail-line span { min-width: 0; color: #334155; }
 .rd-footnotes {
   display: grid;
   gap: 6px;
@@ -5597,7 +5615,7 @@ select option:checked {
 .rd-footnote .rd-icon { margin-top: 2px; color: #64748b; }
 .rd-footnote strong { color: #0f172a; font-weight: 600; }
 
-.rd-check-result { white-space: nowrap; }
+.rd-check-result { white-space: normal; }
 
 @media (max-width: 576px) {
   .rd-verdict { padding-left: 14px; padding-right: 14px; }

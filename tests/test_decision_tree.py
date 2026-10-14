@@ -275,6 +275,31 @@ def test_family_event_correlation_does_not_compare_relative_to_employee():
     assert issues == []
 
 
+def test_migraine_reason_matches_diagnosis_despite_ocr_typo_and_keeps_date_issue():
+    from vlm_inspector import _score_correlation
+
+    score, issues, _ = _score_correlation(
+        employee_name='Lê Thị Hương',
+        reason='Migraine tiền đình cấp, hạ đường huyết điều trị ngoại trú',
+        recommended_from=date(2026, 11, 13),
+        recommended_to=date(2026, 11, 13),
+        requested_from=date(2026, 10, 16),
+        requested_to=date(2026, 10, 16),
+        diagnosis='Hội chứng Migraine tiến đỉnh cấp, hạ đường huyết',
+        days_granted_by_doctor=1,
+        requested_workdays=1,
+        leave_type='SICK_MEDICAL',
+        patient_name_on_doc='LE THI HUONG',
+        patient_name_match='MATCH',
+        reason_diagnosis_match='MATCH',
+    )
+
+    assert score >= 0.5
+    assert not any('Chẩn đoán trên giấy' in issue for issue in issues)
+    assert not any('Tên trên giấy' in issue for issue in issues)
+    assert any('Khoảng nghỉ yêu cầu' in issue for issue in issues)
+
+
 def test_wedding_vlm_parser_extracts_event_type(monkeypatch, tmp_path):
     import vlm_inspector as vi
 
@@ -293,22 +318,39 @@ def test_wedding_vlm_parser_extracts_event_type(monkeypatch, tmp_path):
         'signature_present': True,
         'document_readability': 'READABLE',
         'fields_detected': ['subject_name', 'partner_name', 'wedding_date'],
+        'comparison_assessment': {
+            'patient_name_match': 'NOT_APPLICABLE',
+            'patient_name_match_reason': 'Không đối chiếu người kết hôn với nhân viên nộp đơn.',
+            'reason_diagnosis_match': 'NOT_APPLICABLE',
+            'reason_diagnosis_match_reason': 'Đây không phải chứng từ y tế.',
+        },
     }
+    sent_payload = {}
     monkeypatch.setattr(vi, '_ollama_reachable', lambda: True)
     monkeypatch.setattr(vi, '_ollama_loaded_models', lambda: ['qwen2.5vl:7b'])
     monkeypatch.setattr(vi, '_compute_file_sha256', lambda _path: None)
     monkeypatch.setattr(vi, 'detect_image_blur', lambda *_args, **_kwargs: (False, 100.0))
     monkeypatch.setattr(vi, 'prepare_image_for_vlm', lambda *_args, **_kwargs: 'encoded-image')
-    monkeypatch.setattr(vi, 'ollama_generate', lambda *_args, **_kwargs: {'response': json.dumps(model_output)})
+    def fake_generate(payload, **_kwargs):
+        sent_payload.update(payload)
+        return {'response': json.dumps(model_output)}
+
+    monkeypatch.setattr(vi, 'ollama_generate', fake_generate)
 
     parsed, error = vi._try_ollama_extract(
         str(image_path),
         leave_type='SPECIAL_PAID',
         reason_category='CHILD_MARRIAGE',
+        employee_name='Trần Quốc Hưng',
+        reason='Nghỉ dự đám cưới con trai',
     )
 
     assert error is None
     assert parsed['proof_extra']['event_type'] == 'CHILD_MARRIAGE'
+    assert parsed['proof_extra']['patient_name_match'] == 'NOT_APPLICABLE'
+    assert parsed['proof_extra']['reason_diagnosis_match'] == 'NOT_APPLICABLE'
+    assert 'Trần Quốc Hưng' in sent_payload['prompt']
+    assert 'Nghỉ dự đám cưới con trai' in sent_payload['prompt']
 
 
 @pytest.mark.parametrize('patient_name', ['Lê Văn Nam', 'Lê Nam', 'Le Van Nam', 'LÊ VĂN NAM'])
@@ -317,6 +359,14 @@ def test_small_name_variations_are_accepted(patient_name):
     r = evaluate(leave_type='SICK_MEDICAL', employee_name='Ông Lê văn Năm',
                  from_date='2026-10-05', to_date='2026-10-05', proof=proof)
     assert r.error_code != 'NAME_MISMATCH'
+
+
+def test_vlm_confirmed_name_match_accepts_name_order_variation():
+    proof = {**PROOF, 'patient_name': 'Thi Huong Le', 'patient_name_match': 'MATCH',
+             'recommended_to_date': '2026-10-05'}
+    result = evaluate(leave_type='SICK_MEDICAL', employee_name='Lê Thị Hương',
+                      from_date='2026-10-05', to_date='2026-10-05', proof=proof)
+    assert result.error_code != 'NAME_MISMATCH'
 
 
 @pytest.mark.parametrize('left,right', [

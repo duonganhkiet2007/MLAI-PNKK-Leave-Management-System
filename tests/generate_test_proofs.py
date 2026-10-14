@@ -191,7 +191,7 @@ def generate_medical_certificate(
         draw.rectangle([(465, 845), (735, 955)], fill=(240, 248, 255), outline=(0, 100, 200), width=2)
         draw.text((480, 855), "✔ KÝ BỞI: " + issuer[:25], fill=(0, 100, 200), font=get_font(12, bold=True))
         draw.text((480, 880), "CHỨNG THƯ SỐ: 5402.VN-CA.2026", fill=(50, 50, 50), font=get_font(11))
-        draw.text((480, 902), f"NGÀY KÝ: 2026-10-{int(start_date[:2]):02d}T08:15:30", fill=(50, 50, 50), font=get_font(11))
+        draw.text((480, 902), f"NGÀY KÝ: 2026-{start_date[3:5]}-{int(start_date[:2]):02d}T08:15:30", fill=(50, 50, 50), font=get_font(11))
         draw.text((480, 925), "TRẠNG THÁI: HỢP LỆ (DIGITAL VALID)", fill=(0, 140, 40), font=get_font(11, bold=True))
     elif has_stamp:
         draw_round_stamp(draw, 595, 895, radius=60, text=issuer)
@@ -658,14 +658,15 @@ def main():
         filename="proof_emp003_wedding_child.png",
         husband="Trần Quốc Anh",
         wife="Đặng Mai Phương",
+        wedding_date="26/10/2026",
         note_relationship="Trần Quốc Anh là con ruột của ông Trần Quốc Hưng (EMP003)"
     )
     # Ảnh 2: SICK_MEDICAL - Giấy ra viện điều trị sỏi thận 4 ngày (Nội trú BV Bạch Mai)
     generate_discharge_certificate(
         filename="proof_emp003_discharge_inpatient.png",
         patient_name="Trần Quốc Hưng",
-        admission_date="08/10/2026",
-        discharge_date="11/10/2026",
+        admission_date="22/10/2026",
+        discharge_date="25/10/2026",
         days_count=4,
         hospital="BỆNH VIỆN BẠCH MAI"
     )
@@ -675,8 +676,8 @@ def main():
     generate_medical_certificate(
         filename="proof_emp004_sick_digital_valid.png",
         patient_name="Lê Văn Nam",
-        start_date="12/10/2026",
-        end_date="14/10/2026",
+        start_date="26/10/2026",
+        end_date="28/10/2026",
         days_count=3,
         issuer="BỆNH VIỆN ĐA KHOA HỒNG NGỌC",
         diagnosis="Viêm xoang hàm cấp tính có mủ (J01.0)",
@@ -686,8 +687,8 @@ def main():
     generate_medical_certificate(
         filename="proof_emp004_sick_days_mismatch.png",
         patient_name="Lê Văn Nam",
-        start_date="12/10/2026",
-        end_date="12/10/2026",
+        start_date="26/10/2026",
+        end_date="26/10/2026",
         days_count=1,
         issuer="BỆNH VIỆN ĐA KHOA QUỐC TẾ HÀ NỘI",
         diagnosis="Rối loạn tiêu hóa nhẹ, theo dõi ngộ độc thức ăn",
@@ -699,9 +700,9 @@ def main():
     generate_medical_certificate(
         filename="proof_emp005_sick_clinic_valid.png",
         patient_name="Nguyễn Văn An",
-        start_date="14/10/2026",
-        end_date="17/10/2026",
-        days_count=4,
+        start_date="28/10/2026",
+        end_date="30/10/2026",
+        days_count=3,
         issuer="PHÒNG KHÁM ĐA KHOA MEDLATEC",
         diagnosis="Sốt xuất huyết Dengue cảnh báo ngày thứ 3 (A97.1)",
         has_stamp=True
@@ -724,8 +725,8 @@ def main():
     generate_medical_certificate(
         filename="proof_emp006_sick_standard_2days.png",
         patient_name="Bùi Tuấn Kiệt",
-        start_date="15/10/2026",
-        end_date="16/10/2026",
+        start_date="29/10/2026",
+        end_date="30/10/2026",
         days_count=2,
         issuer="BỆNH VIỆN GIAO THÔNG VẬN TẢI",
         diagnosis="Viêm amidan hốc mủ cấp tính (J03.9)",
@@ -735,7 +736,7 @@ def main():
     generate_emergency_slip(
         filename="proof_emp006_emergency_slip.png",
         patient_name="Bùi Tuấn Kiệt",
-        admission_datetime="15/10/2026 lúc 06:15 sáng",
+        admission_datetime="29/10/2026 lúc 06:15 sáng",
         hospital="BỆNH VIỆN ĐA KHOA E TRUNG ƯƠNG",
         emergency_reason="Đau bụng cấp hố chậu phải dữ dội nghi ruột thừa vỡ"
     )
@@ -745,9 +746,9 @@ def main():
     generate_medical_certificate(
         filename="proof_emp007_sick_probation_valid.png",
         patient_name="Lê Thị Hương",
-        start_date="16/10/2026",
-        end_date="17/10/2026",
-        days_count=2,
+        start_date="30/10/2026",
+        end_date="30/10/2026",
+        days_count=1,
         issuer="BỆNH VIỆN ĐẠI HỌC Y HÀ NỘI",
         diagnosis="Hội chứng Migraine tiền đình cấp, hạ đường huyết",
         has_stamp=True
@@ -756,9 +757,9 @@ def main():
     generate_medical_certificate(
         filename="proof_emp007_sick_missing_signature.png",
         patient_name="Lê Thị Hương",
-        start_date="16/10/2026",
-        end_date="17/10/2026",
-        days_count=2,
+        start_date="30/10/2026",
+        end_date="30/10/2026",
+        days_count=1,
         issuer="BỆNH VIỆN ĐA KHOA QUỐC TẾ HÀ NỘI",
         diagnosis="Cúm mùa A (J10.1)",
         has_stamp=True,
@@ -770,7 +771,7 @@ def main():
     generate_prenatal_certificate(
         filename="proof_emp008_maternity_prenatal.png",
         patient_name="Nguyễn Thị Kim Ngân",
-        visit_date="19/10/2026",
+        visit_date="02/11/2026",
         gestational_age="28 tuần 4 ngày"
     )
     # Ảnh 12: SPECIAL_PAID - Tang chế mẹ ruột 3 ngày hưởng nguyên lương
@@ -779,7 +780,7 @@ def main():
         deceased_name="Trần Thị Lan",
         relationship="Mẹ ruột",
         applicant_name="Nguyễn Thị Kim Ngân",
-        death_date="18/10/2026"
+        death_date="01/11/2026"
     )
 
     # 7. EMP009 - Võ Minh Khang (Content Specialist, Marketing & Ops)
@@ -788,14 +789,14 @@ def main():
         filename="proof_emp009_wedding_valid.png",
         husband="Võ Minh Khang",
         wife="Nguyễn Thu Thảo",
-        wedding_date="20/10/2026"
+        wedding_date="03/11/2026"
     )
     # Ảnh 14: SICK_MEDICAL (BẪY LỆCH TÊN) - Nhân viên nộp giấy nhưng tên bệnh nhân là người nhà
     generate_medical_certificate(
         filename="proof_emp009_sick_name_mismatch.png",
         patient_name="Võ Hoàng Long",
-        start_date="20/10/2026",
-        end_date="22/10/2026",
+        start_date="03/11/2026",
+        end_date="05/11/2026",
         days_count=3,
         issuer="BỆNH VIỆN BẠCH MAI",
         diagnosis="Viêm họng hạt cấp tính",
@@ -807,8 +808,8 @@ def main():
     generate_medical_certificate(
         filename="proof_emp010_sick_standard_3days.png",
         patient_name="Phan Thảo My",
-        start_date="21/10/2026",
-        end_date="23/10/2026",
+        start_date="04/11/2026",
+        end_date="06/11/2026",
         days_count=3,
         issuer="BỆNH VIỆN THANH NHÀN",
         diagnosis="Sốt virus nhiễm khuẩn hô hấp cấp",
@@ -818,8 +819,8 @@ def main():
     generate_medical_certificate(
         filename="proof_emp010_sick_blurry.png",
         patient_name="Phan Thảo My",
-        start_date="21/10/2026",
-        end_date="23/10/2026",
+        start_date="04/11/2026",
+        end_date="06/11/2026",
         days_count=3,
         issuer="BỆNH VIỆN THANH NHÀN",
         diagnosis="Sốt virus",
@@ -831,8 +832,8 @@ def main():
     generate_medical_certificate(
         filename="proof_emp011_sick_morning_valid.png",
         patient_name="Hoàng Kim Yến",
-        start_date="22/10/2026",
-        end_date="22/10/2026",
+        start_date="05/11/2026",
+        end_date="05/11/2026",
         days_count=1,
         issuer="BỆNH VIỆN ĐA KHOA QUỐC TẾ THU CÚC",
         diagnosis="Viêm dạ dày ruột cấp tính, mất nước nhẹ",
@@ -842,7 +843,7 @@ def main():
     generate_work_accident_certificate(
         filename="proof_emp011_work_accident.png",
         victim_name="Hoàng Kim Yến",
-        accident_date="22/10/2026",
+        accident_date="05/11/2026",
         location="Cầu thang bộ Tầng 6, Tòa nhà Công ty",
         injury_desc="Trượt ngã bong gân cổ chân phải, chấn thương mô mềm"
     )
@@ -854,9 +855,9 @@ def main():
         parent_name="Lê Mai Loan",
         child_name="Đặng Minh Khôi",
         child_age="3 tuổi",
-        days_count=3,
-        start_date="23/10/2026",
-        end_date="25/10/2026"
+        days_count=1,
+        start_date="06/11/2026",
+        end_date="06/11/2026"
     )
     # Ảnh 20: SPECIAL_PAID (BẪY QUY CHẾ) - Giấy kết hôn của em gái (Không được nghỉ có lương tự động theo luật)
     generate_wedding_certificate(
@@ -864,16 +865,16 @@ def main():
         husband="Đỗ Tuấn Minh",
         wife="Lê Mai Linh",
         note_relationship="Lê Mai Linh là em gái ruột của nhân viên Lê Mai Loan (EMP012)",
-        wedding_date="24/10/2026"
+        wedding_date="07/11/2026"
     )
 
     # Giữ nguyên 6 ảnh gốc cho backwards compatibility
-    generate_medical_certificate("proof_sick_valid_3days.png", "Nguyễn Văn An", "22/09/2026", "24/09/2026", 3)
-    generate_medical_certificate("proof_name_mismatch.png", "Phạm Quốc Dũng", "22/09/2026", "24/09/2026", 3, issuer="Bệnh viện Đa khoa Medlatec")
-    generate_medical_certificate("proof_days_mismatch.png", "Nguyễn Văn An", "22/09/2026", "23/09/2026", 2)
-    generate_medical_certificate("proof_blurry_illegible.png", "Nguyễn Văn An", "22/09/2026", "24/09/2026", 3, is_blurry=True)
-    generate_medical_certificate("proof_digital_signed.png", "Nguyễn Văn An", "22/09/2026", "24/09/2026", 3, is_digital=True)
-    generate_wedding_certificate("proof_wedding_cert.png", "Võ Minh Khang", "Nguyễn Thu Thảo")
+    generate_medical_certificate("proof_sick_valid_3days.png", "Nguyễn Văn An", "26/10/2026", "28/10/2026", 3)
+    generate_medical_certificate("proof_name_mismatch.png", "Phạm Quốc Dũng", "26/10/2026", "28/10/2026", 3, issuer="Bệnh viện Đa khoa Medlatec")
+    generate_medical_certificate("proof_days_mismatch.png", "Nguyễn Văn An", "26/10/2026", "27/10/2026", 2)
+    generate_medical_certificate("proof_blurry_illegible.png", "Nguyễn Văn An", "26/10/2026", "28/10/2026", 3, is_blurry=True)
+    generate_medical_certificate("proof_digital_signed.png", "Nguyễn Văn An", "26/10/2026", "28/10/2026", 3, is_digital=True)
+    generate_wedding_certificate("proof_wedding_cert.png", "Võ Minh Khang", "Nguyễn Thu Thảo", wedding_date="03/11/2026")
 
     print("🎉 Hoàn tất sinh toàn bộ 26 chứng từ y tế và minh chứng mẫu chất lượng cao!")
 

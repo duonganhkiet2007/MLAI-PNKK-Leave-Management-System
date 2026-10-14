@@ -164,8 +164,15 @@ class LeaveRuleEngine:
             # Lỗi rõ ràng mà nhân viên tự sửa được (dựa trên thông tin đã đọc được trên giấy) phải báo cho nhân viên
             # TRƯỚC khi chuyển người duyệt đối chiếu chứng từ; nếu không, người duyệt nhận những chứng từ sai hiển nhiên.
             if q.leave_type in MEDICAL:
-                if p.patient_name and not names_approximately_match(p.patient_name, q.employee_name):
+                name_match = getattr(p, 'patient_name_match', None)
+                if p.patient_name and (name_match == 'MISMATCH' or (
+                    name_match is None and not names_approximately_match(p.patient_name, q.employee_name)
+                )):
                     return correction(E.NAME_MISMATCH,f'[Họ tên trên chứng từ không khớp] Họ tên trên giấy y tế ({p.patient_name}) khác với nhân viên làm đơn ({q.employee_name}). Vui lòng kiểm tra lại file đính kèm hoặc bổ sung giải trình.','MED-01')
+                if p.patient_name and name_match in {'UNCERTAIN', 'NOT_APPLICABLE'}:
+                    return finish(D.ESCALATE, E.PROOF_REVIEW_REQUIRED,
+                                  '[Chưa xác minh được danh tính trên chứng từ] VLM chưa đủ căn cứ xác nhận tên bệnh nhân khớp với nhân viên. Hồ sơ cần được quản lý kiểm tra.',
+                                  C.AUTHORITY_ESCALATION, R.DIRECT_MANAGER, 'MED-01', [R.DIRECT_MANAGER])
                 if p.recommended_from_date and p.recommended_to_date and (
                         p.recommended_from_date > p.recommended_to_date
                         or any(not p.recommended_from_date <= d <= p.recommended_to_date for d in dates)):
@@ -193,8 +200,6 @@ class LeaveRuleEngine:
             if q.leave_type in MEDICAL:
                 if not p.patient_name or not p.recommended_from_date or not p.recommended_to_date or not (p.signature_present or p.digital_signature_present):
                     return correction(E.DOC_FIELD_MISSING,'[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này.','MED-01')
-                if not names_approximately_match(p.patient_name, q.employee_name):
-                    return correction(E.NAME_MISMATCH,f'[Họ tên trên chứng từ không khớp] Họ tên trên giấy y tế ({p.patient_name}) khác với nhân viên làm đơn ({q.employee_name}). Vui lòng kiểm tra lại file đính kèm hoặc bổ sung giải trình.','MED-01')
                 if p.recommended_from_date > p.recommended_to_date or any(not p.recommended_from_date <= d <= p.recommended_to_date for d in dates):
                     return correction(E.MEDICAL_DAYS_MISMATCH,f'[Thời gian nghỉ lệch chỉ định y tế] Khoảng ngày bạn xin nghỉ nằm ngoài thời gian bác sĩ chỉ định trên giấy (từ {p.recommended_from_date} đến {p.recommended_to_date}). Vui lòng điều chỉnh ngày xin nghỉ cho khớp với giấy chứng nhận.','MED-01')
                 if p.proof_verification_status != 'VERIFIED':

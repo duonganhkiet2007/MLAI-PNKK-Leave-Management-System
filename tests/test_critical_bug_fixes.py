@@ -190,3 +190,44 @@ def test_vlm_cache_separates_comparison_context(tmp_path, monkeypatch):
 
     assert first != other_employee
     assert first != other_reason
+
+
+# --- 13. Phê duyệt đơn Thai sản & Tai nạn lao động (Human Override) --------------------------------------
+def test_human_approval_maternity_and_work_accident(service, isolated_db):
+    c = isolated_db.get_db_connection()
+    c.execute("DELETE FROM actor_roles WHERE role='HR'")
+    c.commit(); c.close()
+
+    # 1. Boss (CEO) phê duyệt đơn Thai sản
+    r1 = service.process_new_request(employee_id='E', structured_data=payload(leave_type='MATERNITY', to_date='2026-10-06'))
+    assert r1['status'] == 'PENDING_ESCALATION'
+    assert r1['target_role'] == 'CEO'
+    assert r1['error_code'] == 'AUTOMATION_SCOPE_UNSUPPORTED'
+
+    approved1 = service.process_human_decision(r1['id'], approver_id='CEO', action_type='APPROVE')
+    assert approved1['status'] == 'COMPLETED'
+    assert approved1['human_resolution'] == 'APPROVE_OVERRIDE'
+
+    # 2. Leader (M) phê duyệt đơn Tai nạn lao động (khoảng ngày khác để không trùng)
+    r2 = service.process_new_request(employee_id='E', structured_data=payload(leave_type='WORK_ACCIDENT', from_date='2026-10-12', to_date='2026-10-13'))
+    assert r2['status'] == 'PENDING_ESCALATION'
+    assert r2['target_role'] == 'DIRECT_MANAGER'
+    assert r2['error_code'] == 'AUTOMATION_SCOPE_UNSUPPORTED'
+
+    approved2 = service.process_human_decision(r2['id'], approver_id='M', action_type='APPROVE')
+    assert approved2['status'] == 'COMPLETED'
+    assert approved2['human_resolution'] == 'APPROVE_OVERRIDE'
+
+
+def test_human_approval_unclear_relationship(service):
+    # Leader phê duyệt đơn STATUTORY_UNPAID khi quan hệ chưa rõ
+    r3 = service.process_new_request(employee_id='E', structured_data=payload(leave_type='STATUTORY_UNPAID', reason_category=None, from_date='2026-10-19', to_date='2026-10-19'))
+    assert r3['status'] == 'PENDING_ESCALATION'
+    assert r3['target_role'] == 'DIRECT_MANAGER'
+    assert r3['error_code'] == 'RELATIONSHIP_UNCLEAR'
+
+    approved3 = service.process_human_decision(r3['id'], approver_id='M', action_type='APPROVE')
+    assert approved3['status'] == 'COMPLETED'
+    assert approved3['human_resolution'] == 'APPROVE_OVERRIDE'
+
+

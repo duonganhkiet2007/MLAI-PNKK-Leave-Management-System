@@ -14,7 +14,7 @@ Giả thuyết cần kiểm tra: Base VLM < Base + một kỹ thuật < Base + c
 
 ## 2. Hiện trạng trong repository
 
-`core/vlm_inspector.py` hiện đã chọn persona, schema và thứ tự decision tree theo loại nghỉ/chứng từ. Đây là prompting có hướng dẫn vai trò và quy trình trích xuất. Tuy nhiên, prompt hiện tại **không yêu cầu CoT tường minh theo từng bước**; decision tree đang mô tả thứ tự trường cần kiểm tra, không tương đương với một thí nghiệm CoT độc lập. Vì vậy, không thể dùng kết quả hiện có để kết luận persona hay CoT đã cải thiện độ chính xác.
+`core/vlm_inspector.py` hiện đã chọn persona, schema và thứ tự decision tree theo loại nghỉ/chứng từ. Đây là prompting có hướng dẫn vai tròà quy trình trích xuất. Tuy nhiên, prompt hiện tại **không yêu cầu CoT tường minh theo từng bước**; decision tree đang mô tả thứ tự trường cần kiểm tra, không tương đương với một thí nghiệm CoT độc lập. Vì vậy, không thể dùng kết quả hiện có để kết luận persona hay CoT đã cải thiện độ chính xác.
 
 Bộ test **N=138** dưới đây là quy mô theo yêu cầu của nghiên cứu. Workspace hiện không có manifest xác nhận bộ 138 ID này: `benchmarks/datasets/unified_cases.json` có 158 case, trong đó 46 case có ảnh; bộ `applications.json` có 140 case. Tài liệu benchmark cũng nêu VLM real inference là opt-in và output mock không được tính là độ chính xác. Do đó, bảng kết quả ở mục 5 được **giả lập có chủ đích** để minh họa cách báo cáo, không được trích dẫn như số đo thực nghiệm.
 

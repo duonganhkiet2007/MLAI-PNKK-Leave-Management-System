@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/static/vendor/tabler/tabler.min.css">
   
   <!-- Custom Styling & Refinements -->
-  <link rel="stylesheet" href="styles.css?v=20261013_v80">
+  <link rel="stylesheet" href="styles.css?v=20261014_v81">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e40af'/><text x='16' y='22' font-family='sans-serif' font-size='16' font-weight='bold' fill='white' text-anchor='middle'>HR</text></svg>">
   <link rel="stylesheet" href="employee_management.css?v=20261013">
 </head>
@@ -262,7 +262,7 @@
                     <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                       <tr>
                         <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Nhân viên</th>
-                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Thời gian nghỉ</th>
+                        <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Loại nghỉ</th>
                         <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Số ngày</th>
                         <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Chi tiết</th>
                         <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 11px 16px;">Trạng thái</th>
@@ -272,12 +272,10 @@
                       <!-- Row 1 -->
                       <tr id="sprint1-row-TC-AI-01">
                         <td style="padding: 12px 16px;"><b class="text-dark">Nguyễn Văn An</b></td>
-                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-16 &rarr; 2026-10-16</td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">Phép năm</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">1 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-AI-01')" title="Xem chi tiết đơn">
-                            Chi tiết
-                          </button>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-AI-01')" title="Xem thông tin đơn">Chi tiết</button>
                         </td>
                         <td style="padding: 12px 16px;">
                           <span class="benchmark-tag benchmark-tag-approve" id="sprint1-status-TC-AI-01">1. Thường quy · Duyệt</span>
@@ -287,12 +285,10 @@
                       <!-- Row 2 -->
                       <tr id="sprint1-row-TC-EMP008-03">
                         <td style="padding: 12px 16px;"><b class="text-dark">Nguyễn Thị Kim Ngân</b></td>
-                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-22 &rarr; 2026-10-23</td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">Phép năm</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">2 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-EMP008-03')" title="Xem chi tiết đơn">
-                            Chi tiết
-                          </button>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-EMP008-03')" title="Xem thông tin đơn">Chi tiết</button>
                         </td>
                         <td style="padding: 12px 16px;">
                           <span class="benchmark-tag benchmark-tag-approve" id="sprint1-status-TC-EMP008-03">2. Thường quy · Duyệt</span>
@@ -302,12 +298,10 @@
                       <!-- Row 3 -->
                       <tr id="sprint1-row-TC-AI-03B">
                         <td style="padding: 12px 16px;"><b class="text-dark">Bùi Tuấn Kiệt</b></td>
-                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-19 &rarr; 2026-10-20</td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">Phép năm</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">2 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-AI-03B')" title="Xem chi tiết đơn">
-                            Chi tiết
-                          </button>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-AI-03B')" title="Xem thông tin đơn">Chi tiết</button>
                         </td>
                         <td style="padding: 12px 16px;">
                           <span class="benchmark-tag benchmark-tag-reject" id="sprint1-status-TC-AI-03B">3. Thường quy · Từ chối</span>
@@ -317,12 +311,10 @@
                       <!-- Row 4 -->
                       <tr id="sprint1-row-TC-VLM-03">
                         <td style="padding: 12px 16px;"><b class="text-dark">Lê Văn Nam</b></td>
-                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-12 &rarr; 2026-10-14</td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">Nghỉ ốm</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">3 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-VLM-03')" title="Xem chi tiết đơn">
-                            Chi tiết
-                          </button>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-VLM-03')" title="Xem thông tin đơn">Chi tiết</button>
                         </td>
                         <td style="padding: 12px 16px;">
                           <span class="benchmark-tag benchmark-tag-correct" id="sprint1-status-TC-VLM-03">4. Chuyển tiếp · Lệch ảnh</span>
@@ -332,12 +324,10 @@
                       <!-- Row 5 -->
                       <tr id="sprint1-row-TC-MGR-03">
                         <td style="padding: 12px 16px;"><b class="text-dark">Võ Minh Khang</b></td>
-                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">2026-10-21 &rarr; 2026-10-23</td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">Nghỉ kết hôn</td>
                         <td style="padding: 12px 16px;"><b class="text-dark">3 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openBenchmarkCaseDetail('TC-MGR-03')" title="Xem chi tiết đơn">
-                            Chi tiết
-                          </button>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-MGR-03')" title="Xem thông tin đơn">Chi tiết</button>
                         </td>
                         <td style="padding: 12px 16px;">
                           <span class="benchmark-tag benchmark-tag-escalate" id="sprint1-status-TC-MGR-03">5. Chuyển tiếp · Vượt quyền</span>
@@ -387,7 +377,7 @@
                     <table class="table table-sm table-hover card-table m-0" id="table-sprint1-results">
                       <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
                         <tr>
-                          <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Kịch bản</th>
+                          <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Nhân viên</th>
                           <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Phân loại</th>
                           <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Kỳ vọng</th>
                           <th style="font-size: 0.74rem; font-weight: 700; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; padding: 10px 14px;">Phán quyết AI</th>
@@ -920,7 +910,6 @@
                         <th>Thời gian nghỉ</th>
                         <th>Số ngày</th>
                         <th>Trạng thái</th>
-                        <th>Chi tiết</th>
                         <th>Quyền kiểm soát</th>
                       </tr>
                     </thead>
@@ -1239,7 +1228,7 @@
   <script src="/static/vendor/tabler/tabler.min.js" defer></script>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20261013_v80"></script>
+  <script src="app.js?v=20261014_v83"></script>
   <script src="employee_management.js?v=20261013"></script>
 </body>
 </html>

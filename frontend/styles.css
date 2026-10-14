@@ -5721,3 +5721,12 @@ select option:checked {
 /* Kho dữ liệu kịch bản: nhãn trạng thái dạng chữ nhật, đồng bộ nút Chi tiết */
 #repo-overview-tbody [id^="repo-status-"] { display:inline-flex; align-items:center; gap:6px; border-radius:6px !important;
   padding:5px 12px !important; font-size:0.8rem !important; line-height:1.4; border:1px solid currentColor; white-space:nowrap; }
+
+/* Bảng kết quả kiểm tra: đường kẻ đậm hơn, có đường dọc phân cách Tiêu chí | Kết quả | Chi tiết */
+.rd-grid th,
+.rd-grid td { border-bottom: 1px solid #cbd5e1; }
+.rd-grid thead th { border-bottom: 1px solid #94a3b8; }
+.rd-grid th + th,
+.rd-grid td + td { border-left: 1px solid #cbd5e1; }
+.rd-detail-line { border-bottom: 1px solid #d5dde7; }
+.rd-detail-line:last-child { border-bottom: 0; }

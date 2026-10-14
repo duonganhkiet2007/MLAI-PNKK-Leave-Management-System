@@ -2397,7 +2397,7 @@ function renderStaffTestCaseCard() {
           <td style="padding: 12px 16px;"><b class="text-dark">${escapeHtml(empName)}</b></td>
           <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">${escapeHtml(leaveLabel)}</td>
           <td style="padding: 12px 16px;" class="text-center">
-            <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openRepoCaseDetail('${id}')" title="Xem chi tiết kịch bản">Chi tiết</button>
+            <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openRepoInfoDetail('${id}')" title="Xem thông tin đơn">Chi tiết</button>
           </td>
           <td style="padding: 12px 16px;">
             <span class="benchmark-tag ${grpConfig.tagClass}" id="repo-status-${id}">${escapeHtml(grpConfig.tagLabel)}</span>
@@ -2572,7 +2572,7 @@ function initSprint1Benchmark() {
         expectedDecision: "AUTO_APPROVE",
         proofFile: null,
         proofText: "Không",
-        dates: "05/11 – 06/11/2026",
+        dates: "22/10 – 23/10/2026",
         actionableQuestion: "Tự động xử lý hoàn toàn: Phép năm 2 ngày có bàn giao hợp lệ cùng phòng, không cần chuyển người duyệt."
       },
       {
@@ -2686,20 +2686,34 @@ function initSprint1Benchmark() {
 
         const canViewDetail = hasVerifiedResult;
 
+        const _decisionVN = (d) => ({
+          AUTO_APPROVE:    'Tự động duyệt',
+          AUTO_REJECT:     'Từ chối tự động',
+          NEED_CORRECTION: 'Cần sửa đơn',
+          ESCALATE:        'Chuyển cấp duyệt',
+          PROOF_REVIEW_REQUIRED: 'Cần xác minh chứng từ',
+        }[d] || d);
+
         const tr = document.createElement("tr");
         tr.style.animation = "fadeIn 0.3s ease-in-out";
+
+        // Lấy kết quả từ benchmark session cache vì request đã được dọn khỏi DB dùng chung.
+        const _detailBtn = canViewDetail
+          ? `<button type="button" class="btn btn-sm btn-outline-primary" onclick="openBenchmarkCaseDetail('${item.id}')">Chi tiết</button>`
+          : '<span class="small text-muted">—</span>';
+
         tr.innerHTML = `
-          <td><span class="fw-bold" style="font-size: 0.84rem;">${item.id}</span></td>
+          <td><span class="fw-bold" style="font-size: 0.84rem;">${escapeHtml(item.name)}</span></td>
           <td>
             <span class="badge ${item.groupBadgeClass}" style="font-size: 0.72rem; font-weight: 700; padding: 4px 7px;">${escapeHtml(item.groupLabel)}</span>
           </td>
-          <td><span class="s1-tag s1-tag-neutral">${item.expectedDecision}</span></td>
-          <td><span class="s1-tag ${decisionTagClass}">${actualDecision}</span></td>
+          <td><span class="s1-tag s1-tag-neutral">${_decisionVN(item.expectedDecision)}</span></td>
+          <td><span class="s1-tag ${decisionTagClass}">${_decisionVN(actualDecision)}</span></td>
           <td class="text-center">
             <span class="s1-tag ${hasVerifiedResult ? (isPassed ? 's1-tag-ok' : 's1-tag-bad') : 's1-tag-neutral'}">${hasVerifiedResult ? (isPassed ? 'Đạt' : 'Không đạt') : 'Chưa xác nhận'}</span>
           </td>
           <td class="text-center">
-            ${canViewDetail ? `<button type="button" class="btn btn-sm btn-outline-primary" onclick="openBenchmarkCaseDetail('${item.id}')">Chi tiết</button>` : '<span class="small text-muted">—</span>'}
+            ${_detailBtn}
           </td>
         `;
         if (resultsTbody) resultsTbody.appendChild(tr);
@@ -6228,6 +6242,28 @@ function renderBenchmarkDetailModal(req) {
 }
 
 window.openBenchmarkCaseDetail = openBenchmarkCaseDetail;
+
+// Nút Chi tiết ở bảng Kịch Bản Kiểm Thử: chỉ hiện Thông tin đơn
+async function openOverviewCaseDetail(caseId) {
+  window.__rdInfoOnly = true;
+  try {
+    await openBenchmarkCaseDetail(caseId);
+  } finally {
+    window.__rdInfoOnly = false;
+  }
+}
+window.openOverviewCaseDetail = openOverviewCaseDetail;
+
+// Nút Chi tiết ở Kho kịch bản: cũng chỉ hiện Thông tin đơn
+async function openRepoInfoDetail(caseId) {
+  window.__rdInfoOnly = true;
+  try {
+    await openRepoCaseDetail(caseId);
+  } finally {
+    window.__rdInfoOnly = false;
+  }
+}
+window.openRepoInfoDetail = openRepoInfoDetail;
 window.BENCHMARK_CASES_DATA = BENCHMARK_CASES_DATA;
 
 
@@ -6642,6 +6678,18 @@ async function openRequestDetailModal(requestId) {
       OTHER: 'Chứng từ khác',
       NONE: 'Không có chứng từ'
     };
+    const _eventTypeLabels = {
+      SELF_MARRIAGE:        'Bản thân kết hôn',
+      CHILD_MARRIAGE:       'Con kết hôn',
+      PARENT_MARRIAGE:      'Cha/mẹ kết hôn',
+      SIBLING_MARRIAGE:     'Anh/chị/em ruột kết hôn',
+      PARENT_DEATH:         'Cha/mẹ qua đời',
+      SPOUSE_DEATH:         'Vợ/chồng qua đời',
+      CHILD_DEATH:          'Con qua đời',
+      GRANDPARENT_DEATH:    'Ông/bà qua đời',
+      SIBLING_DEATH:        'Anh/chị/em ruột qua đời',
+      PERSONAL:             'Việc cá nhân',
+    };
     const _proofTypeCandidates = [
       req.proof_source?.proof_type,
       req.proof?.proof_type,
@@ -6710,7 +6758,11 @@ async function openRequestDetailModal(requestId) {
     _addProofLine('Nơi cấp', _vlmDoc.issuer);
     _addProofLine('Ngày cấp', _vlmDoc.issue_date ? formatSimpleDate(_vlmDoc.issue_date) : '');
     _addProofLine(_isWedding ? 'Tên trên giấy' : 'Tên bệnh nhân', _patientValue ? `${_patientValue}${_patientMatch === true ? ' (Khớp với tên nhân sự)' : (_patientMatch === false ? ' (Không khớp với tên nhân sự)' : (_patientMatchUncertain ? ' (Chưa xác định)' : ''))}` : '');
-    _addProofLine(_isWedding ? 'Sự kiện' : 'Chẩn đoán', _isWedding ? _vlmDoc.event_type : _vlmDoc.diagnosis);
+    const _rawEventType = _isWedding ? _vlmDoc.event_type : null;
+    const _eventTypeDisplay = _rawEventType
+      ? (_eventTypeLabels[String(_rawEventType).toUpperCase()] || _rawEventType)
+      : (_vlmDoc.diagnosis || '');
+    _addProofLine(_isWedding ? 'Sự kiện' : 'Chẩn đoán', _eventTypeDisplay);
     _addProofLine('Quan hệ ghi trên giấy', _isWedding ? _vlmDoc.relationship : '');
     _addProofLine('Dấu đỏ', _vlmFlags.has_red_stamp === true ? 'Có' : _vlmFlags.has_red_stamp === false ? 'Không có' : '');
     _addProofLine(_isWedding ? 'Chữ ký cơ quan' : 'Chữ ký bác sĩ', _signature === true ? 'Có' : _signature === false ? 'Không có' : '');
@@ -6867,7 +6919,8 @@ async function openRequestDetailModal(requestId) {
       + (_footnotes ? '<div class="rd-footnotes">' + _footnotes + '</div>' : ''), _aside, true);
   }
 
-  body.innerHTML = '<div class="rd-body">' + _infoCard + _checkCard + '</div>';
+  // Bảng Kịch Bản Kiểm Thử chỉ xem thông tin đơn, không hiện phần Kết quả kiểm tra
+  body.innerHTML = '<div class="rd-body">' + _infoCard + (window.__rdInfoOnly ? '' : _checkCard) + '</div>';
 
   modal.style.display = "flex";
   modal.classList.add("active");
@@ -7247,7 +7300,7 @@ function renderManagerAllRequests() {
   // ─── Empty state ──────────────────────────────────────────────────────────
   if (list.length === 0) {
     container.innerHTML = `
-      <tr><td colspan="6" class="mgr-records-empty">
+      <tr><td colspan="5" class="mgr-records-empty">
         <div class="fw-bold" style="font-size:0.95rem;color:#334155;">Không có hồ sơ nào phù hợp</div>
         <div style="font-size:0.82rem;color:#94a3b8;margin-top:4px;">Thử chọn trạng thái khác trong bộ lọc.</div>
       </td></tr>
@@ -7290,7 +7343,6 @@ function renderManagerAllRequests() {
         <td class="text-nowrap">${escapeHtml(req.from_date)} → ${escapeHtml(req.to_date)}</td>
         <td class="text-nowrap"><b>${days} ngày</b></td>
         <td>${getDecisionTag(req)}</td>
-        <td><button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openRequestDetailModal('${req.id}')" title="Xem chi tiết">Chi tiết</button></td>
         <td>${revokeBtn(req)}</td>
       </tr>
     `;
@@ -7925,7 +7977,17 @@ function localizeResponseText(value) {
     [/\bFAIL\b/gi, 'không đạt'],
     [/\bWARN\b/gi, 'cảnh báo'],
     [/\bNOT_RUN\b/gi, 'chưa kiểm tra'],
-    [/\bN\/A\b/gi, 'chưa xác định']
+    [/\bN\/A\b/gi, 'chưa xác định'],
+    // Sự kiện gia đình / lý do nghỉ
+    [/\bSELF_MARRIAGE\b/gi, 'Bản thân kết hôn'],
+    [/\bCHILD_MARRIAGE\b/gi, 'Con kết hôn'],
+    [/\bPARENT_MARRIAGE\b/gi, 'Cha/mẹ kết hôn'],
+    [/\bSIBLING_MARRIAGE\b/gi, 'Anh\/chị\/em ruột kết hôn'],
+    [/\bPARENT_DEATH\b/gi, 'Cha/mẹ qua đời'],
+    [/\bSPOUSE_DEATH\b/gi, 'Vợ/chồng qua đời'],
+    [/\bCHILD_DEATH\b/gi, 'Con qua đời'],
+    [/\bGRANDPARENT_DEATH\b/gi, 'Ông/bà qua đời'],
+    [/\bSIBLING_DEATH\b/gi, 'Anh\/chị\/em ruột qua đời'],
   ];
   replacements.forEach(([pattern, replacement]) => { text = text.replace(pattern, replacement); });
   return text.replace(/\s{2,}/g, ' ').replace(/\s+([,.;])/g, '$1').trim();

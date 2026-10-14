@@ -107,7 +107,10 @@ class LeaveRuleEngine:
         if q.leave_type not in {x.value for x in LeaveType}:
             return correction(E.LEAVE_TYPE_MISSING,'[Loại nghỉ chưa nhận diện] Loại nghỉ gửi lên không nằm trong danh mục quy chế công ty. Vui lòng chọn lại loại nghỉ phép hợp lệ.')
         if q.leave_type in {'WORK_ACCIDENT','MATERNITY'}:
-            return finish(D.ESCALATE,E.AUTOMATION_SCOPE_UNSUPPORTED,'[Chế độ đặc thù BHXH] Bạn nộp đơn theo chế độ Thai sản hoặc Tai nạn lao động cần đối soát hồ sơ hưởng trợ cấp theo luật. Đơn chuyển tới Phòng Nhân sự (HR) để tiếp nhận và hướng dẫn thủ tục trực tiếp.',C.OUT_OF_POLICY,R.HR,'HR-SCOPE',[R.HR])
+            roles = [R.HR]
+            remaining = [r for r in roles if r not in q.granted_roles]
+            if remaining and E.AUTOMATION_SCOPE_UNSUPPORTED not in q.waived_errors:
+                return finish(D.ESCALATE,E.AUTOMATION_SCOPE_UNSUPPORTED,'[Chế độ đặc thù BHXH] Bạn nộp đơn theo chế độ Thai sản hoặc Tai nạn lao động cần đối soát hồ sơ hưởng trợ cấp theo luật. Đơn chuyển tới Phòng Nhân sự (HR) để tiếp nhận và hướng dẫn thủ tục trực tiếp.',C.OUT_OF_POLICY,R.HR,'HR-SCOPE',roles)
         if should_deduct_annual_balance(q.leave_type) and q.employment_status == 'PROBATION':
             return correction(E.PROBATION_ANNUAL_RESTRICTED,'[Nhân sự đang thử việc] Theo quy chế nội bộ, nhân sự thử việc chưa áp dụng trừ quỹ phép năm. Vui lòng chọn loại đơn Nghỉ không lương để quản lý duyệt; số ngày phép năm sẽ được bảo lưu.','EMP-01')
         result.paid = q.leave_type in {'ANNUAL','SPECIAL_PAID'} if q.leave_type not in MEDICAL else None
@@ -117,15 +120,20 @@ class LeaveRuleEngine:
             entitlement = entitlements.get(q.reason_category)
             if entitlement is None:
                 if q.leave_type == 'STATUTORY_UNPAID':
-                    return finish(D.ESCALATE, E.RELATIONSHIP_UNCLEAR,
-                                  '[Chưa rõ quan hệ thân nhân] Thông tin quan hệ gia đình chưa đủ căn cứ theo Điều 115 Bộ luật Lao động. Đơn chuyển tới Quản lý trực tiếp để xác minh thực tế.',
-                                  C.UNCERTAIN_FACTS, R.DIRECT_MANAGER, 'ENT-01')
-                if q.leave_type == 'SPECIAL_PAID' and q.reason_category in UNPAID_ENTITLEMENTS:
+                    roles = [R.DIRECT_MANAGER]
+                    remaining = [r for r in roles if r not in q.granted_roles]
+                    if remaining and E.RELATIONSHIP_UNCLEAR not in q.waived_errors:
+                        return finish(D.ESCALATE, E.RELATIONSHIP_UNCLEAR,
+                                      '[Chưa rõ quan hệ thân nhân] Thông tin quan hệ gia đình chưa đủ căn cứ theo Điều 115 Bộ luật Lao động. Đơn chuyển tới Quản lý trực tiếp để xác minh thực tế.',
+                                      C.UNCERTAIN_FACTS, R.DIRECT_MANAGER, 'ENT-01', roles)
+                    entitlement = n
+                elif q.leave_type == 'SPECIAL_PAID' and q.reason_category in UNPAID_ENTITLEMENTS:
                     # Đã chọn sự kiện, nhưng sự kiện này chỉ được nghỉ KHÔNG lương (Điều 115 khoản 2): hướng dẫn đổi loại nghỉ.
                     event = getattr(q.reason_category, 'value', q.reason_category)
                     return correction(E.UNQUALIFIED_SPECIAL_LEAVE,f'[Sự kiện không thuộc diện nghỉ có lương] Sự kiện {event} chỉ được nghỉ không hưởng lương tối đa {UNPAID_ENTITLEMENTS[q.reason_category]} ngày theo Điều 115 khoản 2 BLLĐ 2019. Vui lòng đổi loại nghỉ sang "Việc riêng không lương luật định" hoặc dùng phép năm.','ENT-01')
-                return correction(E.REASON_REQUIRED,'[Thiếu sự kiện hưởng lương] Bạn chưa chọn lý do sự kiện gia đình theo Điều 115 Bộ luật Lao động 2019 (Kết hôn, Con kết hôn, Tang chế tứ thân phụ mẫu). Vui lòng chọn đúng sự kiện để hưởng nguyên lương.','ENT-01')
-            if n > entitlement: return correction(E.ENTITLEMENT_EXCEEDED,f'[Vượt định mức ngày phép theo luật] Chế độ này quy định tối đa {entitlement} ngày làm việc có lương (bạn đang xin {n} ngày). Vui lòng điều chỉnh đơn về tối đa {entitlement} ngày hoặc gửi đơn Nghỉ không lương cho phần ngày vượt định mức.','ENT-01')
+                else:
+                    return correction(E.REASON_REQUIRED,'[Thiếu sự kiện hưởng lương] Bạn chưa chọn lý do sự kiện gia đình theo Điều 115 Bộ luật Lao động 2019 (Kết hôn, Con kết hôn, Tang chế tứ thân phụ mẫu). Vui lòng chọn đúng sự kiện để hưởng nguyên lương.','ENT-01')
+            if entitlement is not None and n > entitlement: return correction(E.ENTITLEMENT_EXCEEDED,f'[Vượt định mức ngày phép theo luật] Chế độ này quy định tối đa {entitlement} ngày làm việc có lương (bạn đang xin {n} ngày). Vui lòng điều chỉnh đơn về tối đa {entitlement} ngày hoặc gửi đơn Nghỉ không lương cho phần ngày vượt định mức.','ENT-01')
         trace('ENTITLEMENT')
         if q.leave_type == 'UNPAID_OTHER' and not q.reason.strip():
             return correction(E.REASON_REQUIRED,'[Thiếu lý do nghỉ việc riêng] Đơn nghỉ không lương đang để trống phần lý do. Vui lòng ghi rõ lý do để cấp quản lý có cơ sở xem xét phê duyệt.','UNPAID-01')
@@ -157,9 +165,12 @@ class LeaveRuleEngine:
             if pt == 'NONE': return correction(E.PROOF_MISSING,'[Thiếu chứng từ bắt buộc] Chế độ nghỉ này bắt buộc phải có giấy tờ xác minh theo quy chế công ty. Vui lòng tải lên ảnh chụp hoặc file PDF chứng từ hợp lệ (giấy khám bệnh, giấy ra viện, giấy kết hôn...).','PROOF-01')
             unreadable = p.document_readability in {'ILLEGIBLE', 'UNREADABLE'}
             if unreadable:
-                return finish(D.ESCALATE, E.DOC_ILLEGIBLE,
-                             '[Chứng từ mờ / khó nhận diện] Ảnh chứng từ bị mờ, mất nét hoặc thiếu dấu mộc khiến hệ thống không thể tự động đối soát. Đơn chuyển tới Quản lý trực tiếp để kiểm tra bản gốc hoặc yêu cầu bổ sung.',
-                             C.AUTHORITY_ESCALATION, R.DIRECT_MANAGER, 'PROOF-01', [R.DIRECT_MANAGER])
+                roles = [R.DIRECT_MANAGER]
+                remaining = [r for r in roles if r not in q.granted_roles]
+                if remaining and E.DOC_ILLEGIBLE not in q.waived_errors:
+                    return finish(D.ESCALATE, E.DOC_ILLEGIBLE,
+                                 '[Chứng từ mờ / khó nhận diện] Ảnh chứng từ bị mờ, mất nét hoặc thiếu dấu mộc khiến hệ thống không thể tự động đối soát. Đơn chuyển tới Quản lý trực tiếp để kiểm tra bản gốc hoặc yêu cầu bổ sung.',
+                                 C.AUTHORITY_ESCALATION, R.DIRECT_MANAGER, 'PROOF-01', roles)
             if p.proof_verification_status == 'REJECTED':
                 return correction(E.DOC_FIELD_MISSING,'[Chứng từ chưa được chấp thuận] Hồ sơ chứng từ chưa đáp ứng quy chuẩn: ' + (p.verification_notes or 'Chưa đủ thông tin pháp lý hợp lệ. Vui lòng kiểm tra lại và tải lên chứng từ bổ sung.'),'PROOF-01')
             # Lỗi rõ ràng mà nhân viên tự sửa được (dựa trên thông tin đã đọc được trên giấy) phải báo cho nhân viên
@@ -171,9 +182,12 @@ class LeaveRuleEngine:
                 )):
                     return correction(E.NAME_MISMATCH,f'[Họ tên trên chứng từ không khớp] Họ tên trên giấy y tế ({p.patient_name}) khác với nhân viên làm đơn ({q.employee_name}). Vui lòng kiểm tra lại file đính kèm hoặc bổ sung giải trình.','MED-01')
                 if p.patient_name and name_match in {'UNCERTAIN', 'NOT_APPLICABLE'}:
-                    return finish(D.ESCALATE, E.PROOF_REVIEW_REQUIRED,
-                                  '[Chưa xác minh được danh tính trên chứng từ] VLM chưa đủ căn cứ xác nhận tên bệnh nhân khớp với nhân viên. Hồ sơ cần được quản lý kiểm tra.',
-                                  C.AUTHORITY_ESCALATION, R.DIRECT_MANAGER, 'MED-01', [R.DIRECT_MANAGER])
+                    roles = [R.DIRECT_MANAGER]
+                    remaining = [r for r in roles if r not in q.granted_roles]
+                    if remaining and E.PROOF_REVIEW_REQUIRED not in q.waived_errors:
+                        return finish(D.ESCALATE, E.PROOF_REVIEW_REQUIRED,
+                                      '[Chưa xác minh được danh tính trên chứng từ] VLM chưa đủ căn cứ xác nhận tên bệnh nhân khớp với nhân viên. Hồ sơ cần được quản lý kiểm tra.',
+                                      C.AUTHORITY_ESCALATION, R.DIRECT_MANAGER, 'MED-01', roles)
                 if p.recommended_from_date and p.recommended_to_date and (
                         p.recommended_from_date > p.recommended_to_date
                         or any(not p.recommended_from_date <= d <= p.recommended_to_date for d in dates)):
@@ -196,7 +210,7 @@ class LeaveRuleEngine:
                 {'MARRIAGE_CERTIFICATE','WEDDING_INVITATION'} if (hasattr(q.reason_category,'value') and q.reason_category.value == 'CHILD_MARRIAGE') else {'DEATH_CERTIFICATE'})
             if pt not in allowed:
                 return correction(E.DOC_FIELD_MISSING,f'[Loại chứng từ không phù hợp] Chứng từ đính kèm ({pt}) không phải loại giấy tờ được chấp nhận cho chế độ nghỉ này. Vui lòng tải đúng loại chứng từ (vd giấy chứng nhận nghỉ ốm / giấy ra viện cho nghỉ ốm, giấy đăng ký kết hôn cho nghỉ cưới, giấy chứng tử cho nghỉ tang).','PROOF-01')
-            if p.document_readability != 'READABLE' or not p.issuer or not p.issue_date:
+            if (p.document_readability != 'READABLE' and E.DOC_ILLEGIBLE not in q.waived_errors and not any(r in q.granted_roles for r in (R.DIRECT_MANAGER, R.DEPARTMENT_HEAD, R.CEO))) or not p.issuer or not p.issue_date:
                 return correction(E.DOC_FIELD_MISSING,'[Thông tin chứng từ chưa đầy đủ] Chứng từ cần thể hiện rõ tên cơ sở y tế cấp, ngày cấp và hình ảnh rõ nét. Vui lòng kiểm tra lại ảnh chụp để đảm bảo thấy rõ các thông tin này.','PROOF-01')
             if q.leave_type in MEDICAL:
                 if not p.patient_name or not p.recommended_from_date or not p.recommended_to_date or not (p.signature_present or p.digital_signature_present):
@@ -283,6 +297,8 @@ class LeaveRuleEngine:
                 roles = [R.DIRECT_MANAGER]
         if q.leave_type == 'STATUTORY_UNPAID':
             roles = [R.DIRECT_MANAGER]
+        if q.leave_type in {'WORK_ACCIDENT', 'MATERNITY'}:
+            roles = [R.HR]
         if operational and not roles: roles = [R.DIRECT_MANAGER]
         remaining = [r for r in roles if r not in q.granted_roles]
         for code, message, clause in operational:

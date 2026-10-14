@@ -1300,6 +1300,9 @@ class LeaveOrchestratorService:
                 # nghĩa là đã xem xét chứng từ, nên không chuyển lại bước này. Các kiểm tra nội dung chứng từ vẫn áp dụng.
                 if req.get('error_code')==ErrorCode.PROOF_REVIEW_REQUIRED.value:
                     waive.append(ErrorCode.PROOF_REVIEW_REQUIRED)
+                if req.get('error_code') in {ErrorCode.AUTOMATION_SCOPE_UNSUPPORTED.value, ErrorCode.RELATIONSHIP_UNCLEAR.value, ErrorCode.DOC_ILLEGIBLE.value}:
+                    try: waive.append(ErrorCode(req['error_code']))
+                    except Exception: pass
                 # Re-evaluate before writing this approval. No balance/proof/overlap bypass.
                 st.audit(conn,request_id,'HUMAN_APPROVAL',f'{approver_id}: {req["target_role"]}; {feedback.feedback_notes}')
                 # Dùng lại kết quả đọc chứng từ đã lưu trên đơn (không gọi lại VLM). Nếu bỏ qua hẳn VLM,
@@ -1314,7 +1317,7 @@ class LeaveOrchestratorService:
                     except Exception: cached_vlm=None
                 result=self._evaluate(conn,req,RequestFacts.model_validate(req['facts_json']),granted,waive,
                     skip_vlm=cached_vlm is None,precomputed_vlm=cached_vlm)
-                if result.decision in {DecisionType.AUTO_APPROVE,DecisionType.ESCALATE} and result.error_code not in {ErrorCode.PROOF_REVIEW_REQUIRED,ErrorCode.LEGAL_REVIEW_REQUIRED,ErrorCode.AUTOMATION_SCOPE_UNSUPPORTED}:
+                if result.decision == DecisionType.AUTO_APPROVE or (result.decision == DecisionType.ESCALATE and result.error_code not in {ErrorCode.PROOF_REVIEW_REQUIRED,ErrorCode.LEGAL_REVIEW_REQUIRED,ErrorCode.AUTOMATION_SCOPE_UNSUPPORTED}):
                     conn.execute("UPDATE approval_steps SET status='APPROVED',approver_id=?,decided_at=? WHERE request_id=? AND revision=? AND role=? AND status='PENDING'",
                         (approver_id,self.clock().isoformat(),request_id,req['revision'],old_target))
             st.audit(conn,request_id,feedback.action,approver_id+': '+feedback.feedback_notes)

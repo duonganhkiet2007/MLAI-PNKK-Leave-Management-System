@@ -85,13 +85,13 @@ SPRINT1_BENCHMARK_CASES = [
         "employee_name": "Nguyễn Văn An",
         "department": "Engineering",
         "leave_type": "ANNUAL",
-        "from_date": "2026-10-16",
-        "to_date": "2026-10-16",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-19",
         "reason": "Việc riêng gia đình",
         "remaining_leave_days": 10,
         "total_team_members": 6,
         "team_absent_count": 0,
-        "submitted_at": "2026-10-12T08:00:00+07:00",
+        "submitted_at": "2026-10-16T08:00:00+07:00",
         "expected": {
             "decision": "AUTO_APPROVE",
             "target_role": None,
@@ -118,7 +118,7 @@ SPRINT1_BENCHMARK_CASES = [
         "handover": {"employee_id": "EMP010", "department": "Marketing & Operations", "status": "ACTIVE", "absent_dates": []},
         "total_team_members": 6,
         "team_absent_count": 0,
-        "submitted_at": "2026-10-15T08:00:00+07:00",
+        "submitted_at": "2026-10-19T08:00:00+07:00",
         "expected": {
             "decision": "AUTO_APPROVE",
             "target_role": None,
@@ -143,7 +143,7 @@ SPRINT1_BENCHMARK_CASES = [
         "remaining_leave_days": 1,
         "total_team_members": 6,
         "team_absent_count": 0,
-        "submitted_at": "2026-10-14T08:00:00+07:00",
+        "submitted_at": "2026-10-16T08:00:00+07:00",
         "expected": {
             "decision": "AUTO_REJECT",
             "target_role": "EMPLOYEE",
@@ -162,25 +162,25 @@ SPRINT1_BENCHMARK_CASES = [
         "employee_name": "Lê Văn Nam",
         "department": "Engineering",
         "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-12",
-        "to_date": "2026-10-14",
+        "from_date": "2026-10-26",
+        "to_date": "2026-10-28",
         "reason": "Rối loạn tiêu hóa cấp, theo dõi ngộ độc thức ăn",
         "proof_file": "proof_emp004_sick_days_mismatch.png",
         "proof": {
             "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
             "proof_verification_status": "VERIFIED",
-            "issuer": "Bệnh viện Đa khoa Hồng Ngọc",
+            "issuer": "Bệnh viện Đa khoa Quốc tế Hà Nội",
             "patient_name": "Lê Văn Nam",
-            "issue_date": "2026-10-12",
-            "recommended_from_date": "2026-10-12",
-            "recommended_to_date": "2026-10-12",
+            "issue_date": "2026-10-26",
+            "recommended_from_date": "2026-10-26",
+            "recommended_to_date": "2026-10-26",
             "signature_present": True,
             "document_readability": "READABLE"
         },
         "remaining_leave_days": 10,
         "total_team_members": 6,
         "team_absent_count": 0,
-        "submitted_at": "2026-10-12T07:30:00+07:00",
+        "submitted_at": "2026-10-26T07:30:00+07:00",
         "expected": {
             "decision": "NEED_CORRECTION",
             "target_role": "EMPLOYEE",
@@ -188,7 +188,7 @@ SPRINT1_BENCHMARK_CASES = [
             "uncertainty_category": "UNCERTAIN_FACTS",
             "error_code": "MEDICAL_DAYS_MISMATCH"
         },
-        "actionable_question": "Đơn xin nghỉ 3 ngày (12/10 - 14/10) nhưng giấy chứng nhận y tế chỉ chỉ định nghỉ 1 ngày (12/10). Nhân viên cần điều chỉnh lại số ngày hoặc bổ sung thông tin để khớp với chứng từ."
+        "actionable_question": "Đơn xin nghỉ 3 ngày (26/10 - 28/10) nhưng giấy chứng nhận y tế chỉ chỉ định nghỉ 1 ngày (26/10). Nhân viên cần điều chỉnh lại số ngày hoặc bổ sung thông tin để khớp với chứng từ."
     },
     {
         "id": "TC-MGR-03",
@@ -200,8 +200,8 @@ SPRINT1_BENCHMARK_CASES = [
         "department": "Marketing & Operations",
         "leave_type": "SPECIAL_PAID",
         "reason_category": "SELF_MARRIAGE",
-        "from_date": "2026-10-21",
-        "to_date": "2026-10-23",
+        "from_date": "2026-11-02",
+        "to_date": "2026-11-04",
         "reason": "Nghỉ đám cưới bản thân (Lễ thành hôn)",
         "proof_file": "proof_emp009_wedding_valid.png",
         "proof": {
@@ -209,16 +209,16 @@ SPRINT1_BENCHMARK_CASES = [
             "proof_verification_status": "VERIFIED",
             "issuer": "UBND Phường Dịch Vọng Hậu",
             "patient_name": "Võ Minh Khang",
-            "issue_date": "2026-10-20",
-            "recommended_from_date": "2026-10-21",
-            "recommended_to_date": "2026-10-23",
+            "issue_date": "2026-10-31",
+            "recommended_from_date": "2026-11-02",
+            "recommended_to_date": "2026-11-04",
             "signature_present": True,
             "document_readability": "READABLE"
         },
         "remaining_leave_days": 10,
         "total_team_members": 6,
         "team_absent_count": 0,
-        "submitted_at": "2026-10-15T08:00:00+07:00",
+        "submitted_at": "2026-10-26T08:00:00+07:00",
         "expected": {
             "decision": "ESCALATE",
             "target_role": "DIRECT_MANAGER",
@@ -339,6 +339,21 @@ def _run_single_case(c: dict, orch: LeaveOrchestratorService = None):
     # Simulate a real user submission flow for benchmark checks, but keep the main
     # leave database clean. The record is retained in an isolated in-memory cache
     # for the detail modal, and removed from the shared DB immediately after submission.
+    # Dựng sẵn bảng "Kết quả kiểm tra" (checklist cây quyết định) như đơn thường, khi đơn còn trong DB của lượt chạy,
+    # để khung Chi tiết của tab Test hiển thị giống hệt Hồ sơ đơn.
+    try:
+        from routers.leave_router import get_request_analysis
+        analysis = get_request_analysis(req_id, actor_id=c['employee_id']) or {}
+        if isinstance(analysis, dict):
+            data = analysis.get('data', analysis)
+            record = dict(record)
+            record['decision_tree_checklist'] = data.get('decision_tree_checklist') or []
+            if data.get('vlm_analysis') and not record.get('vlm_analysis_json'):
+                record['vlm_analysis_json'] = data['vlm_analysis']
+            if data.get('llm_summary'):
+                record['llm_summary_json'] = data['llm_summary']
+    except Exception as exc:
+        print(f"⚠️ [VERIFY] Không dựng được checklist cho {c['id']}: {exc}")
     BENCHMARK_SESSION_CACHE[c['id']] = record
     _cleanup_benchmark_request(req_id)
     elapsed = time.perf_counter() - begin

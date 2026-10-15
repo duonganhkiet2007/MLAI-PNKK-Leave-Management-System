@@ -7,6 +7,11 @@ Hệ thống điều phối phê duyệt nghỉ phép tích hợp AI (MLAI Hacka
 - **Frontend:** SPA HTML/JS (Tabler UI), phục vụ tại `/`
 - **Phạm vi:** 8 loại nghỉ phép — phép năm, không lương, phúc lợi, luật định, ốm, cấp cứu, tai nạn lao động, thai sản
 
+**Tài liệu & Demo**
+
+- [Proposal](https://docs.google.com/document/d/1vvmc66DHWcx4OMFSgipeEEpDdnL_SFszAKhkrALF1Xg/edit?usp=sharing)
+- [Video Demo](https://drive.google.com/file/d/17AcEXeBfeE7FbaUK6FAuJROpsaZFLUgh/view?usp=sharing)
+
 ---
 
 ## Yêu cầu hệ thống
@@ -15,7 +20,7 @@ Hệ thống điều phối phê duyệt nghỉ phép tích hợp AI (MLAI Hacka
 |---|---|
 | Hệ điều hành | Linux / macOS / Windows (WSL2) |
 | Docker | Engine 24+ & Compose v2 |
-| GPU | NVIDIA ≥ 8 GB VRAM (cần cho VLM `qwen2.5vl:7b`) |
+| GPU | NVIDIA ≥ 16 GB VRAM (cần cho VLM `qwen2.5vl:7b` ở mức Q8+; <16 GB Ollama tự hạ xuống Q4, đọc chứng từ kém chính xác) |
 | NVIDIA Driver | Phiên bản tương ứng card (kiểm tra: `nvidia-smi`) |
 | nvidia-container-toolkit | Đã cài (để Docker truy cập GPU) |
 

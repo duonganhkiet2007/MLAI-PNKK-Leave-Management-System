@@ -441,6 +441,33 @@ def reset_all_data(include_demo: bool = False):
         conn.commit()
         sync_employment_fields(conn, overwrite=True)
 
+        # Seed mốc đơn nghỉ phép đã duyệt ngày 2026-09-14 để kịch bản kiểm thử trùng lịch (TC-DUP) hoạt động chính xác sau khi reset
+        now_iso = datetime.now().isoformat()
+        sample_dup_emps = [
+            ("REQ-COVERED-EMP005", "EMP005", "Nguyễn Văn An", "Engineering"),
+            ("REQ-COVERED-EMP003", "EMP003", "Trần Quốc Hưng", "Engineering"),
+            ("REQ-COVERED-EMP004", "EMP004", "Lê Văn Nam", "Engineering"),
+            ("REQ-COVERED-EMP006", "EMP006", "Bùi Tuấn Kiệt", "Engineering"),
+            ("REQ-COVERED-EMP007", "EMP007", "Lê Thị Hương", "Engineering"),
+            ("REQ-COVERED-EMP009", "EMP009", "Võ Minh Khang", "Marketing"),
+            ("REQ-COVERED-EMP011", "EMP011", "Hoàng Kim Yến", "Marketing"),
+        ]
+        for req_id, emp_id, emp_name, dept in sample_dup_emps:
+            conn.execute("""
+                INSERT OR IGNORE INTO leave_requests (
+                    id, employee_id, employee_name, department, from_date, to_date,
+                    workdays, leave_type, reason, status, decision, result_json,
+                    submitted_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                req_id, emp_id, emp_name, dept,
+                "2026-09-14", "2026-09-14", 1, "ANNUAL",
+                "Đơn nghỉ phép năm đã được phê duyệt trước đó", "COMPLETED", "AUTO_APPROVE",
+                json.dumps({"working_dates": ["2026-09-14"]}, ensure_ascii=False),
+                now_iso, now_iso
+            ))
+        conn.commit()
+
         # Dọn đúng thư mục upload đang dùng (LEAVE_UPLOAD_DIR); giữ lại thư mục con vlm_cache.
         uploads_dir = os.getenv("LEAVE_UPLOAD_DIR", os.path.join(os.path.dirname(DB_PATH), "uploads"))
         if os.path.exists(uploads_dir):

@@ -889,1042 +889,230 @@ const EMP_NAME_MAP = {
 };
 
 const STAFF_TEST_CASES = [
-  // =========================================================================
-  // EMP003: Trần Quốc Hưng (Senior / Lead Developer - Engineering)
-  // =========================================================================
   {
-    id: "TC-HARD-03",
-    primaryEmpId: "EMP003",
-    title: "TC-HARD-03: Nghỉ liên tục 6 ngày -> Vượt trần Quản lý (5 ngày), chuyển Boss",
-    badge: "Cấp Sếp · Vượt trần Quản lý",
-    badgeClass: "bg-purple-lt",
-    desc: "Trần Quốc Hưng xin 6 ngày làm việc liên tiếp có bàn giao cho EMP004 -> Vượt hạn mức 5 ngày của Quản lý trực tiếp, thẩm quyền chuyển Tổng Giám đốc (Boss).",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-26",
-      handover_person_id: "EMP004",
-      handover: { employee_id: "EMP004", department: "Engineering", status: "ACTIVE", absent_dates: [] },
-      reason: "Nghỉ du lịch gia đình dài ngày",
-      submitted_at: "2026-09-24T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "CEO",
-      error_code: "DURATION_OVER_MANAGER_LIMIT",
-      note: "Vượt 5 ngày trần Quản lý: Chuyển cấp trên (Boss/Head)"
-    }
-  },
-  {
-    id: "TC-EMP003-01",
-    primaryEmpId: "EMP003",
-    title: "TC-EMP003-01: Con kết hôn 1 ngày nguyên lương theo Điều 115 BLLĐ",
-    badge: "Nguyên lương · Con kết hôn",
-    badgeClass: "bg-pink-lt",
-    desc: "Trần Quốc Hưng xin 1 ngày nghỉ tham dự đám cưới con trai (Trần Quốc Anh) kèm Giấy chứng nhận kết hôn -> Chuyển Quản lý duyệt hưởng nguyên lương, 0 trừ phép.",
-    payload: {
-      leave_type: "SPECIAL_PAID",
-      reason_category: "CHILD_MARRIAGE",
-      from_date: "2026-10-26",
-      to_date: "2026-10-26",
-      reason: "Nghỉ tham dự lễ thành hôn của con trai ruột (Trần Quốc Anh)",
-      proof: {
-        proof_type: "MARRIAGE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "UBND Phường Dịch Vọng Hậu",
-        issue_date: "2026-10-15",
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-19T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Hưởng nguyên lương theo Điều 115 BLLĐ: Con kết hôn được nghỉ 01 ngày có lương"
-    }
-  },
-  {
-    id: "TC-EMP003-02",
-    primaryEmpId: "EMP003",
-    title: "TC-EMP003-02: Nghỉ ốm 2 ngày làm việc do phẫu thuật sỏi thận BV Bạch Mai",
-    badge: "BHXH · Ra viện nội trú",
-    badgeClass: "bg-info-lt",
-    desc: "Nghỉ ốm 4 ngày lịch (2 ngày làm việc) kèm Giấy ra viện BV Bạch Mai; vượt ngưỡng AI tự duyệt 1 ngày -> Chuyển Quản lý xem xét.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-22",
-      to_date: "2026-10-25",
-      reason: "Phẫu thuật tán sỏi nội soi ngược dòng tại Bệnh viện Bạch Mai",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Bạch Mai",
-        issue_date: "2026-10-25",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-21T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "2 ngày làm việc vượt ngưỡng AI tự duyệt 1 ngày nghỉ ốm; Lead Team xem xét theo phân cấp."
-    }
-  },
-
-  // =========================================================================
-  // EMP004: Lê Văn Nam (Senior Developer - Engineering)
-  // =========================================================================
-  {
-    id: "TC-MGR-01",
-    primaryEmpId: "EMP004",
-    title: "TC-MGR-01: Phép năm 4 ngày -> Chuyển Quản lý Kỹ thuật (EMP001)",
-    badge: "Cấp 1 · Engineering Mgr",
-    badgeClass: "bg-primary-lt",
-    desc: "Lê Văn Nam xin 4 ngày phép năm có bàn giao cùng phòng cho EMP003 -> Chuyển Đỗ Hoàng Long (Engineering Manager) duyệt.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-22",
-      handover_person_id: "EMP003",
-      handover: { employee_id: "EMP003", department: "Engineering", status: "ACTIVE", absent_dates: [] },
-      reason: "Nghỉ phép thường niên",
-      submitted_at: "2026-10-09T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Phép năm 3-5 ngày: Thẩm quyền duyệt là Quản lý Kỹ thuật (EMP001)"
-    }
-  },
-  {
-    id: "TC-HARD-06",
-    primaryEmpId: "EMP004",
-    title: "TC-HARD-06: Bàn giao chéo phòng ban không hợp lệ (Bắt lỗi)",
-    badge: "Lỗi bàn giao · Bị chặn",
-    badgeClass: "bg-danger-lt",
-    desc: "Nhân viên Kỹ thuật bàn giao công việc cho EMP009 phòng Marketing -> Báo lỗi HANDOVER_INVALID, yêu cầu sửa đơn.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-21",
-      handover_person_id: "EMP009",
-      handover: { employee_id: "EMP009", department: "Marketing & Operations", status: "ACTIVE", absent_dates: [] },
-      reason: "Nghỉ phép thường niên",
-      submitted_at: "2026-10-09T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "NEED_CORRECTION",
-      target_role: "AI",
-      error_code: "HANDOVER_INVALID",
-      note: "Chặn tự động: Người nhận bàn giao khác phòng ban"
-    }
-  },
-  {
-    id: "TC-VLM-05",
-    primaryEmpId: "EMP004",
-    title: "TC-VLM-05: Chứng từ y tế có chữ ký điện tử theo TT 25/2025/TT-BYT",
-    badge: "VLM · Chữ ký điện tử",
-    badgeClass: "bg-success-lt",
-    desc: "Chứng từ điện tử BV Hồng Ngọc không có mộc đỏ vật lý nhưng có chữ ký điện tử bệnh viện -> Hợp lệ chuyển Quản lý Kỹ thuật duyệt.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-26",
-      to_date: "2026-10-28",
-      reason: "Viêm xoang hàm cấp tính có mủ, điều trị ngoại trú",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Đa khoa Hồng Ngọc",
-        signature_present: false,
-        digital_signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-26T07:30:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Chữ ký điện tử hợp lệ theo TT 25/2025/TT-BYT, không bắt bẻ mộc đỏ"
-    }
-  },
-  {
-    id: "TC-VLM-03",
-    primaryEmpId: "EMP004",
-    title: "TC-VLM-03: Nghỉ ốm 3 ngày viêm xoang hàm vượt ngưỡng tự duyệt của AI",
-    badge: "Chuyển cấp · Nghỉ ốm 3 ngày viêm xoang hàm",
-    badgeClass: "bg-warning-lt",
-    desc: "Giấy chứng nhận hợp lệ chỉ định nghỉ đủ 3 ngày (26–28/10); đơn vượt ngưỡng AI tự duyệt 1 ngày nghỉ ốm -> Chuyển Lead Team xem xét.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-26",
-      to_date: "2026-10-28",
-      reason: "Rối loạn tiêu hóa cấp, theo dõi ngộ độc thức ăn",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Đa khoa Quốc tế Hà Nội",
-        patient_name: "Lê Văn Nam",
-        issue_date: "2026-10-26",
-        recommended_from_date: "2026-10-26",
-        recommended_to_date: "2026-10-28",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-26T07:30:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      error_code: "DURATION_OVER_AI_LIMIT",
-      note: "3 ngày nghỉ ốm vượt ngưỡng AI tự duyệt 1 ngày; Lead Team xem xét theo phân cấp."
-    }
-  },
-
-  // =========================================================================
-  // EMP005: Nguyễn Văn An (Developer - Engineering)
-  // =========================================================================
-  {
-    id: "TC-AI-01",
-    primaryEmpId: "EMP005",
-    title: "TC-AI-01: Phép năm 1 ngày tự động duyệt (1-2 ngày đủ số dư)",
-    badge: "AI Cấp 0 · Tự duyệt",
-    badgeClass: "bg-success-lt",
-    desc: "Nguyễn Văn An xin 1 ngày phép năm (19/10/2026), báo trước đúng hạn, đủ số dư phép -> AI Cấp 0 tự động duyệt, trừ 1 ngày phép.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-19",
-      reason: "Việc riêng gia đình",
-      submitted_at: "2026-10-16T17:00:00+07:00",
-      total_team_members: 6,
-      team_absent_count: 0
-    },
-    expected: {
-      decision: "AUTO_APPROVE",
-      target_role: "AI",
-      deducted_days: 1,
-      note: "Hệ thống AI tự động duyệt & trừ 1 ngày phép năm"
-    }
-  },
-  {
-    id: "TC-AI-05",
-    primaryEmpId: "EMP005",
-    title: "TC-AI-05: Đơn rơi vào ngày lễ / nghỉ bù Giỗ Tổ (Không cần xin phép)",
-    badge: "Lễ / Cuối tuần",
-    badgeClass: "bg-secondary-lt",
-    desc: "Xin nghỉ trùng Giỗ Tổ Hùng Vương & nghỉ bù (26-27/04/2026) -> Hệ thống xác định không cần xin phép vì là ngày nghỉ luật định.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-04-26",
-      to_date: "2026-04-27",
-      reason: "Nghỉ lễ Giỗ Tổ",
-      submitted_at: "2026-04-20T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "NO_LEAVE_REQUIRED",
-      target_role: "AI",
-      error_code: "DAY_ALREADY_NON_WORKING",
-      note: "Ngày lễ/nghỉ bù luật định: Không cần xin phép, 0 trừ ngày"
-    }
-  },
-  {
-    id: "TC-MGR-04",
-    primaryEmpId: "EMP005",
-    title: "TC-MGR-04: Nghỉ việc riêng quan hệ họ hàng chưa rõ thân nhân",
-    badge: "Cấp 1 · Xác minh thân nhân",
-    badgeClass: "bg-warning-lt",
-    desc: "Lý do 'Về quê lo việc họ hàng' chưa rõ thân nhân hưởng lương -> Chuyển Quản lý trực tiếp xác minh, không từ chối vội.",
-    payload: {
-      leave_type: "STATUTORY_UNPAID",
-      from_date: "2026-10-19",
-      to_date: "2026-10-19",
-      reason: "Về quê lo việc họ hàng",
-      submitted_at: "2026-10-15T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      error_code: "RELATIONSHIP_UNCLEAR",
-      note: "Bắt cờ RELATIONSHIP_UNCLEAR: Quản lý thẩm định mối quan hệ"
-    }
-  },
-  {
-    id: "TC-HARD-04",
-    primaryEmpId: "EMP005",
-    title: "TC-HARD-04: Nghỉ ngắt quãng nhiều lần trong tháng (Cờ lạm dụng)",
-    badge: "Cảnh báo · Lạm dụng",
-    badgeClass: "bg-danger-lt",
-    desc: "Đơn 1 ngày lẽ ra AI tự duyệt, nhưng đã có nhiều đơn trong tháng tích lũy > 2 ngày -> Bắt cờ FLAG_ABUSE_PATTERN, chuyển Quản lý.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-11-02",
-      to_date: "2026-11-02",
-      has_abuse_pattern: true,
-      reason: "Nghỉ việc riêng",
-      submitted_at: "2026-10-29T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      error_code: "FLAG_ABUSE_PATTERN",
-      note: "Bắt cờ lạm dụng: Chặn tự duyệt Cấp 0, chuyển Quản lý xem xét"
-    }
-  },
-  {
-    id: "TC-EMP005-02",
-    primaryEmpId: "EMP005",
-    title: "TC-EMP005-02: [Bẫy quá hạn] Nộp chứng từ y tế quá thời hạn 3 ngày làm việc",
-    badge: "Bẫy VLM · Quá hạn",
-    badgeClass: "bg-warning-lt",
-    desc: "Giấy khám bệnh từ đợt ốm 15–18/05/2026 nhưng đến 19/10 mới nộp đơn -> Báo nghỉ ốm trễ hạn (NOTICE_PERIOD_VIOLATED), chuyển Quản lý xem xét.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-05-15",
-      to_date: "2026-05-18",
-      reason: "Nộp bổ sung giấy khám sức khỏe tháng trước",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Đa khoa Quốc tế Thu Cúc",
-        issue_date: "2026-05-15",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-19T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      error_code: "NOTICE_PERIOD_VIOLATED",
-      note: "Quá hạn nộp chứng từ: Chuyển Quản lý xem xét lý do nộp trễ"
-    }
-  },
-
-  // =========================================================================
-  // EMP006: Bùi Tuấn Kiệt (Developer - Engineering)
-  // =========================================================================
-  {
-    id: "TC-AI-03A",
-    primaryEmpId: "EMP006",
-    title: "TC-AI-03A: Biên số dư phép - Còn 1 ngày, xin 1 ngày (Duyệt)",
-    badge: "Biên số dư · Đạt",
-    badgeClass: "bg-success-lt",
-    desc: "Bùi Tuấn Kiệt số dư còn 1 ngày: Xin đúng 1 ngày phép năm -> AI tự duyệt, số dư trừ sạch về 0.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-19",
-      remaining_leave_days: 1.0,
-      reason: "Giải quyết việc cá nhân",
-      submitted_at: "2026-10-16T17:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "AUTO_APPROVE",
-      target_role: "AI",
-      deducted_days: 1,
-      note: "Số dư vừa đủ (1 ngày) -> Tự động duyệt"
-    }
-  },
-  {
-    id: "TC-AI-03B",
-    primaryEmpId: "EMP006",
-    title: "TC-AI-03B: Biên số dư phép - Còn 1 ngày, xin 2 ngày (Từ chối tự động)",
-    badge: "Biên số dư · Từ chối",
-    badgeClass: "bg-danger-lt",
-    desc: "Bùi Tuấn Kiệt số dư còn 1 ngày nhưng xin 2 ngày phép -> Bị hệ thống từ chối tự động vì vượt số dư (BALANCE_EXCEEDED).",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-20",
-      remaining_leave_days: 1.0,
-      reason: "Nghỉ việc gia đình 2 ngày",
-      submitted_at: "2026-10-16T17:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "AUTO_REJECT",
-      target_role: "AI",
-      error_code: "BALANCE_EXCEEDED",
-      note: "Từ chối tự động (AUTO_REJECT) do vượt số dư phép năm"
-    }
-  },
-  {
-    id: "TC-EMP006-01",
-    primaryEmpId: "EMP006",
-    title: "TC-EMP006-01: Nghỉ ốm 2 ngày tiêu chuẩn BV Đa khoa Đống Đa",
-    badge: "BHXH · Ngoại trú chuẩn",
-    badgeClass: "bg-info-lt",
-    desc: "Nghỉ ốm 2 ngày điều trị viêm amidan hốc mủ cấp tính có Giấy chứng nhận nghỉ việc hưởng BHXH BV Đa khoa Đống Đa -> Chuyển Quản lý duyệt.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-29",
-      to_date: "2026-10-30",
-      reason: "Viêm amidan hốc mủ cấp tính điều trị ngoại trú",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Đa khoa Đống Đa",
-        issue_date: "2026-10-29",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-29T07:30:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Chứng từ tiêu chuẩn: Chuyển Quản lý Kỹ thuật phê duyệt BHXH"
-    }
-  },
-  {
-    id: "TC-EMP006-02",
-    primaryEmpId: "EMP006",
-    title: "TC-EMP006-02: Giấy cấp cứu ban đêm tai nạn nhẹ BV E (Hỗ trợ khẩn cấp)",
-    badge: "Khẩn cấp · Ban đêm",
-    badgeClass: "bg-danger-lt",
-    desc: "Nhập Khoa Cấp cứu BV E lúc 06:15 sáng 29/10 vì đau bụng cấp -> Phiếu cấp cứu hợp lệ (đủ tên, nơi cấp, ngày, chữ ký) cho 1 ngày nghỉ: AI tự duyệt theo quy chế §3.1.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-29",
-      to_date: "2026-10-29",
-      reason: "Cấp cứu đau bụng cấp hố chậu phải nghi viêm ruột thừa tại Khoa Cấp cứu BV E",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện E - Khoa Cấp cứu",
-        issue_date: "2026-10-29",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-29T07:15:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "AUTO_APPROVE",
-      target_role: "AI",
-      note: "Ca cấp cứu khẩn cấp: Chuyển Quản lý xử lý nhanh chế độ"
-    }
-  },
-
-  // =========================================================================
-  // EMP007: Lê Thị Hương (Thử việc - Engineering)
-  // =========================================================================
-  {
-    id: "TC-AI-04A",
-    primaryEmpId: "EMP007",
-    title: "TC-AI-04A: Thử việc xin phép năm hưởng lương (Chặn sửa đơn)",
-    badge: "Thử việc · Bị chặn",
-    badgeClass: "bg-warning-lt",
-    desc: "Lê Thị Hương (thử việc) xin phép năm hưởng lương -> Bắt lỗi PROBATION_ANNUAL_RESTRICTED, yêu cầu sửa đơn.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-19",
-      employment_status: "PROBATION",
-      remaining_leave_days: 0.0,
-      reason: "Nghỉ phép năm",
-      submitted_at: "2026-10-16T17:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "NEED_CORRECTION",
-      target_role: "AI",
-      error_code: "PROBATION_ANNUAL_RESTRICTED",
-      note: "Chặn tự động: Thử việc chưa phát sinh phép năm hưởng lương"
-    }
-  },
-  {
-    id: "TC-AI-04B",
-    primaryEmpId: "EMP007",
-    title: "TC-AI-04B: Thử việc xin nghỉ không lương (Hợp lệ chuyển Quản lý)",
-    badge: "Thử việc · Quản lý",
-    badgeClass: "bg-primary-lt",
-    desc: "Lê Thị Hương (thử việc) xin nghỉ việc riêng không lương UNPAID_OTHER -> Hợp lệ chuyển Quản lý trực tiếp duyệt.",
-    payload: {
-      leave_type: "UNPAID_OTHER",
-      from_date: "2026-10-19",
-      to_date: "2026-10-19",
-      employment_status: "PROBATION",
-      remaining_leave_days: 0.0,
-      reason: "Giải quyết việc cá nhân đột xuất",
-      submitted_at: "2026-10-04T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Hợp lệ cho thử việc: Chuyển Quản lý trực tiếp (Cấp 1)"
-    }
-  },
-  {
-    id: "TC-EMP007-01",
-    primaryEmpId: "EMP007",
-    title: "TC-EMP007-01: Thử việc nghỉ ốm 1 ngày có chứng từ PK Medlatec",
-    badge: "Thử việc · Ốm BHXH",
-    badgeClass: "bg-info-lt",
-    desc: "Nhân sự thử việc (có đóng BHXH) nộp đơn ốm 1 ngày kèm chứng từ đầy đủ -> AI tự duyệt theo quy chế §3.1 (ốm 1 ngày, chứng từ hợp lệ).",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-30",
-      to_date: "2026-10-30",
-      reason: "Migraine tiền đình cấp, hạ đường huyết điều trị ngoại trú",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Phòng khám Đa khoa Medlatec Cầu Giấy",
-        issue_date: "2026-10-30",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-30T08:10:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "AUTO_APPROVE",
-      target_role: "AI",
-      note: "Thử việc có chứng từ y tế hợp lệ (1 ngày): AI tự động phê duyệt chế độ BHXH"
-    }
-  },
-  {
-    id: "TC-EMP007-02",
-    primaryEmpId: "EMP007",
-    title: "TC-EMP007-02: [Bẫy thiếu chữ ký] Chứng từ thiếu chữ ký bác sĩ điều trị",
-    badge: "Bẫy VLM · Thiếu ký",
-    badgeClass: "bg-danger-lt",
-    desc: "Chứng từ có mộc đỏ bệnh viện nhưng ô bác sĩ khám ký tên bị bỏ trống -> Báo thiếu chữ ký (DOC_FIELD_MISSING), yêu cầu bổ sung.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-10-30",
-      to_date: "2026-10-30",
-      reason: "Nghỉ ốm theo dõi",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Giao thông Vận tải",
-        issue_date: "2026-10-30",
-        signature_present: false,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-30T08:15:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "NEED_CORRECTION",
-      target_role: "AI",
-      error_code: "DOC_FIELD_MISSING",
-      note: "Thiếu chữ ký bác sĩ chuyên khoa: Yêu cầu nhân viên xin xác nhận lại"
-    }
-  },
-
-  // =========================================================================
-  // EMP008: Nguyễn Thị Kim Ngân (Operations Specialist - Marketing & Ops)
-  // =========================================================================
-  {
-    id: "TC-EMP008-01",
-    primaryEmpId: "EMP008",
-    title: "TC-EMP008-01: Khám thai định kỳ 1 ngày có chứng nhận y tế (BHXH)",
-    badge: "BHXH · Khám thai",
-    badgeClass: "bg-pink-lt",
-    desc: "Nguyễn Thị Kim Ngân nộp đơn khám thai định kỳ kèm Giấy chứng nhận BV Phụ sản Hà Nội -> Chế độ thai sản: chuyển Tổng Giám đốc duyệt theo quy chế §3.1.",
-    payload: {
-      leave_type: "MATERNITY",
-      from_date: "2026-11-02",
-      to_date: "2026-11-02",
-      reason: "Khám thai định kỳ tuần thứ 28 tại BV Phụ sản Hà Nội",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Phụ sản Hà Nội",
-        issue_date: "2026-11-02",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-11-02T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "CEO",
-      note: "Chế độ thai sản BHXH: Chuyển Tổng Giám đốc (CEO) phê duyệt theo quy chế"
-    }
-  },
-  {
-    id: "TC-EMP008-02",
-    primaryEmpId: "EMP008",
-    title: "TC-EMP008-02: Tang lễ tứ thân phụ mẫu 3 ngày hưởng nguyên lương",
-    badge: "Nguyên lương · Tang chế",
-    badgeClass: "bg-dark-lt",
-    desc: "Nghỉ việc riêng hưởng nguyên lương do mẹ đẻ qua đời (01/11) kèm Giấy chứng tử -> Quản lý duyệt 3 ngày nguyên lương theo Điều 115 BLLĐ.",
-    payload: {
-      leave_type: "SPECIAL_PAID",
-      reason_category: "PARENT_DEATH",
-      from_date: "2026-11-02",
-      to_date: "2026-11-04",
-      reason: "Lo tang lễ cho mẹ ruột (Trần Thị Lan) tại quê nhà",
-      proof: {
-        proof_type: "OTHER",
-        proof_verification_status: "VERIFIED",
-        issuer: "UBND Xã Hải Hậu, Tỉnh Nam Định",
-        issue_date: "2026-11-01",
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-11-02T06:30:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Tang chế tứ thân phụ mẫu: 03 ngày hưởng nguyên lương theo Điều 115 BLLĐ"
-    }
-  },
-  {
-    id: "TC-EMP008-03",
-    primaryEmpId: "EMP008",
-    title: "TC-EMP008-03: Phép năm 2 ngày có bàn giao cùng phòng cho EMP010",
-    badge: "Phép năm · Có bàn giao",
-    badgeClass: "bg-success-lt",
-    desc: "Nguyễn Thị Kim Ngân xin nghỉ phép năm 2 ngày có bàn giao công việc cho Phan Thảo My (EMP010) cùng phòng Marketing & Ops.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-22",
-      to_date: "2026-10-23",
-      handover_person_id: "EMP010",
-      handover: { employee_id: "EMP010", department: "Marketing & Operations", status: "ACTIVE", absent_dates: [] },
-      reason: "Nghỉ phép thường niên",
-      submitted_at: "2026-10-15T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "AUTO_APPROVE",
-      target_role: "AI",
-      deducted_days: 2,
-      note: "Phép năm 1-2 ngày có bàn giao hợp lệ -> AI tự động phê duyệt"
-    }
-  },
-
-  // =========================================================================
-  // EMP009: Võ Minh Khang (Marketing Specialist - Marketing & Ops)
-  // =========================================================================
-  {
-    id: "TC-MGR-03",
-    primaryEmpId: "EMP009",
-    title: "TC-MGR-03: Nghỉ kết hôn 3 ngày hưởng nguyên lương (SPECIAL_PAID)",
-    badge: "Cấp 1 · Chế độ kết hôn",
-    badgeClass: "bg-pink-lt",
-    desc: "Võ Minh Khang nộp đơn kết hôn 3 ngày kèm giấy đăng ký kết hôn UBND Quận Cầu Giấy -> Quản lý duyệt hưởng nguyên lương, 0 trừ phép năm.",
-    payload: {
-      leave_type: "SPECIAL_PAID",
-      reason_category: "SELF_MARRIAGE",
-      from_date: "2026-11-02",
-      to_date: "2026-11-04",
-      reason: "Nghỉ đám cưới bản thân (Lễ thành hôn)",
-      proof: {
-        proof_type: "MARRIAGE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "UBND Phường Dịch Vọng Hậu",
-        issue_date: "2026-11-03",
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-26T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Hưởng nguyên lương, không trừ phép năm (Điều 115 BLLĐ)"
-    }
-  },
-  {
-    id: "TC-VLM-02",
-    primaryEmpId: "EMP009",
-    title: "TC-VLM-02: Bẫy lệch tên bệnh nhân trên giấy nghỉ ốm (NAME_MISMATCH)",
-    badge: "Bẫy VLM · Lệch tên",
-    badgeClass: "bg-danger-lt",
-    desc: "Giấy chứng nhận ghi tên bệnh nhân 'Võ Hoàng Long' khác tên Võ Minh Khang -> Bắt cờ NAME_MISMATCH, yêu cầu sửa/nộp lại đơn.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-11-03",
-      to_date: "2026-11-05",
-      reason: "Nghỉ ốm điều trị",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Đa khoa Medlatec",
-        patient_name: "Võ Hoàng Long",
-        issue_date: "2026-11-03",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-11-03T07:30:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "NEED_CORRECTION",
-      target_role: "AI",
-      error_code: "NAME_MISMATCH",
-      note: "Bẫy thị giác: Tên trên chứng từ không khớp tên nhân viên nộp"
-    }
-  },
-  {
-    id: "TC-EMP009-03",
-    primaryEmpId: "EMP009",
-    title: "TC-EMP009-03: Phép năm 3 ngày có bàn giao cho EMP008 -> Quản lý duyệt",
-    badge: "Cấp 1 · Mkt & Ops Mgr",
-    badgeClass: "bg-primary-lt",
-    desc: "Võ Minh Khang xin 3 ngày phép năm có bàn giao cùng phòng cho EMP008 -> Chuyển Dương Mỹ Duyên (Marketing/Ops Manager) duyệt.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-11-02",
-      to_date: "2026-11-04",
-      handover_person_id: "EMP008",
-      handover: { employee_id: "EMP008", department: "Marketing & Operations", status: "ACTIVE", absent_dates: [] },
-      reason: "Nghỉ việc gia đình",
-      submitted_at: "2026-10-24T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Phép năm 3-5 ngày: Thẩm quyền duyệt là Quản lý Marketing (EMP002)"
-    }
-  },
-
-  // =========================================================================
-  // EMP010: Phan Thảo My (Operations Specialist - Marketing & Ops)
-  // =========================================================================
-  {
-    id: "TC-MGR-02",
-    primaryEmpId: "EMP010",
-    title: "TC-MGR-02: Phép năm 4 ngày -> Chuyển Quản lý Marketing (EMP002)",
-    badge: "Cấp 1 · Mkt & Ops Mgr",
-    badgeClass: "bg-primary-lt",
-    desc: "Phan Thảo My xin 4 ngày phép năm có bàn giao cùng phòng cho EMP008 -> Chuyển Dương Mỹ Duyên (Mkt/Ops Manager) duyệt.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-22",
-      handover_person_id: "EMP008",
-      handover: { employee_id: "EMP008", department: "Marketing & Operations", status: "ACTIVE", absent_dates: [] },
-      reason: "Nghỉ phép cá nhân",
-      submitted_at: "2026-10-09T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Phép năm 3-5 ngày: Thẩm quyền duyệt là Quản lý Marketing (EMP002)"
-    }
-  },
-  {
-    id: "TC-HARD-05",
-    primaryEmpId: "EMP010",
-    title: "TC-HARD-05: Tỷ lệ vắng mặt phòng ban vượt 30% (Chặn tự duyệt)",
-    badge: "Cảnh báo · Quota 30%",
-    badgeClass: "bg-danger-lt",
-    desc: "Phòng Marketing đã có 2/6 thành viên vắng (33%) -> Bắt cờ TEAM_QUOTA_EXCEEDED, chặn tự duyệt, chuyển Quản lý trực tiếp.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-19",
-      team_absent_count: 2,
-      total_team_members: 6,
-      reason: "Nghỉ cá nhân",
-      submitted_at: "2026-10-16T17:00:00+07:00"
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      error_code: "TEAM_QUOTA_EXCEEDED",
-      note: "Vắng >= 30% nhân sự: Chuyển Quản lý điều phối nguồn lực"
-    }
-  },
-  {
-    id: "TC-VLM-04",
-    primaryEmpId: "EMP010",
-    title: "TC-VLM-04: Ảnh chụp chứng từ bị mờ nhòe, mất nét (DOC_ILLEGIBLE)",
-    badge: "Bẫy VLM · Mờ nhòe",
-    badgeClass: "bg-danger-lt",
-    desc: "Ảnh chụp tài liệu mờ nhòe, mất nét không đọc được thông tin -> Không tự đối soát được (DOC_ILLEGIBLE / PROOF_REVIEW_REQUIRED), chuyển Quản lý kiểm tra bản gốc / yêu cầu ảnh rõ.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-11-04",
-      to_date: "2026-11-06",
-      reason: "Nghỉ ốm điều trị",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        document_readability: "ILLEGIBLE"
-      },
-      submitted_at: "2026-11-04T07:30:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Bẫy chất lượng ảnh: Ảnh mờ nhòe, yêu cầu bổ sung ảnh đọc được"
-    }
-  },
-  {
-    id: "TC-EMP010-02",
-    primaryEmpId: "EMP010",
-    title: "TC-EMP010-02: Nghỉ ốm 3 ngày tiêu chuẩn BV Thanh Nhàn",
-    badge: "BHXH · BV Thanh Nhàn",
-    badgeClass: "bg-info-lt",
-    desc: "Nghỉ ốm ngoại trú 3 ngày (04–06/11) kèm chứng từ BV Thanh Nhàn -> Quản lý duyệt chế độ BHXH.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-11-04",
-      to_date: "2026-11-06",
-      reason: "Sốt virus nhiễm khuẩn hô hấp cấp điều trị ngoại trú",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Thanh Nhàn",
-        issue_date: "2026-11-04",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-11-04T07:30:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Chứng từ hợp lệ (3 ngày): Chuyển Quản lý duyệt theo quy chế"
-    }
-  },
-
-  // =========================================================================
-  // EMP011: Hoàng Kim Yến (Operations Specialist - Marketing & Ops)
-  // =========================================================================
-  {
-    id: "TC-AI-02",
-    primaryEmpId: "EMP011",
-    title: "TC-AI-02: Nghỉ ốm 1 ngày có đơn thuốc nộp trước 08:30 (BHXH)",
-    badge: "AI Cấp 0 · Ốm đau BHXH",
-    badgeClass: "bg-info-lt",
-    desc: "Hoàng Kim Yến nộp đơn ốm 1 ngày lúc 07:45 sáng kèm đơn thuốc bệnh viện hợp lệ -> AI tự duyệt, 0 trừ phép năm (chế độ BHXH).",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-11-05",
-      to_date: "2026-11-05",
-      reason: "Viêm dạ dày ruột cấp tính, mất nước nhẹ",
-      submitted_at: "2026-11-05T07:45:00+07:00",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Đa khoa Quốc tế Hà Nội",
-        issue_date: "2026-11-05",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      total_team_members: 6
-    },
-    expected: {
-      decision: "AUTO_APPROVE",
-      target_role: "AI",
-      deducted_days: 0,
-      note: "Chế độ ốm đau BHXH: Tự duyệt, không trừ phép năm"
-    }
-  },
-  {
-    id: "TC-EMP011-02",
-    primaryEmpId: "EMP011",
-    title: "TC-EMP011-02: Tai nạn lao động tại văn phòng công ty (Thẩm định tai nạn)",
-    badge: "Thẩm định · Tai nạn LĐ",
-    badgeClass: "bg-warning-lt",
-    desc: "Tai nạn lao động: trượt ngã cầu thang bộ tầng 6 tòa nhà công ty, có phiếu tiếp nhận sơ cứu BV Giao thông Vận tải -> Chuyển Quản lý thẩm định chế độ tai nạn lao động.",
-    payload: {
-      leave_type: "WORK_ACCIDENT",
-      from_date: "2026-11-05",
-      to_date: "2026-11-06",
-      reason: "Trượt ngã cầu thang bộ tầng 6 tòa nhà công ty, bong gân cổ chân phải",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Giao thông Vận tải",
-        issue_date: "2026-11-05",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-11-05T09:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Hồ sơ tai nạn lao động tại văn phòng: Quản lý thẩm định biên bản & chứng từ y tế"
-    }
-  },
-  {
-    id: "TC-EMP011-03",
-    primaryEmpId: "EMP011",
-    title: "TC-EMP011-03: Phép năm 1 ngày việc riêng (Tự động duyệt)",
-    badge: "AI Cấp 0 · Tự duyệt",
-    badgeClass: "bg-success-lt",
-    desc: "Hoàng Kim Yến xin 1 ngày phép năm giải quyết việc cá nhân, đủ số dư phép -> AI tự duyệt.",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-11-06",
-      to_date: "2026-11-06",
-      reason: "Việc riêng gia đình",
-      submitted_at: "2026-11-01T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "AUTO_APPROVE",
-      target_role: "AI",
-      deducted_days: 1,
-      note: "Phép năm 1 ngày đủ số dư: AI tự động duyệt & trừ 1 ngày phép"
-    }
-  },
-
-  // =========================================================================
-  // EMP012: Lê Mai Loan (Creative / Operations - Marketing & Ops)
-  // =========================================================================
-  {
-    id: "TC-HARD-02",
-    primaryEmpId: "EMP012",
-    title: "TC-HARD-02: Nghỉ dài hạn 21 ngày làm việc -> Bắt buộc Tổng Giám đốc (Boss)",
-    badge: "Cấp Sếp · Nghỉ dài hạn",
-    badgeClass: "bg-purple-lt",
-    desc: "Lê Mai Loan xin 21 ngày làm việc (19/10 - 16/11/2026) có bàn giao -> Thẩm quyền bắt buộc là Tổng Giám đốc (CEO/Boss).",
-    payload: {
-      leave_type: "UNPAID_OTHER",
-      from_date: "2026-10-19",
-      to_date: "2026-11-16",
-      handover_person_id: "EMP010",
-      handover: { employee_id: "EMP010", department: "Marketing & Operations", status: "ACTIVE", absent_dates: [] },
-      reason: "Nghỉ việc riêng dài hạn",
-      submitted_at: "2026-09-15T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "CEO",
-      note: "Đơn >= 20 ngày làm việc: Thẩm quyền duyệt là Tổng Giám đốc (Boss)"
-    }
-  },
-  {
-    id: "TC-EMP012-02",
-    primaryEmpId: "EMP012",
-    title: "TC-EMP012-02: Con ốm 1 ngày hưởng trợ cấp BHXH (Con dưới 7 tuổi)",
-    badge: "BHXH · Chăm sóc con ốm",
-    badgeClass: "bg-info-lt",
-    desc: "Nghỉ chăm sóc con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh kèm Giấy chứng nhận BV Nhi Trung ương -> Chuyển Quản lý duyệt hưởng chế độ con ốm.",
-    payload: {
-      leave_type: "SICK_MEDICAL",
-      from_date: "2026-11-06",
-      to_date: "2026-11-06",
-      reason: "Nghỉ chăm sóc con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh",
-      proof: {
-        proof_type: "MEDICAL_LEAVE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "Bệnh viện Nhi Trung ương",
-        issue_date: "2026-11-06",
-        signature_present: true,
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-11-06T07:30:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      note: "Chế độ con ốm hưởng BHXH theo Luật BHXH: Quản lý phê duyệt"
-    }
-  },
-  {
-    id: "TC-EMP012-03",
-    primaryEmpId: "EMP012",
-    title: "TC-EMP012-03: [Bẫy quy chế] Cưới em gái ruột (Không thuộc diện có lương)",
-    badge: "Bẫy quy chế · Không lương",
-    badgeClass: "bg-warning-lt",
-    desc: "Xin nghỉ CÓ LƯƠNG để dự cưới em gái ruột -> Điều 115 BLLĐ chỉ cho nghỉ có lương khi bản thân hoặc con kết hôn. Hệ thống trả đơn, hướng dẫn đổi sang nghỉ không lương luật định hoặc phép năm.",
-    payload: {
-      leave_type: "SPECIAL_PAID",
-      reason_category: "SIBLING_MARRIAGE",
-      from_date: "2026-11-06",
-      to_date: "2026-11-06",
-      reason: "Tham dự lễ thành hôn của em gái ruột (Lê Mai Linh)",
-      proof: {
-        proof_type: "MARRIAGE_CERTIFICATE",
-        proof_verification_status: "VERIFIED",
-        issuer: "UBND Phường Quan Hoa, Quận Cầu Giấy",
-        issue_date: "2026-10-24",
-        document_readability: "READABLE"
-      },
-      submitted_at: "2026-10-29T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "NEED_CORRECTION",
-      target_role: "AI",
-      error_code: "REASON_REQUIRED",
-      note: "Bẫy quy chế: Anh/chị/em cưới không có lương -> Quản lý hướng dẫn đổi loại phép"
-    }
-  },
-
-  // =========================================================================
-  // EMP001: Đỗ Hoàng Long (Engineering Manager)
-  // =========================================================================
-  {
-    id: "TC-HARD-01",
-    primaryEmpId: "EMP001",
-    title: "TC-HARD-01: Quản lý nộp đơn -> Không tự duyệt, chuyển Sếp (Boss)",
-    badge: "Cấp Sếp · Anti Self-Approval",
-    badgeClass: "bg-purple-lt",
-    desc: "Đỗ Hoàng Long nộp đơn -> Quy chế chống tự phê duyệt (Anti-self-approval), thẩm quyền chuyển thẳng lên Sếp (EMP000 - Boss).",
-    payload: {
-      leave_type: "ANNUAL",
-      from_date: "2026-10-19",
-      to_date: "2026-10-21",
-      reason: "Nghỉ phép cá nhân",
-      handover_person_id: "EMP003",
-      submitted_at: "2026-10-09T08:00:00+07:00",
-      total_team_members: 6
-    },
-    expected: {
-      decision: "ESCALATE",
-      target_role: "CEO",
-      note: "Người nộp là Quản lý: Chuyển cấp trên trực tiếp là Tổng Giám đốc"
-    }
-  },
-  // =========================================================================
-  // 43 KỊCH BẢN KIỂM ĐỊNH MỞ RỘNG (TC-EXT-01 -> TC-EXT-43)
-  // =========================================================================
-  {
-    "id": "TC-EXT-01",
-    "primaryEmpId": "EMP005",
-    "title": "TC-EXT-01: Phép năm 1 ngày tự động duyệt (1-2 ngày đủ số dư)",
+    "id": "TC-VAL-01",
+    "primaryEmpId": "EMP003",
+    "title": "TC-VAL-01: Phép năm 1 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
     "badge": "Tự động duyệt",
     "badgeClass": "bg-success-lt",
-    "desc": "Nguyễn Văn An xin 1 ngày phép năm giải quyết việc gia đình, nộp trước hạn 4 ngày, số dư phép còn 8 ngày -> AI Cấp 0 tự động duyệt & trừ 1 ngày phép.",
+    "desc": "Trần Quốc Hưng xin 1 ngày phép năm (2026-10-19), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-19",
+      "to_date": "2026-10-19",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (1 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
+      "remaining_leave_days": 18.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Trần Quốc Hưng xin 1 ngày phép năm (2026-10-19), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-02",
+    "primaryEmpId": "EMP004",
+    "title": "TC-VAL-02: Phép năm 2 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Lê Văn Nam xin 2 ngày phép năm (2026-10-21), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-21",
+      "to_date": "2026-10-22",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (2 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
+      "remaining_leave_days": 14.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 2,
+      "note": "Lê Văn Nam xin 2 ngày phép năm (2026-10-21), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-03",
+    "primaryEmpId": "EMP005",
+    "title": "TC-VAL-03: Phép năm 1 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Nguyễn Văn An xin 1 ngày phép năm (2026-10-26), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-26",
+      "to_date": "2026-10-26",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (1 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
+      "remaining_leave_days": 8.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Nguyễn Văn An xin 1 ngày phép năm (2026-10-26), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-04",
+    "primaryEmpId": "EMP008",
+    "title": "TC-VAL-04: Phép năm 2 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Nguyễn Thị Kim Ngân xin 2 ngày phép năm (2026-10-28), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-28",
+      "to_date": "2026-10-29",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (2 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
+      "remaining_leave_days": 16.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 2,
+      "note": "Nguyễn Thị Kim Ngân xin 2 ngày phép năm (2026-10-28), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-05",
+    "primaryEmpId": "EMP003",
+    "title": "TC-VAL-05: Phép năm 1 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Trần Quốc Hưng xin 1 ngày phép năm (2026-11-02), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-11-02",
+      "to_date": "2026-11-02",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (1 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
+      "remaining_leave_days": 18.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Trần Quốc Hưng xin 1 ngày phép năm (2026-11-02), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-06",
+    "primaryEmpId": "EMP004",
+    "title": "TC-VAL-06: Phép năm 2 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Lê Văn Nam xin 2 ngày phép năm (2026-11-04), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-11-04",
+      "to_date": "2026-11-05",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (2 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
+      "remaining_leave_days": 14.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 2,
+      "note": "Lê Văn Nam xin 2 ngày phép năm (2026-11-04), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-07",
+    "primaryEmpId": "EMP005",
+    "title": "TC-VAL-07: Phép năm 1 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Nguyễn Văn An xin 1 ngày phép năm (2026-11-09), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-11-09",
+      "to_date": "2026-11-09",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (1 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
+      "remaining_leave_days": 8.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Nguyễn Văn An xin 1 ngày phép năm (2026-11-09), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-08",
+    "primaryEmpId": "EMP008",
+    "title": "TC-VAL-08: Phép năm 2 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Nguyễn Thị Kim Ngân xin 2 ngày phép năm (2026-11-11), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-11-11",
+      "to_date": "2026-11-12",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (2 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
+      "remaining_leave_days": 16.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 2,
+      "note": "Nguyễn Thị Kim Ngân xin 2 ngày phép năm (2026-11-11), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-09",
+    "primaryEmpId": "EMP009",
+    "title": "TC-VAL-09: Phép năm 1 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Võ Minh Khang xin 1 ngày phép năm (2026-11-16), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
     "payload": {
       "leave_type": "ANNUAL",
       "from_date": "2026-11-16",
       "to_date": "2026-11-16",
-      "reason": "Giải quyết việc cá nhân gia đình",
-      "submitted_at": "2026-11-12T08:00:00+07:00",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (1 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
       "total_team_members": 6,
       "team_absent_count": 0,
-      "employee_id": "EMP005",
-      "employee_name": "Nguyễn Văn An",
-      "department": "Engineering",
-      "remaining_leave_days": 8.0,
+      "remaining_leave_days": 6.0,
       "employment_status": "REGULAR"
     },
     "expected": {
@@ -1932,99 +1120,24 @@ const STAFF_TEST_CASES = [
       "target_role": null,
       "error_code": null,
       "deducted_days": 1,
-      "note": "[Tự động duyệt thành công] Đơn nghỉ 1 ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép."
+      "note": "Võ Minh Khang xin 1 ngày phép năm (2026-11-16), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
     }
   },
   {
-    "id": "TC-EXT-02",
-    "primaryEmpId": "EMP004",
-    "title": "TC-EXT-02: Phép năm 2 ngày có bàn giao cùng phòng cho EMP003",
+    "id": "TC-VAL-10",
+    "primaryEmpId": "EMP010",
+    "title": "TC-VAL-10: Phép năm 2 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
     "badge": "Tự động duyệt",
     "badgeClass": "bg-success-lt",
-    "desc": "Lê Văn Nam xin 2 ngày phép năm có thỏa thuận bàn giao công việc cho Trần Quốc Hưng cùng phòng Kỹ thuật -> AI tự động phê duyệt.",
+    "desc": "Phan Thảo My xin 2 ngày phép năm (2026-11-18), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
     "payload": {
       "leave_type": "ANNUAL",
-      "from_date": "2026-11-17",
-      "to_date": "2026-11-18",
-      "reason": "Nghỉ phép cá nhân thường niên",
-      "handover_person_id": "EMP003",
-      "handover": {
-        "employee_id": "EMP003",
-        "department": "Engineering",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-11-13T08:00:00+07:00",
-      "total_team_members": 6,
-      "team_absent_count": 0,
-      "employee_id": "EMP004",
-      "employee_name": "Lê Văn Nam",
-      "department": "Engineering",
-      "remaining_leave_days": 14.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "AUTO_APPROVE",
-      "target_role": null,
-      "error_code": null,
-      "deducted_days": 2,
-      "note": "[Tự động duyệt thành công] Đơn nghỉ 2 ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép."
-    }
-  },
-  {
-    "id": "TC-EXT-03",
-    "primaryEmpId": "EMP008",
-    "title": "TC-EXT-03: Phép năm 1 ngày phòng Marketing & Operations",
-    "badge": "Tự động duyệt",
-    "badgeClass": "bg-success-lt",
-    "desc": "Nguyễn Thị Kim Ngân xin 1 ngày phép năm, số dư còn 16 ngày, nộp trước hạn 5 ngày -> AI tự động duyệt & trừ 1 ngày phép.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-19",
+      "from_date": "2026-11-18",
       "to_date": "2026-11-19",
-      "reason": "Nghỉ phép thường niên",
-      "submitted_at": "2026-11-14T08:00:00+07:00",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (2 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
       "total_team_members": 6,
       "team_absent_count": 0,
-      "employee_id": "EMP008",
-      "employee_name": "Nguyễn Thị Kim Ngân",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 16.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "AUTO_APPROVE",
-      "target_role": null,
-      "error_code": null,
-      "deducted_days": 1,
-      "note": "[Tự động duyệt thành công] Đơn nghỉ 1 ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép."
-    }
-  },
-  {
-    "id": "TC-EXT-04",
-    "primaryEmpId": "EMP010",
-    "title": "TC-EXT-04: Phép năm 2 ngày có bàn giao cùng phòng cho EMP008",
-    "badge": "Tự động duyệt",
-    "badgeClass": "bg-success-lt",
-    "desc": "Phan Thảo My xin 2 ngày phép năm có bàn giao công việc cho Nguyễn Thị Kim Ngân cùng phòng Marketing -> AI tự động phê duyệt.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-19",
-      "to_date": "2026-11-20",
-      "reason": "Nghỉ phép cá nhân",
-      "handover_person_id": "EMP008",
-      "handover": {
-        "employee_id": "EMP008",
-        "department": "Marketing & Operations",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-11-15T08:00:00+07:00",
-      "total_team_members": 6,
-      "team_absent_count": 0,
-      "employee_id": "EMP010",
-      "employee_name": "Phan Thảo My",
-      "department": "Marketing & Operations",
       "remaining_leave_days": 10.0,
       "employment_status": "REGULAR"
     },
@@ -2033,913 +1146,51 @@ const STAFF_TEST_CASES = [
       "target_role": null,
       "error_code": null,
       "deducted_days": 2,
-      "note": "[Tự động duyệt thành công] Đơn nghỉ 2 ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép."
+      "note": "Phan Thảo My xin 2 ngày phép năm (2026-11-18), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
     }
   },
   {
-    "id": "TC-EXT-05",
-    "primaryEmpId": "EMP012",
-    "title": "TC-EXT-05: Phép năm 1 ngày phòng Điều phối Vận hành",
-    "badge": "Tự động duyệt",
-    "badgeClass": "bg-success-lt",
-    "desc": "Lê Mai Loan xin 1 ngày phép năm giải quyết việc riêng, số dư còn 12 ngày -> AI tự động phê duyệt.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-20",
-      "to_date": "2026-11-20",
-      "reason": "Giải quyết việc cá nhân",
-      "submitted_at": "2026-11-16T08:00:00+07:00",
-      "total_team_members": 6,
-      "team_absent_count": 0,
-      "employee_id": "EMP012",
-      "employee_name": "Lê Mai Loan",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 12.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "AUTO_APPROVE",
-      "target_role": null,
-      "error_code": null,
-      "deducted_days": 1,
-      "note": "[Tự động duyệt thành công] Đơn nghỉ 1 ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép."
-    }
-  },
-  {
-    "id": "TC-EXT-06",
-    "primaryEmpId": "EMP006",
-    "title": "TC-EXT-06: Biên số dư phép - Còn đúng 1 ngày, xin đúng 1 ngày (Duyệt)",
-    "badge": "Biên số dư · Đạt",
-    "badgeClass": "bg-success-lt",
-    "desc": "Bùi Tuấn Kiệt số dư còn đúng 1 ngày phép: nộp đơn xin đúng 1 ngày -> AI tự động duyệt, số dư trừ vừa hết về 0.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-23",
-      "to_date": "2026-11-23",
-      "remaining_leave_days": 1.0,
-      "reason": "Giải quyết việc cá nhân gia đình",
-      "submitted_at": "2026-11-20T08:00:00+07:00",
-      "total_team_members": 6,
-      "team_absent_count": 0,
-      "employee_id": "EMP006",
-      "employee_name": "Bùi Tuấn Kiệt",
-      "department": "Engineering",
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "AUTO_APPROVE",
-      "target_role": null,
-      "error_code": null,
-      "deducted_days": 1,
-      "note": "[Tự động duyệt thành công] Đơn nghỉ 1 ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép."
-    }
-  },
-  {
-    "id": "TC-EXT-07",
-    "primaryEmpId": "EMP005",
-    "title": "TC-EXT-07: Nghỉ ốm 1 ngày PK Đa khoa hợp lệ có chứng từ đúng tên",
-    "badge": "Tự động duyệt",
-    "badgeClass": "bg-success-lt",
-    "desc": "Nguyễn Văn An nộp đơn nghỉ ốm 1 ngày kèm Giấy khám bệnh PK hợp lệ đúng tên bệnh nhân -> AI tự động phê duyệt chế độ BHXH 1 ngày theo quy chế §3.1.",
-    "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-11-23",
-      "to_date": "2026-11-23",
-      "reason": "Viêm đường hô hấp trên điều trị ngoại trú",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Phòng khám Đa khoa Quốc tế",
-        "patient_name": "Nguyễn Văn An",
-        "issue_date": "2026-11-23",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-11-23T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP005",
-      "employee_name": "Nguyễn Văn An",
-      "department": "Engineering",
-      "remaining_leave_days": 8.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này."
-    }
-  },
-  {
-    "id": "TC-EXT-08",
+    "id": "TC-VAL-11",
     "primaryEmpId": "EMP011",
-    "title": "TC-EXT-08: Nghỉ ốm 1 ngày khám buổi sáng có chứng nhận hợp lệ",
+    "title": "TC-VAL-11: Phép năm 1 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
     "badge": "Tự động duyệt",
     "badgeClass": "bg-success-lt",
-    "desc": "Hoàng Kim Yến nộp đơn nghỉ ốm 1 ngày kèm chứng từ khám buổi sáng hợp lệ -> AI tự động duyệt theo quy chế §3.1.",
+    "desc": "Hoàng Kim Yến xin 1 ngày phép năm (2026-11-23), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
     "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-11-24",
-      "to_date": "2026-11-24",
-      "reason": "Rối loạn tiêu hóa cấp điều trị ngoại trú",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Đa khoa",
-        "patient_name": "Hoàng Kim Yến",
-        "issue_date": "2026-11-24",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-11-24T08:15:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-11-23",
+      "to_date": "2026-11-23",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (1 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
       "total_team_members": 6,
-      "employee_id": "EMP011",
-      "employee_name": "Hoàng Kim Yến",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 4.0,
+      "team_absent_count": 0,
+      "remaining_leave_days": 5.0,
       "employment_status": "REGULAR"
     },
     "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này."
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Hoàng Kim Yến xin 1 ngày phép năm (2026-11-23), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
     }
   },
   {
-    "id": "TC-EXT-09",
-    "primaryEmpId": "EMP006",
-    "title": "TC-EXT-09: Cấp cứu ban đêm Khoa Cấp cứu BV E có phiếu xác nhận",
-    "badge": "Cấp cứu khẩn",
+    "id": "TC-VAL-12",
+    "primaryEmpId": "EMP012",
+    "title": "TC-VAL-12: Phép năm 2 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
     "badgeClass": "bg-success-lt",
-    "desc": "Bùi Tuấn Kiệt cấp cứu rạng sáng tại BV E, nộp phiếu tiếp nhận cấp cứu hợp lệ cho 1 ngày nghỉ -> AI tự duyệt hỗ trợ khẩn cấp.",
+    "desc": "Lê Mai Loan xin 2 ngày phép năm (2026-11-25), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
     "payload": {
-      "leave_type": "SICK_MEDICAL",
+      "leave_type": "ANNUAL",
       "from_date": "2026-11-25",
-      "to_date": "2026-11-25",
-      "reason": "Cấp cứu ban đêm đau quặn thận nghi sỏi tại Khoa Cấp cứu BV E",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện E - Khoa Cấp cứu",
-        "issue_date": "2026-11-25",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-11-25T07:10:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP006",
-      "employee_name": "Bùi Tuấn Kiệt",
-      "department": "Engineering",
-      "remaining_leave_days": 1.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này."
-    }
-  },
-  {
-    "id": "TC-EXT-10",
-    "primaryEmpId": "EMP004",
-    "title": "TC-EXT-10: Đơn xin nghỉ trùng ngày Quốc khánh 02/09 (Miễn trừ làm đơn)",
-    "badge": "Lễ luật định",
-    "badgeClass": "bg-secondary-lt",
-    "desc": "Lê Văn Nam xin nghỉ trùng ngày Quốc khánh 02/09/2026 -> Hệ thống xác định đây là ngày nghỉ lễ luật định có hưởng lương, không cần nộp đơn nghỉ phép.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-09-02",
-      "to_date": "2026-09-02",
-      "reason": "Nghỉ lễ Quốc khánh",
-      "submitted_at": "2026-08-25T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP004",
-      "employee_name": "Lê Văn Nam",
-      "department": "Engineering",
-      "remaining_leave_days": 14.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NO_LEAVE_REQUIRED",
-      "target_role": null,
-      "error_code": "DAY_ALREADY_NON_WORKING",
-      "deducted_days": 0,
-      "note": "[Toàn bộ là ngày nghỉ quy định] Toàn bộ khoảng thời gian xin nghỉ rơi vào ngày cuối tuần hoặc ngày lễ. Bạn được nghỉ theo lịch chung và quỹ phép năm được giữ nguyên 100%."
-    }
-  },
-  {
-    "id": "TC-EXT-11",
-    "primaryEmpId": "EMP003",
-    "title": "TC-EXT-11: Phép năm 3 ngày có bàn giao cùng phòng cho EMP004",
-    "badge": "Chuyển Quản lý",
-    "badgeClass": "bg-primary-lt",
-    "desc": "Trần Quốc Hưng xin 3 ngày phép năm có bàn giao công việc cho Lê Văn Nam cùng phòng -> Chuyển Đỗ Hoàng Long (Engineering Manager) duyệt.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-24",
       "to_date": "2026-11-26",
-      "reason": "Nghỉ phép thường niên",
-      "handover_person_id": "EMP004",
-      "handover": {
-        "employee_id": "EMP004",
-        "department": "Engineering",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-11-16T08:00:00+07:00",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (2 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
       "total_team_members": 6,
-      "employee_id": "EMP003",
-      "employee_name": "Trần Quốc Hưng",
-      "department": "Engineering",
-      "remaining_leave_days": 18.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DIRECT_MANAGER",
-      "error_code": "DURATION_OVER_AI_LIMIT",
-      "deducted_days": 0,
-      "note": "[Vượt hạn mức tự duyệt của AI] Đơn xin nghỉ 3 ngày hợp lệ về số dư nhưng vượt trần tự duyệt 2 ngày của AI; chuyển tới Quản lý trực tiếp phê duyệt."
-    }
-  },
-  {
-    "id": "TC-EXT-12",
-    "primaryEmpId": "EMP004",
-    "title": "TC-EXT-12: Phép năm 4 ngày có bàn giao cùng phòng cho EMP005",
-    "badge": "Chuyển Quản lý",
-    "badgeClass": "bg-primary-lt",
-    "desc": "Lê Văn Nam xin 4 ngày phép năm có bàn giao công việc cho Nguyễn Văn An cùng phòng Kỹ thuật -> Chuyển Quản lý Kỹ thuật phê duyệt.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-24",
-      "to_date": "2026-11-27",
-      "reason": "Nghỉ phép thường niên cá nhân",
-      "handover_person_id": "EMP005",
-      "handover": {
-        "employee_id": "EMP005",
-        "department": "Engineering",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-11-16T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP004",
-      "employee_name": "Lê Văn Nam",
-      "department": "Engineering",
-      "remaining_leave_days": 14.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DIRECT_MANAGER",
-      "error_code": "DURATION_OVER_AI_LIMIT",
-      "deducted_days": 0,
-      "note": "[Vượt hạn mức tự duyệt của AI] Đơn xin nghỉ 4 ngày hợp lệ về số dư nhưng vượt trần tự duyệt 2 ngày của AI; chuyển tới Quản lý trực tiếp phê duyệt."
-    }
-  },
-  {
-    "id": "TC-EXT-13",
-    "primaryEmpId": "EMP008",
-    "title": "TC-EXT-13: Phép năm 4 ngày phòng Vận hành có bàn giao cho EMP010",
-    "badge": "Chuyển Quản lý",
-    "badgeClass": "bg-primary-lt",
-    "desc": "Nguyễn Thị Kim Ngân xin 4 ngày phép năm có bàn giao cho Phan Thảo My -> Chuyển Dương Mỹ Duyên (Marketing & Ops Manager) duyệt.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-24",
-      "to_date": "2026-11-27",
-      "reason": "Nghỉ phép cá nhân",
-      "handover_person_id": "EMP010",
-      "handover": {
-        "employee_id": "EMP010",
-        "department": "Marketing & Operations",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-11-16T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP008",
-      "employee_name": "Nguyễn Thị Kim Ngân",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 16.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DIRECT_MANAGER",
-      "error_code": "DURATION_OVER_AI_LIMIT",
-      "deducted_days": 0,
-      "note": "[Vượt hạn mức tự duyệt của AI] Đơn xin nghỉ 4 ngày hợp lệ về số dư nhưng vượt trần tự duyệt 2 ngày của AI; chuyển tới Quản lý trực tiếp phê duyệt."
-    }
-  },
-  {
-    "id": "TC-EXT-14",
-    "primaryEmpId": "EMP010",
-    "title": "TC-EXT-14: Phép năm 5 ngày chạm trần Quản lý trực tiếp",
-    "badge": "Chuyển Quản lý",
-    "badgeClass": "bg-primary-lt",
-    "desc": "Phan Thảo My xin 5 ngày phép năm (đúng hạn mức tối đa của Quản lý trực tiếp) có bàn giao cho Nguyễn Thị Kim Ngân -> Chuyển Quản lý duyệt.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-30",
-      "to_date": "2026-12-04",
-      "reason": "Nghỉ phép du lịch gia đình",
-      "handover_person_id": "EMP008",
-      "handover": {
-        "employee_id": "EMP008",
-        "department": "Marketing & Operations",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-11-20T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP010",
-      "employee_name": "Phan Thảo My",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 10.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DIRECT_MANAGER",
-      "error_code": "DURATION_OVER_AI_LIMIT",
-      "deducted_days": 0,
-      "note": "[Vượt hạn mức tự duyệt của AI] Đơn xin nghỉ 5 ngày hợp lệ về số dư nhưng vượt trần tự duyệt 2 ngày của AI; chuyển tới Quản lý trực tiếp phê duyệt."
-    }
-  },
-  {
-    "id": "TC-EXT-15",
-    "primaryEmpId": "EMP003",
-    "title": "TC-EXT-15: Phép năm 6 ngày liên tục -> Vượt trần Quản lý, chuyển Tổng Giám đốc (CEO)",
-    "badge": "Cấp CEO",
-    "badgeClass": "bg-purple-lt",
-    "desc": "Trần Quốc Hưng xin 6 ngày phép năm liên tục có bàn giao -> Vượt hạn mức 5 ngày của Quản lý trực tiếp, chuyển thẳng Tổng Giám đốc (CEO) phê duyệt.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-30",
-      "to_date": "2026-12-07",
-      "reason": "Nghỉ phép gia đình dài ngày",
-      "handover_person_id": "EMP004",
-      "handover": {
-        "employee_id": "EMP004",
-        "department": "Engineering",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-11-15T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP003",
-      "employee_name": "Trần Quốc Hưng",
-      "department": "Engineering",
-      "remaining_leave_days": 18.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DEPARTMENT_HEAD",
-      "error_code": "DURATION_OVER_MANAGER_LIMIT",
-      "deducted_days": 0,
-      "note": "[Vượt thẩm quyền Quản lý trực tiếp] Đơn xin nghỉ 6 ngày hợp lệ về số dư nhưng vượt mức 5 ngày của Quản lý trực tiếp; chuyển tới Trưởng bộ phận phê duyệt."
-    }
-  },
-  {
-    "id": "TC-EXT-16",
-    "primaryEmpId": "EMP004",
-    "title": "TC-EXT-16: Phép năm 7 ngày dài ngày -> Chuyển Tổng Giám đốc (CEO)",
-    "badge": "Cấp CEO",
-    "badgeClass": "bg-purple-lt",
-    "desc": "Lê Văn Nam xin 7 ngày phép năm liên tục có bàn giao -> Vượt trần thẩm quyền Quản lý, chuyển Tổng Giám đốc phê duyệt.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-30",
-      "to_date": "2026-12-08",
-      "reason": "Nghỉ du lịch dài ngày xuyên Việt",
-      "handover_person_id": "EMP005",
-      "handover": {
-        "employee_id": "EMP005",
-        "department": "Engineering",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-11-15T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP004",
-      "employee_name": "Lê Văn Nam",
-      "department": "Engineering",
-      "remaining_leave_days": 14.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DEPARTMENT_HEAD",
-      "error_code": "DURATION_OVER_MANAGER_LIMIT",
-      "deducted_days": 0,
-      "note": "[Vượt thẩm quyền Quản lý trực tiếp] Đơn xin nghỉ 7 ngày hợp lệ về số dư nhưng vượt mức 5 ngày của Quản lý trực tiếp; chuyển tới Trưởng bộ phận phê duyệt."
-    }
-  },
-  {
-    "id": "TC-EXT-17",
-    "primaryEmpId": "EMP008",
-    "title": "TC-EXT-17: Phép năm 8 ngày dài ngày phòng Marketing -> Chuyển Tổng Giám đốc (CEO)",
-    "badge": "Cấp CEO",
-    "badgeClass": "bg-purple-lt",
-    "desc": "Nguyễn Thị Kim Ngân xin 8 ngày phép năm có bàn giao -> Vượt trần 5 ngày của Quản lý, chuyển Tổng Giám đốc phê duyệt.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-11-30",
-      "to_date": "2026-12-09",
-      "reason": "Nghỉ việc gia đình dài ngày",
-      "handover_person_id": "EMP010",
-      "handover": {
-        "employee_id": "EMP010",
-        "department": "Marketing & Operations",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-11-15T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP008",
-      "employee_name": "Nguyễn Thị Kim Ngân",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 16.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DEPARTMENT_HEAD",
-      "error_code": "DURATION_OVER_MANAGER_LIMIT",
-      "deducted_days": 0,
-      "note": "[Vượt thẩm quyền Quản lý trực tiếp] Đơn xin nghỉ 8 ngày hợp lệ về số dư nhưng vượt mức 5 ngày của Quản lý trực tiếp; chuyển tới Trưởng bộ phận phê duyệt."
-    }
-  },
-  {
-    "id": "TC-EXT-18",
-    "primaryEmpId": "EMP004",
-    "title": "TC-EXT-18: Nghỉ ốm 2 ngày tiêu chuẩn BV Đa khoa Quốc tế có chứng từ hợp lệ",
-    "badge": "Chuyển Quản lý",
-    "badgeClass": "bg-info-lt",
-    "desc": "Lê Văn Nam nộp đơn nghỉ ốm 2 ngày kèm Giấy chứng nhận nghỉ việc hưởng BHXH hợp lệ -> Vượt ngưỡng AI tự duyệt 1 ngày, chuyển Quản lý xem xét.",
-    "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-11-24",
-      "to_date": "2026-11-25",
-      "reason": "Sốt virus cấp tính điều trị ngoại trú",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Đa khoa Quốc tế",
-        "patient_name": "Lê Văn Nam",
-        "issue_date": "2026-11-24",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-11-24T07:45:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP004",
-      "employee_name": "Lê Văn Nam",
-      "department": "Engineering",
-      "remaining_leave_days": 14.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này."
-    }
-  },
-  {
-    "id": "TC-EXT-19",
-    "primaryEmpId": "EMP006",
-    "title": "TC-EXT-19: Nghỉ ốm 2 ngày điều trị viêm amidan cấp BV Đa khoa Đống Đa",
-    "badge": "Chuyển Quản lý",
-    "badgeClass": "bg-info-lt",
-    "desc": "Bùi Tuấn Kiệt xin nghỉ ốm 2 ngày kèm Giấy chứng nhận BV Đống Đa hợp lệ -> Chuyển Quản lý trực tiếp xem xét duyệt BHXH.",
-    "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-11-26",
-      "to_date": "2026-11-27",
-      "reason": "Viêm amidan hốc mủ cấp tính điều trị ngoại trú",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Đa khoa Đống Đa",
-        "patient_name": "Bùi Tuấn Kiệt",
-        "issue_date": "2026-11-26",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-11-26T07:30:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP006",
-      "employee_name": "Bùi Tuấn Kiệt",
-      "department": "Engineering",
-      "remaining_leave_days": 1.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này."
-    }
-  },
-  {
-    "id": "TC-EXT-20",
-    "primaryEmpId": "EMP010",
-    "title": "TC-EXT-20: Nghỉ ốm 3 ngày tiêu chuẩn điều trị ngoại trú có chứng từ",
-    "badge": "Chuyển Quản lý",
-    "badgeClass": "bg-info-lt",
-    "desc": "Phan Thảo My xin nghỉ ốm 3 ngày kèm Giấy chứng nhận tiêu chuẩn -> Chuyển Quản lý trực tiếp xem xét theo phân cấp.",
-    "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-12-01",
-      "to_date": "2026-12-03",
-      "reason": "Viêm phế quản cấp tính điều trị ngoại trú",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Đa khoa",
-        "patient_name": "Phan Thảo My",
-        "issue_date": "2026-12-01",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-01T07:30:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP010",
-      "employee_name": "Phan Thảo My",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 10.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này."
-    }
-  },
-  {
-    "id": "TC-EXT-21",
-    "primaryEmpId": "EMP004",
-    "title": "TC-EXT-21: Chứng từ y tế có chữ ký số điện tử theo TT 25/2025/TT-BYT",
-    "badge": "Chữ ký điện tử",
-    "badgeClass": "bg-success-lt",
-    "desc": "Chứng từ điện tử BV Hồng Ngọc không có mộc đỏ vật lý nhưng có chữ ký số hợp lệ theo TT 25/2025/TT-BYT -> Hợp lệ chuyển Quản lý duyệt.",
-    "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-12-01",
-      "to_date": "2026-12-03",
-      "reason": "Viêm xoang hàm cấp điều trị ngoại trú",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Đa khoa Hồng Ngọc",
-        "patient_name": "Lê Văn Nam",
-        "issue_date": "2026-12-01",
-        "signature_present": false,
-        "digital_signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-01T07:30:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP004",
-      "employee_name": "Lê Văn Nam",
-      "department": "Engineering",
-      "remaining_leave_days": 14.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này."
-    }
-  },
-  {
-    "id": "TC-EXT-22",
-    "primaryEmpId": "EMP005",
-    "title": "TC-EXT-22: Nghỉ ốm có chứng từ chữ ký số xác thực hợp lệ",
-    "badge": "Chữ ký điện tử",
-    "badgeClass": "bg-success-lt",
-    "desc": "Nguyễn Văn An nộp chứng từ y tế có chữ ký số xác thực điện tử -> Hợp lệ chuyển Quản lý trực tiếp phê duyệt.",
-    "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-12-02",
-      "to_date": "2026-12-04",
-      "reason": "Điều trị ngoại trú theo chỉ định",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Cơ sở khám chữa bệnh",
-        "patient_name": "Nguyễn Văn An",
-        "issue_date": "2026-12-02",
-        "digital_signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-02T07:30:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP005",
-      "employee_name": "Nguyễn Văn An",
-      "department": "Engineering",
-      "remaining_leave_days": 8.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này."
-    }
-  },
-  {
-    "id": "TC-EXT-23",
-    "primaryEmpId": "EMP009",
-    "title": "TC-EXT-23: Kết hôn bản thân 3 ngày nguyên lương theo Điều 115 BLLĐ",
-    "badge": "Nguyên lương",
-    "badgeClass": "bg-pink-lt",
-    "desc": "Võ Minh Khang xin 3 ngày nghỉ kết hôn bản thân kèm Giấy chứng nhận kết hôn hợp lệ -> Chuyển Quản lý duyệt hưởng nguyên lương theo Điều 115 BLLĐ, 0 trừ phép.",
-    "payload": {
-      "leave_type": "SPECIAL_PAID",
-      "reason_category": "SELF_MARRIAGE",
-      "from_date": "2026-12-02",
-      "to_date": "2026-12-04",
-      "reason": "Lễ thành hôn của bản thân",
-      "proof": {
-        "proof_type": "MARRIAGE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "UBND Phường",
-        "issue_date": "2026-11-25",
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-11-25T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP009",
-      "employee_name": "Võ Minh Khang",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 6.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DIRECT_MANAGER",
-      "error_code": "DURATION_OVER_AI_LIMIT",
-      "deducted_days": 0,
-      "note": "[Vượt hạn mức tự duyệt của AI] Đơn xin nghỉ 3 ngày hợp lệ về số dư nhưng vượt trần tự duyệt 2 ngày của AI; chuyển tới Quản lý trực tiếp phê duyệt."
-    }
-  },
-  {
-    "id": "TC-EXT-24",
-    "primaryEmpId": "EMP005",
-    "title": "TC-EXT-24: Kết hôn bản thân 3 ngày nguyên lương có Giấy đăng ký kết hôn",
-    "badge": "Nguyên lương",
-    "badgeClass": "bg-pink-lt",
-    "desc": "Nguyễn Văn An xin 3 ngày nghỉ kết hôn kèm Giấy chứng nhận kết hôn UBND xã/phường -> Chuyển Quản lý phê duyệt hưởng nguyên lương Điều 115 BLLĐ.",
-    "payload": {
-      "leave_type": "SPECIAL_PAID",
-      "reason_category": "SELF_MARRIAGE",
-      "from_date": "2026-12-07",
-      "to_date": "2026-12-09",
-      "reason": "Tổ chức đám cưới của bản thân",
-      "proof": {
-        "proof_type": "MARRIAGE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "UBND Phường",
-        "issue_date": "2026-11-28",
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-11-28T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP005",
-      "employee_name": "Nguyễn Văn An",
-      "department": "Engineering",
-      "remaining_leave_days": 8.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DIRECT_MANAGER",
-      "error_code": "DURATION_OVER_AI_LIMIT",
-      "deducted_days": 0,
-      "note": "[Vượt hạn mức tự duyệt của AI] Đơn xin nghỉ 3 ngày hợp lệ về số dư nhưng vượt trần tự duyệt 2 ngày của AI; chuyển tới Quản lý trực tiếp phê duyệt."
-    }
-  },
-  {
-    "id": "TC-EXT-25",
-    "primaryEmpId": "EMP008",
-    "title": "TC-EXT-25: Tang tứ thân phụ mẫu 3 ngày nguyên lương Điều 115 BLLĐ",
-    "badge": "Nguyên lương",
-    "badgeClass": "bg-dark-lt",
-    "desc": "Nguyễn Thị Kim Ngân xin nghỉ 3 ngày lo tang lễ mẹ ruột kèm Giấy chứng tử -> Quản lý duyệt 3 ngày nguyên lương theo Điều 115 BLLĐ.",
-    "payload": {
-      "leave_type": "SPECIAL_PAID",
-      "reason_category": "PARENT_DEATH",
-      "from_date": "2026-12-07",
-      "to_date": "2026-12-09",
-      "reason": "Lo hậu sự cho mẹ ruột tại quê nhà",
-      "proof": {
-        "proof_type": "OTHER",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "UBND Xã/Phường",
-        "issue_date": "2026-12-06",
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-06T18:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP008",
-      "employee_name": "Nguyễn Thị Kim Ngân",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 16.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Loại chứng từ không phù hợp] Chứng từ đính kèm (OTHER) không phải loại giấy tờ được chấp nhận cho chế độ nghỉ này. Vui lòng tải đúng loại chứng từ (vd giấy chứng nhận nghỉ ốm / giấy ra viện cho nghỉ ốm, giấy đăng ký kết hôn cho nghỉ cưới, giấy chứng tử cho nghỉ tang)."
-    }
-  },
-  {
-    "id": "TC-EXT-26",
-    "primaryEmpId": "EMP003",
-    "title": "TC-EXT-26: Con kết hôn 1 ngày nguyên lương theo Điều 115 BLLĐ",
-    "badge": "Nguyên lương",
-    "badgeClass": "bg-pink-lt",
-    "desc": "Trần Quốc Hưng xin 1 ngày nghỉ tham dự lễ cưới con trai ruột kèm Giấy chứng nhận kết hôn -> Quản lý duyệt 1 ngày hưởng nguyên lương Điều 115 BLLĐ.",
-    "payload": {
-      "leave_type": "SPECIAL_PAID",
-      "reason_category": "CHILD_MARRIAGE",
-      "from_date": "2026-12-08",
-      "to_date": "2026-12-08",
-      "reason": "Tham dự lễ thành hôn của con trai ruột",
-      "proof": {
-        "proof_type": "MARRIAGE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "UBND Phường",
-        "issue_date": "2026-12-01",
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-01T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP003",
-      "employee_name": "Trần Quốc Hưng",
-      "department": "Engineering",
-      "remaining_leave_days": 18.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DIRECT_MANAGER",
-      "error_code": "DURATION_OVER_AI_LIMIT",
-      "deducted_days": 0,
-      "note": "[Vượt hạn mức tự duyệt của AI] Đơn xin nghỉ 1 ngày hợp lệ về số dư nhưng vượt trần tự duyệt 2 ngày của AI; chuyển tới Quản lý trực tiếp phê duyệt."
-    }
-  },
-  {
-    "id": "TC-EXT-27",
-    "primaryEmpId": "EMP012",
-    "title": "TC-EXT-27: Nghỉ chăm con ốm theo Luật BHXH có chứng nhận cơ sở y tế",
-    "badge": "Luật BHXH",
-    "badgeClass": "bg-info-lt",
-    "desc": "Lê Mai Loan xin nghỉ chăm con nhỏ ốm sốt có Giấy chứng nhận y tế hợp lệ theo Luật BHXH -> Chuyển Quản lý trực tiếp phê duyệt.",
-    "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-12-09",
-      "to_date": "2026-12-09",
-      "reason": "Chăm sóc con nhỏ ốm sốt điều trị tại nhà",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Nhi",
-        "issue_date": "2026-12-09",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-09T07:30:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP012",
-      "employee_name": "Lê Mai Loan",
-      "department": "Marketing & Operations",
+      "team_absent_count": 0,
       "remaining_leave_days": 12.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này."
-    }
-  },
-  {
-    "id": "TC-EXT-28",
-    "primaryEmpId": "EMP008",
-    "title": "TC-EXT-28: Khám thai định kỳ 1 ngày có chứng nhận y tế BV Phụ sản",
-    "badge": "Cấp CEO",
-    "badgeClass": "bg-pink-lt",
-    "desc": "Nguyễn Thị Kim Ngân nộp đơn khám thai định kỳ kèm Giấy chứng nhận BV Phụ sản Hà Nội -> Chế độ thai sản BHXH: chuyển Tổng Giám đốc duyệt theo quy chế §3.1.",
-    "payload": {
-      "leave_type": "MATERNITY",
-      "from_date": "2026-12-10",
-      "to_date": "2026-12-10",
-      "reason": "Khám thai định kỳ tại Bệnh viện Phụ sản Hà Nội",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Phụ sản Hà Nội",
-        "issue_date": "2026-12-10",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-10T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP008",
-      "employee_name": "Nguyễn Thị Kim Ngân",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 16.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DIRECT_MANAGER",
-      "error_code": "PROOF_REVIEW_REQUIRED",
-      "deducted_days": 0,
-      "note": "[Hồ sơ khám thai cần quản lý đối chiếu] Chứng từ chưa có tên người khám. Đơn được chuyển Quản lý trực tiếp kiểm tra trước khi quyết định."
-    }
-  },
-  {
-    "id": "TC-EXT-29",
-    "primaryEmpId": "EMP011",
-    "title": "TC-EXT-29: Nghỉ do tai nạn lao động có biên bản xác nhận -> Chuyển Nhân sự (HR)",
-    "badge": "Cấp HR",
-    "badgeClass": "bg-warning-lt",
-    "desc": "Hoàng Kim Yến xin nghỉ do sự cố tai nạn lao động kèm biên bản xác nhận -> Thuộc diện hồ sơ BHXH đặc thù, chuyển Trưởng phòng Nhân sự (HR) xử lý.",
-    "payload": {
-      "leave_type": "WORK_ACCIDENT",
-      "from_date": "2026-12-11",
-      "to_date": "2026-12-11",
-      "reason": "Sơ cứu và theo dõi chấn thương do tai nạn lao động",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Cơ sở y tế & Biên bản tai nạn",
-        "issue_date": "2026-12-11",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-11T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP011",
-      "employee_name": "Hoàng Kim Yến",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 4.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "HR",
-      "error_code": "AUTOMATION_SCOPE_UNSUPPORTED",
-      "deducted_days": 0,
-      "note": "[Chế độ đặc thù BHXH] Đơn nghỉ theo chế độ Tai nạn lao động cần được đối soát hồ sơ hưởng trợ cấp theo quy định. Hồ sơ được chuyển tới Phòng Nhân sự (HR) để tiếp nhận và hướng dẫn thủ tục."
-    }
-  },
-  {
-    "id": "TC-EXT-30",
-    "primaryEmpId": "EMP002",
-    "title": "TC-EXT-30: Quản lý Marketing nộp đơn -> Quy chế chống tự duyệt, chuyển Tổng Giám đốc",
-    "badge": "Cấp CEO",
-    "badgeClass": "bg-purple-lt",
-    "desc": "Dương Mỹ Duyên (Marketing Manager) nộp đơn phép năm 2 ngày -> Theo quy chế chống tự phê duyệt (Anti-self-approval), thẩm quyền chuyển thẳng lên Tổng Giám đốc (CEO).",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-12-14",
-      "to_date": "2026-12-15",
-      "reason": "Nghỉ phép cá nhân",
-      "handover_person_id": "EMP008",
-      "handover": {
-        "employee_id": "EMP008",
-        "department": "Marketing & Operations",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-12-07T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP002",
-      "employee_name": "Dương Mỹ Duyên",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 15.0,
       "employment_status": "REGULAR"
     },
     "expected": {
@@ -2947,349 +1198,232 @@ const STAFF_TEST_CASES = [
       "target_role": null,
       "error_code": null,
       "deducted_days": 2,
-      "note": "[Tự động duyệt thành công] Đơn nghỉ 2 ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép."
+      "note": "Lê Mai Loan xin 2 ngày phép năm (2026-11-25), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
     }
   },
   {
-    "id": "TC-EXT-31",
-    "primaryEmpId": "EMP005",
-    "title": "TC-EXT-31: [Bẫy nộp nhầm chứng từ] Nguyễn Văn An nộp giấy khám của Lê Văn Nam",
-    "badge": "Lệch người bệnh",
-    "badgeClass": "bg-danger-lt",
-    "desc": "Nguyễn Văn An (EMP005) xin nghỉ ốm nhưng tải nhầm tệp Giấy chứng nhận mang tên bệnh nhân Lê Văn Nam (EMP004) -> Bắt lỗi lệch họ tên bệnh nhân NAME_MISMATCH, yêu cầu sửa đơn.",
+    "id": "TC-VAL-13",
+    "primaryEmpId": "EMP003",
+    "title": "TC-VAL-13: Phép năm 1 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Trần Quốc Hưng xin 1 ngày phép năm (2026-11-30), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
     "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-12-14",
-      "to_date": "2026-12-16",
-      "reason": "Điều trị ngoại trú theo giấy khám",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Đa khoa Quốc tế Hà Nội",
-        "patient_name": "Lê Văn Nam",
-        "issue_date": "2026-12-14",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-14T07:30:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-11-30",
+      "to_date": "2026-11-30",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (1 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
       "total_team_members": 6,
-      "employee_id": "EMP005",
-      "employee_name": "Nguyễn Văn An",
-      "department": "Engineering",
-      "remaining_leave_days": 8.0,
+      "team_absent_count": 0,
+      "remaining_leave_days": 18.0,
       "employment_status": "REGULAR"
     },
     "expected": {
-      "decision": "ESCALATE",
-      "target_role": "HR",
-      "error_code": "NAME_MISMATCH",
-      "deducted_days": 0,
-      "note": "[Họ tên trên chứng từ không khớp] Tên trên giấy y tế (Lê Văn Nam) khác với nhân viên làm đơn (Nguyễn Văn An). Hồ sơ chuyển HR xác minh trước khi quyết định."
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Trần Quốc Hưng xin 1 ngày phép năm (2026-11-30), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
     }
   },
   {
-    "id": "TC-EXT-32",
-    "primaryEmpId": "EMP009",
-    "title": "TC-EXT-32: [Bẫy lệch tên bệnh nhân] Chứng từ ghi tên người khác",
-    "badge": "Lệch người bệnh",
-    "badgeClass": "bg-danger-lt",
-    "desc": "Võ Minh Khang nộp giấy chứng nhận bệnh nhân tên Nguyễn Thị Lan -> Bắt lỗi lệch tên trên chứng từ y tế, yêu cầu chụp lại đúng giấy tờ cá nhân.",
-    "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-12-15",
-      "to_date": "2026-12-15",
-      "reason": "Nghỉ ốm điều trị",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Phòng khám Đa khoa",
-        "patient_name": "Nguyễn Thị Lan",
-        "issue_date": "2026-12-15",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-15T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP009",
-      "employee_name": "Võ Minh Khang",
-      "department": "Marketing & Operations",
-      "remaining_leave_days": 6.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "ESCALATE",
-      "target_role": "HR",
-      "error_code": "NAME_MISMATCH",
-      "deducted_days": 0,
-      "note": "[Họ tên trên chứng từ không khớp] Tên trên giấy y tế (Nguyễn Thị Lan) khác với nhân viên làm đơn (Võ Minh Khang). Hồ sơ chuyển HR xác minh trước khi quyết định."
-    }
-  },
-  {
-    "id": "TC-EXT-33",
+    "id": "TC-VAL-14",
     "primaryEmpId": "EMP004",
-    "title": "TC-EXT-33: [Bẫy lệch số ngày] Xin 3 ngày nhưng giấy khám chỉ cho nghỉ 1 ngày",
-    "badge": "Lệch số ngày",
-    "badgeClass": "bg-warning-lt",
-    "desc": "Lê Văn Nam xin nghỉ 3 ngày nhưng Giấy chứng nhận bác sĩ chỉ định nghỉ 1 ngày -> Bắt lỗi lệch ngày chỉ định y tế MEDICAL_DAYS_MISMATCH, yêu cầu sửa đơn.",
+    "title": "TC-VAL-14: Phép năm 2 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Lê Văn Nam xin 2 ngày phép năm (2026-12-02), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
     "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-12-16",
-      "to_date": "2026-12-18",
-      "reason": "Điều trị theo giấy khám bệnh viện",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Đa khoa",
-        "patient_name": "Lê Văn Nam",
-        "issue_date": "2026-12-16",
-        "recommended_from_date": "2026-12-16",
-        "recommended_to_date": "2026-12-16",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-16T07:30:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-12-02",
+      "to_date": "2026-12-03",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (2 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
       "total_team_members": 6,
-      "employee_id": "EMP004",
-      "employee_name": "Lê Văn Nam",
-      "department": "Engineering",
+      "team_absent_count": 0,
       "remaining_leave_days": 14.0,
       "employment_status": "REGULAR"
     },
     "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "MEDICAL_DAYS_MISMATCH",
-      "deducted_days": 0,
-      "note": "[Thời gian nghỉ lệch chỉ định y tế] Khoảng ngày bạn xin nghỉ nằm ngoài thời gian bác sĩ chỉ định trên giấy (từ 2026-12-16 đến 2026-12-16). Vui lòng điều chỉnh ngày xin nghỉ cho khớp với giấy chứng nhận."
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 2,
+      "note": "Lê Văn Nam xin 2 ngày phép năm (2026-12-02), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
     }
   },
   {
-    "id": "TC-EXT-34",
-    "primaryEmpId": "EMP010",
-    "title": "TC-EXT-34: [Bẫy chứng từ mờ] Giấy khám mờ, mất nét, không đọc được thông tin",
-    "badge": "Chứng từ mờ",
-    "badgeClass": "bg-warning-lt",
-    "desc": "Phan Thảo My chụp giấy khám bị rung tay, nhòe nét, VLM không nhận diện được ngày cấp và con dấu -> Báo lỗi DOC_ILLEGIBLE, yêu cầu chụp lại ảnh rõ nét.",
+    "id": "TC-VAL-15",
+    "primaryEmpId": "EMP005",
+    "title": "TC-VAL-15: Phép năm 1 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Nguyễn Văn An xin 1 ngày phép năm (2026-12-07), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
     "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-12-17",
-      "to_date": "2026-12-17",
-      "reason": "Nghỉ ốm có chứng từ đính kèm",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Cơ sở y tế",
-        "patient_name": "Phan Thảo My",
-        "issue_date": "2026-12-17",
-        "document_readability": "ILLEGIBLE"
-      },
-      "submitted_at": "2026-12-17T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-12-07",
+      "to_date": "2026-12-07",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (1 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
       "total_team_members": 6,
-      "employee_id": "EMP010",
-      "employee_name": "Phan Thảo My",
-      "department": "Marketing & Operations",
+      "team_absent_count": 0,
+      "remaining_leave_days": 8.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Nguyễn Văn An xin 1 ngày phép năm (2026-12-07), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-16",
+    "primaryEmpId": "EMP008",
+    "title": "TC-VAL-16: Phép năm 2 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Nguyễn Thị Kim Ngân xin 2 ngày phép năm (2026-12-09), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-12-09",
+      "to_date": "2026-12-10",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (2 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
+      "remaining_leave_days": 16.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 2,
+      "note": "Nguyễn Thị Kim Ngân xin 2 ngày phép năm (2026-12-09), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-17",
+    "primaryEmpId": "EMP009",
+    "title": "TC-VAL-17: Phép năm 1 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Võ Minh Khang xin 1 ngày phép năm (2026-12-14), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-12-14",
+      "to_date": "2026-12-14",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (1 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
+      "remaining_leave_days": 6.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Võ Minh Khang xin 1 ngày phép năm (2026-12-14), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
+    }
+  },
+  {
+    "id": "TC-VAL-18",
+    "primaryEmpId": "EMP010",
+    "title": "TC-VAL-18: Phép năm 2 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Phan Thảo My xin 2 ngày phép năm (2026-12-16), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-12-16",
+      "to_date": "2026-12-17",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (2 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "team_absent_count": 0,
       "remaining_leave_days": 10.0,
       "employment_status": "REGULAR"
     },
     "expected": {
-      "decision": "ESCALATE",
-      "target_role": "DIRECT_MANAGER",
-      "error_code": "DOC_ILLEGIBLE",
-      "deducted_days": 0,
-      "note": "[Chứng từ mờ / khó nhận diện] Ảnh chứng từ bị mờ, mất nét hoặc thiếu dấu mộc khiến hệ thống không thể tự động đối soát. Đơn chuyển tới Quản lý trực tiếp để kiểm tra bản gốc hoặc yêu cầu bổ sung."
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 2,
+      "note": "Phan Thảo My xin 2 ngày phép năm (2026-12-16), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
     }
   },
   {
-    "id": "TC-EXT-35",
-    "primaryEmpId": "EMP007",
-    "title": "TC-EXT-35: [Bẫy thiếu chữ ký] Chứng từ thiếu chữ ký bác sĩ điều trị",
-    "badge": "Thiếu chữ ký",
-    "badgeClass": "bg-danger-lt",
-    "desc": "Lê Thị Hương nộp giấy nghỉ ốm có mộc bệnh viện nhưng ô bác sĩ chuyên khoa bị bỏ trống -> Báo lỗi DOC_FIELD_MISSING, yêu cầu xin lại xác nhận.",
-    "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-12-18",
-      "to_date": "2026-12-18",
-      "reason": "Điều trị viêm xoang ngoại trú",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Giao thông Vận tải",
-        "patient_name": "Lê Thị Hương",
-        "issue_date": "2026-12-18",
-        "signature_present": false,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-18T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP007",
-      "employee_name": "Lê Thị Hương",
-      "department": "Engineering",
-      "remaining_leave_days": 0.0,
-      "employment_status": "PROBATION"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Chứng từ thiếu chữ ký] Giấy y tế chưa có chữ ký của bác sĩ / người có thẩm quyền (hoặc chữ ký số). Vui lòng xin xác nhận chữ ký và tải lại chứng từ."
-    }
-  },
-  {
-    "id": "TC-EXT-36",
-    "primaryEmpId": "EMP005",
-    "title": "TC-EXT-36: [Bẫy quá hạn nộp] Nộp chứng từ y tế quá thời hạn 3 ngày làm việc",
-    "badge": "Quá hạn nộp",
-    "badgeClass": "bg-warning-lt",
-    "desc": "Nguyễn Văn An nộp giấy chứng nhận khám từ tháng trước quá hạn nộp quy định -> Báo nghỉ trễ hạn NOTICE_PERIOD_VIOLATED, chuyển Quản lý xem xét lý do nộp muộn.",
-    "payload": {
-      "leave_type": "SICK_MEDICAL",
-      "from_date": "2026-05-15",
-      "to_date": "2026-05-18",
-      "reason": "Nộp bù giấy khám tháng 5",
-      "proof": {
-        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "Bệnh viện Đa khoa Quốc tế Thu Cúc",
-        "patient_name": "Nguyễn Văn An",
-        "issue_date": "2026-05-15",
-        "signature_present": true,
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-18T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP005",
-      "employee_name": "Nguyễn Văn An",
-      "department": "Engineering",
-      "remaining_leave_days": 8.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "DOC_FIELD_MISSING",
-      "deducted_days": 0,
-      "note": "[Thiếu thông tin chỉ định y tế] Giấy y tế cần thể hiện rõ họ tên bệnh nhân, khoảng thời gian bác sĩ chỉ định nghỉ và chữ ký xác nhận. Vui lòng bổ sung chứng từ đầy đủ các mục này."
-    }
-  },
-  {
-    "id": "TC-EXT-37",
-    "primaryEmpId": "EMP005",
-    "title": "TC-EXT-37: [Bẫy bàn giao sai phòng] Kỹ thuật bàn giao chéo cho Marketing",
-    "badge": "Bàn giao sai phòng",
-    "badgeClass": "bg-danger-lt",
-    "desc": "Nguyễn Văn An (Kỹ thuật) bàn giao công việc cho Võ Minh Khang (Marketing) -> Báo lỗi HANDOVER_INVALID, yêu cầu chọn người cùng phòng ban.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-12-21",
-      "to_date": "2026-12-23",
-      "reason": "Nghỉ phép cá nhân",
-      "handover_person_id": "EMP009",
-      "handover": {
-        "employee_id": "EMP009",
-        "department": "Marketing & Operations",
-        "status": "ACTIVE",
-        "absent_dates": []
-      },
-      "submitted_at": "2026-12-11T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP005",
-      "employee_name": "Nguyễn Văn An",
-      "department": "Engineering",
-      "remaining_leave_days": 8.0,
-      "employment_status": "REGULAR"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "HANDOVER_INVALID",
-      "deducted_days": 0,
-      "note": "[Người bàn giao chưa phù hợp] Người được chọn bàn giao phải cùng phòng ban, đang làm việc bình thường, không phải chính bạn và không trùng lịch nghỉ. Vui lòng chọn nhân sự khác thay thế."
-    }
-  },
-  {
-    "id": "TC-EXT-38",
-    "primaryEmpId": "EMP007",
-    "title": "TC-EXT-38: [Bẫy thử việc] Nhân sự thử việc xin phép năm hưởng lương",
-    "badge": "Thử việc bị chặn",
-    "badgeClass": "bg-danger-lt",
-    "desc": "Lê Thị Hương (đang trong thời gian thử việc) xin nghỉ phép năm hưởng lương -> Bắt lỗi PROBATION_ANNUAL_RESTRICTED, yêu cầu đổi sang nghỉ không lương.",
+    "id": "TC-VAL-19",
+    "primaryEmpId": "EMP011",
+    "title": "TC-VAL-19: Phép năm 1 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Hoàng Kim Yến xin 1 ngày phép năm (2026-12-21), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
     "payload": {
       "leave_type": "ANNUAL",
       "from_date": "2026-12-21",
       "to_date": "2026-12-21",
-      "employment_status": "PROBATION",
-      "remaining_leave_days": 0.0,
-      "reason": "Nghỉ việc cá nhân",
-      "submitted_at": "2026-12-16T08:00:00+07:00",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (1 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
       "total_team_members": 6,
-      "employee_id": "EMP007",
-      "employee_name": "Lê Thị Hương",
-      "department": "Engineering"
+      "team_absent_count": 0,
+      "remaining_leave_days": 5.0,
+      "employment_status": "REGULAR"
     },
     "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "PROBATION_ANNUAL_RESTRICTED",
-      "deducted_days": 0,
-      "note": "[Nhân sự đang thử việc] Theo quy chế nội bộ, nhân sự thử việc chưa áp dụng trừ quỹ phép năm. Vui lòng chọn loại đơn Nghỉ không lương để quản lý duyệt; số ngày phép năm sẽ được bảo lưu."
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Hoàng Kim Yến xin 1 ngày phép năm (2026-12-21), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
     }
   },
   {
-    "id": "TC-EXT-39",
+    "id": "TC-VAL-20",
     "primaryEmpId": "EMP012",
-    "title": "TC-EXT-39: [Bẫy cưới em gái ruột] Xin nghỉ có lương dự cưới em gái (Không thuộc Điều 115)",
-    "badge": "Bẫy quy chế",
-    "badgeClass": "bg-warning-lt",
-    "desc": "Lê Mai Loan xin nghỉ CÓ LƯƠNG dự cưới em gái ruột kèm Giấy kết hôn -> Điều 115 BLLĐ chỉ cho nghỉ có lương khi bản thân hoặc con kết hôn. Hệ thống chặn, yêu cầu đổi sang nghỉ không lương.",
+    "title": "TC-VAL-20: Phép năm 2 ngày tự động duyệt (1-2 ngày không bắt buộc bàn giao)",
+    "badge": "Tự động duyệt",
+    "badgeClass": "bg-success-lt",
+    "desc": "Lê Mai Loan xin 2 ngày phép năm (2026-12-23), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức.",
     "payload": {
-      "leave_type": "SPECIAL_PAID",
-      "reason_category": "SIBLING_MARRIAGE",
-      "from_date": "2026-12-22",
-      "to_date": "2026-12-22",
-      "reason": "Tham dự lễ thành hôn của em gái ruột",
-      "proof": {
-        "proof_type": "MARRIAGE_CERTIFICATE",
-        "proof_verification_status": "VERIFIED",
-        "issuer": "UBND Phường Quan Hoa",
-        "issue_date": "2026-12-15",
-        "document_readability": "READABLE"
-      },
-      "submitted_at": "2026-12-15T08:00:00+07:00",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-12-23",
+      "to_date": "2026-12-24",
+      "reason": "Nghỉ phép thường niên giải quyết việc gia đình (2 ngày)",
+      "submitted_at": "2026-10-01T08:00:00+07:00",
       "total_team_members": 6,
-      "employee_id": "EMP012",
-      "employee_name": "Lê Mai Loan",
-      "department": "Marketing & Operations",
+      "team_absent_count": 0,
       "remaining_leave_days": 12.0,
       "employment_status": "REGULAR"
     },
     "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "REASON_REQUIRED",
-      "deducted_days": 0,
-      "note": "[Sự kiện không thuộc diện nghỉ có lương] Sự kiện SIBLING_MARRIAGE chỉ được nghỉ không hưởng lương tối đa 1 ngày theo Điều 115 khoản 2 BLLĐ 2019. Vui lòng đổi loại nghỉ sang \"Việc riêng không lương luật định\" hoặc dùng phép năm."
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 2,
+      "note": "Lê Mai Loan xin 2 ngày phép năm (2026-12-23), nộp trước hạn, đủ số dư và không cần bàn giao -> AI tự động phê duyệt ngay lập tức."
     }
   },
   {
-    "id": "TC-EXT-40",
-    "primaryEmpId": "EMP006",
-    "title": "TC-EXT-40: Vượt số dư phép năm - Còn 1 ngày, xin 3 ngày (Từ chối tự động)",
+    "id": "TC-BAL-01",
+    "primaryEmpId": "EMP005",
+    "title": "TC-BAL-01: Xin nghỉ phép năm 31 ngày vượt quá toàn bộ quỹ phép năm (Từ chối tự động)",
     "badge": "Vượt số dư",
     "badgeClass": "bg-danger-lt",
-    "desc": "Bùi Tuấn Kiệt số dư chỉ còn 1 ngày nhưng làm đơn xin 3 ngày phép năm -> Hệ thống từ chối tự động vì vượt số dư (BALANCE_EXCEEDED).",
+    "desc": "Nguyễn Văn An xin nghỉ phép năm 31 ngày làm việc (01/10 - 12/11/2026), vượt quá số dư phép năm tối đa hiện có (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED).",
     "payload": {
       "leave_type": "ANNUAL",
-      "from_date": "2026-12-23",
-      "to_date": "2026-12-25",
-      "remaining_leave_days": 1.0,
-      "reason": "Nghỉ việc gia đình 3 ngày",
-      "submitted_at": "2026-12-18T08:00:00+07:00",
+      "from_date": "2026-10-01",
+      "to_date": "2026-11-12",
+      "reason": "Nghỉ phép năm dài ngày giải quyết việc riêng gia đình (31 ngày)",
+      "remaining_leave_days": 12.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
       "total_team_members": 6,
-      "employee_id": "EMP006",
-      "employee_name": "Bùi Tuấn Kiệt",
-      "department": "Engineering",
       "employment_status": "REGULAR"
     },
     "expected": {
@@ -3297,80 +1431,328 @@ const STAFF_TEST_CASES = [
       "target_role": "EMPLOYEE",
       "error_code": "BALANCE_EXCEEDED",
       "deducted_days": 0,
-      "note": "[Vượt quá số dư phép năm] Bạn đang xin nghỉ 3 ngày làm việc trong khi quỹ phép năm chỉ còn 1 ngày. Đơn bị từ chối; vui lòng giảm số ngày hoặc làm thêm đơn Nghỉ không lương cho phần ngày còn thiếu."
+      "note": "Nguyễn Văn An xin nghỉ phép năm 31 ngày làm việc (01/10 - 12/11/2026), vượt quá số dư phép năm tối đa hiện có (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED)."
     }
   },
   {
-    "id": "TC-EXT-41",
-    "primaryEmpId": "EMP007",
-    "title": "TC-EXT-41: Số dư phép năm bằng 0 nhưng xin phép năm (Từ chối tự động)",
-    "badge": "Hết số dư",
+    "id": "TC-BAL-02",
+    "primaryEmpId": "EMP004",
+    "title": "TC-BAL-02: Xin nghỉ phép năm 30 ngày vượt hạn mức quỹ phép (Từ chối tự động)",
+    "badge": "Vượt số dư",
     "badgeClass": "bg-danger-lt",
-    "desc": "Lê Thị Hương số dư phép năm bằng 0 nhưng vẫn nộp đơn xin nghỉ phép năm -> Hệ thống tự động từ chối do hết quỹ phép.",
+    "desc": "Lê Văn Nam xin nghỉ 30 ngày làm việc liên tiếp, vượt quá số dư phép năm còn lại (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED).",
     "payload": {
       "leave_type": "ANNUAL",
-      "from_date": "2026-12-24",
-      "to_date": "2026-12-24",
-      "remaining_leave_days": 0.0,
-      "reason": "Nghỉ phép cá nhân",
-      "submitted_at": "2026-12-18T08:00:00+07:00",
+      "from_date": "2026-10-05",
+      "to_date": "2026-11-13",
+      "reason": "Nghỉ phép năm dài ngày giải quyết việc riêng gia đình (30 ngày)",
+      "remaining_leave_days": 12.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
       "total_team_members": 6,
-      "employee_id": "EMP007",
-      "employee_name": "Lê Thị Hương",
-      "department": "Engineering",
-      "employment_status": "PROBATION"
-    },
-    "expected": {
-      "decision": "NEED_CORRECTION",
-      "target_role": "EMPLOYEE",
-      "error_code": "PROBATION_ANNUAL_RESTRICTED",
-      "deducted_days": 0,
-      "note": "[Nhân sự đang thử việc] Theo quy chế nội bộ, nhân sự thử việc chưa áp dụng trừ quỹ phép năm. Vui lòng chọn loại đơn Nghỉ không lương để quản lý duyệt; số ngày phép năm sẽ được bảo lưu."
-    }
-  },
-  {
-    "id": "TC-EXT-42",
-    "primaryEmpId": "EMP005",
-    "title": "TC-EXT-42: Trùng lặp ngày nghỉ đã được phê duyệt trước đó (Từ chối tự động)",
-    "badge": "Trùng lịch nghỉ",
-    "badgeClass": "bg-danger-lt",
-    "desc": "Nguyễn Văn An nộp đơn xin nghỉ phép ngày 28/12 trùng hoàn toàn khoảng thời gian đã có đơn phê duyệt trước đó -> Hệ thống chặn từ chối tự động REQUEST_ALREADY_COVERED.",
-    "payload": {
-      "leave_type": "ANNUAL",
-      "from_date": "2026-12-28",
-      "to_date": "2026-12-28",
-      "reason": "Nghỉ việc cá nhân",
-      "approved_working_dates": [
-        "2026-12-28"
-      ],
-      "submitted_at": "2026-12-20T08:00:00+07:00",
-      "total_team_members": 6,
-      "employee_id": "EMP005",
-      "employee_name": "Nguyễn Văn An",
-      "department": "Engineering",
-      "remaining_leave_days": 8.0,
       "employment_status": "REGULAR"
     },
     "expected": {
       "decision": "AUTO_REJECT",
       "target_role": "EMPLOYEE",
-      "error_code": "REQUEST_ALREADY_COVERED",
+      "error_code": "BALANCE_EXCEEDED",
       "deducted_days": 0,
-      "note": "[Trùng lặp toàn bộ lịch nghỉ] Toàn bộ các ngày bạn xin nghỉ đã có đơn nghỉ phép được duyệt trước đó. Đơn này tự động từ chối để tránh trùng lặp trừ phép."
+      "note": "Lê Văn Nam xin nghỉ 30 ngày làm việc liên tiếp, vượt quá số dư phép năm còn lại (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED)."
     }
   },
   {
-    "id": "TC-EXT-43",
-    "primaryEmpId": "EMP004",
-    "title": "TC-EXT-43: Bàn giao công việc cho chính bản thân mình (Bị chặn)",
-    "badge": "Bàn giao sai",
+    "id": "TC-BAL-03",
+    "primaryEmpId": "EMP003",
+    "title": "TC-BAL-03: Xin nghỉ phép năm 31 ngày vượt quá toàn bộ quỹ phép năm (Từ chối tự động)",
+    "badge": "Vượt số dư",
     "badgeClass": "bg-danger-lt",
-    "desc": "Lê Văn Nam xin nghỉ 3 ngày nhưng tự điền chính mình làm người nhận bàn giao -> Hệ thống bắt lỗi HANDOVER_INVALID, yêu cầu chọn đồng nghiệp khác.",
+    "desc": "Trần Quốc Hưng xin nghỉ phép năm 31 ngày làm việc (01/10 - 12/11/2026), vượt quá số dư phép năm tối đa hiện có (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED).",
     "payload": {
       "leave_type": "ANNUAL",
-      "from_date": "2026-12-28",
-      "to_date": "2026-12-30",
-      "reason": "Nghỉ phép thường niên",
+      "from_date": "2026-10-01",
+      "to_date": "2026-11-12",
+      "reason": "Nghỉ phép năm dài ngày giải quyết việc riêng gia đình (31 ngày)",
+      "remaining_leave_days": 12.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "BALANCE_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng xin nghỉ phép năm 31 ngày làm việc (01/10 - 12/11/2026), vượt quá số dư phép năm tối đa hiện có (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED)."
+    }
+  },
+  {
+    "id": "TC-BAL-04",
+    "primaryEmpId": "EMP006",
+    "title": "TC-BAL-04: Xin nghỉ phép năm 30 ngày vượt hạn mức quỹ phép (Từ chối tự động)",
+    "badge": "Vượt số dư",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Bùi Tuấn Kiệt xin nghỉ 30 ngày làm việc liên tiếp, vượt quá số dư phép năm còn lại (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED).",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-05",
+      "to_date": "2026-11-13",
+      "reason": "Nghỉ phép năm dài ngày giải quyết việc riêng gia đình (30 ngày)",
+      "remaining_leave_days": 12.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "BALANCE_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt xin nghỉ 30 ngày làm việc liên tiếp, vượt quá số dư phép năm còn lại (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED)."
+    }
+  },
+  {
+    "id": "TC-BAL-05",
+    "primaryEmpId": "EMP006",
+    "title": "TC-BAL-05: Xin nghỉ phép năm 31 ngày vượt quá toàn bộ quỹ phép năm (Từ chối tự động)",
+    "badge": "Vượt số dư",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Bùi Tuấn Kiệt xin nghỉ phép năm 31 ngày làm việc (01/10 - 12/11/2026), vượt quá số dư phép năm tối đa hiện có (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED).",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-01",
+      "to_date": "2026-11-12",
+      "reason": "Nghỉ phép năm dài ngày giải quyết việc riêng gia đình (31 ngày)",
+      "remaining_leave_days": 12.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "BALANCE_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt xin nghỉ phép năm 31 ngày làm việc (01/10 - 12/11/2026), vượt quá số dư phép năm tối đa hiện có (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED)."
+    }
+  },
+  {
+    "id": "TC-BAL-06",
+    "primaryEmpId": "EMP008",
+    "title": "TC-BAL-06: Xin nghỉ phép năm 30 ngày vượt hạn mức quỹ phép (Từ chối tự động)",
+    "badge": "Vượt số dư",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Nguyễn Thị Kim Ngân xin nghỉ 30 ngày làm việc liên tiếp, vượt quá số dư phép năm còn lại (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED).",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-05",
+      "to_date": "2026-11-13",
+      "reason": "Nghỉ phép năm dài ngày giải quyết việc riêng gia đình (30 ngày)",
+      "remaining_leave_days": 12.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "BALANCE_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Nguyễn Thị Kim Ngân xin nghỉ 30 ngày làm việc liên tiếp, vượt quá số dư phép năm còn lại (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED)."
+    }
+  },
+  {
+    "id": "TC-BAL-07",
+    "primaryEmpId": "EMP009",
+    "title": "TC-BAL-07: Xin nghỉ phép năm 31 ngày vượt quá toàn bộ quỹ phép năm (Từ chối tự động)",
+    "badge": "Vượt số dư",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Võ Minh Khang xin nghỉ phép năm 31 ngày làm việc (01/10 - 12/11/2026), vượt quá số dư phép năm tối đa hiện có (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED).",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-01",
+      "to_date": "2026-11-12",
+      "reason": "Nghỉ phép năm dài ngày giải quyết việc riêng gia đình (31 ngày)",
+      "remaining_leave_days": 12.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "BALANCE_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Võ Minh Khang xin nghỉ phép năm 31 ngày làm việc (01/10 - 12/11/2026), vượt quá số dư phép năm tối đa hiện có (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED)."
+    }
+  },
+  {
+    "id": "TC-BAL-08",
+    "primaryEmpId": "EMP010",
+    "title": "TC-BAL-08: Xin nghỉ phép năm 30 ngày vượt hạn mức quỹ phép (Từ chối tự động)",
+    "badge": "Vượt số dư",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Phan Thảo My xin nghỉ 30 ngày làm việc liên tiếp, vượt quá số dư phép năm còn lại (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED).",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-05",
+      "to_date": "2026-11-13",
+      "reason": "Nghỉ phép năm dài ngày giải quyết việc riêng gia đình (30 ngày)",
+      "remaining_leave_days": 12.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "BALANCE_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Phan Thảo My xin nghỉ 30 ngày làm việc liên tiếp, vượt quá số dư phép năm còn lại (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED)."
+    }
+  },
+  {
+    "id": "TC-BAL-09",
+    "primaryEmpId": "EMP011",
+    "title": "TC-BAL-09: Xin nghỉ phép năm 31 ngày vượt quá toàn bộ quỹ phép năm (Từ chối tự động)",
+    "badge": "Vượt số dư",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Hoàng Kim Yến xin nghỉ phép năm 31 ngày làm việc (01/10 - 12/11/2026), vượt quá số dư phép năm tối đa hiện có (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED).",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-01",
+      "to_date": "2026-11-12",
+      "reason": "Nghỉ phép năm dài ngày giải quyết việc riêng gia đình (31 ngày)",
+      "remaining_leave_days": 12.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "BALANCE_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Hoàng Kim Yến xin nghỉ phép năm 31 ngày làm việc (01/10 - 12/11/2026), vượt quá số dư phép năm tối đa hiện có (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED)."
+    }
+  },
+  {
+    "id": "TC-BAL-10",
+    "primaryEmpId": "EMP012",
+    "title": "TC-BAL-10: Xin nghỉ phép năm 30 ngày vượt hạn mức quỹ phép (Từ chối tự động)",
+    "badge": "Vượt số dư",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Lê Mai Loan xin nghỉ 30 ngày làm việc liên tiếp, vượt quá số dư phép năm còn lại (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED).",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-10-05",
+      "to_date": "2026-11-13",
+      "reason": "Nghỉ phép năm dài ngày giải quyết việc riêng gia đình (30 ngày)",
+      "remaining_leave_days": 12.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "BALANCE_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Lê Mai Loan xin nghỉ 30 ngày làm việc liên tiếp, vượt quá số dư phép năm còn lại (12.0 ngày) -> Hệ thống tự động từ chối (BALANCE_EXCEEDED)."
+    }
+  },
+  {
+    "id": "TC-NOT-01",
+    "primaryEmpId": "EMP005",
+    "title": "TC-NOT-01: Nộp đơn gấp trong ngày vi phạm thời hạn báo trước",
+    "badge": "Chuyển Quản lý",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Nguyễn Văn An nộp đơn nghỉ phép năm trong ngày (báo trước 0 ngày) -> Vi phạm thời hạn báo trước tối thiểu 1 ngày làm việc, chuyển Quản lý trực tiếp xem xét.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Giải quyết việc đột xuất trong ngày",
+      "submitted_at": "2026-09-14T08:00:00+07:00",
+      "remaining_leave_days": 8.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "NOTICE_PERIOD_VIOLATED",
+      "deducted_days": 0,
+      "note": "Nguyễn Văn An nộp đơn nghỉ phép năm trong ngày (báo trước 0 ngày) -> Vi phạm thời hạn báo trước tối thiểu 1 ngày làm việc, chuyển Quản lý trực tiếp xem xét."
+    }
+  },
+  {
+    "id": "TC-NOT-02",
+    "primaryEmpId": "EMP004",
+    "title": "TC-NOT-02: Nghỉ 4 ngày nộp gấp thiếu ngày báo trước",
+    "badge": "Chuyển Quản lý",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Văn Nam xin 4 ngày phép năm nhưng chỉ nộp trước 1 ngày làm việc (quy chế yêu cầu 3 ngày) -> Chuyển Quản lý trực tiếp xem xét đặc cách.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-17",
+      "reason": "Nghỉ phép cá nhân đột xuất",
+      "handover_person_id": "EMP005",
+      "handover": {
+        "employee_id": "EMP005",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "submitted_at": "2026-09-11T08:00:00+07:00",
+      "remaining_leave_days": 14.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "NOTICE_PERIOD_VIOLATED",
+      "deducted_days": 0,
+      "note": "Lê Văn Nam xin 4 ngày phép năm nhưng chỉ nộp trước 1 ngày làm việc (quy chế yêu cầu 3 ngày) -> Chuyển Quản lý trực tiếp xem xét đặc cách."
+    }
+  },
+  {
+    "id": "TC-NOT-03",
+    "primaryEmpId": "EMP003",
+    "title": "TC-NOT-03: Nộp đơn gấp trong ngày vi phạm thời hạn báo trước",
+    "badge": "Chuyển Quản lý",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Trần Quốc Hưng nộp đơn nghỉ phép năm trong ngày (báo trước 0 ngày) -> Vi phạm thời hạn báo trước tối thiểu 1 ngày làm việc, chuyển Quản lý trực tiếp xem xét.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Giải quyết việc đột xuất trong ngày",
+      "submitted_at": "2026-09-14T08:00:00+07:00",
+      "remaining_leave_days": 18.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "NOTICE_PERIOD_VIOLATED",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng nộp đơn nghỉ phép năm trong ngày (báo trước 0 ngày) -> Vi phạm thời hạn báo trước tối thiểu 1 ngày làm việc, chuyển Quản lý trực tiếp xem xét."
+    }
+  },
+  {
+    "id": "TC-NOT-04",
+    "primaryEmpId": "EMP006",
+    "title": "TC-NOT-04: Nghỉ 4 ngày nộp gấp thiếu ngày báo trước",
+    "badge": "Chuyển Quản lý",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Bùi Tuấn Kiệt xin 4 ngày phép năm nhưng chỉ nộp trước 1 ngày làm việc (quy chế yêu cầu 3 ngày) -> Chuyển Quản lý trực tiếp xem xét đặc cách.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-17",
+      "reason": "Nghỉ phép cá nhân đột xuất",
       "handover_person_id": "EMP004",
       "handover": {
         "employee_id": "EMP004",
@@ -3378,20 +1760,3045 @@ const STAFF_TEST_CASES = [
         "status": "ACTIVE",
         "absent_dates": []
       },
-      "submitted_at": "2026-12-20T08:00:00+07:00",
+      "submitted_at": "2026-09-11T08:00:00+07:00",
+      "remaining_leave_days": 5.0,
       "total_team_members": 6,
-      "employee_id": "EMP004",
-      "employee_name": "Lê Văn Nam",
-      "department": "Engineering",
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "NOTICE_PERIOD_VIOLATED",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt xin 4 ngày phép năm nhưng chỉ nộp trước 1 ngày làm việc (quy chế yêu cầu 3 ngày) -> Chuyển Quản lý trực tiếp xem xét đặc cách."
+    }
+  },
+  {
+    "id": "TC-NOT-05",
+    "primaryEmpId": "EMP007",
+    "title": "TC-NOT-05: Nộp đơn gấp trong ngày vi phạm thời hạn báo trước",
+    "badge": "Chuyển Quản lý",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Thị Hương nộp đơn nghỉ phép năm trong ngày (báo trước 0 ngày) -> Vi phạm thời hạn báo trước tối thiểu 1 ngày làm việc, chuyển Quản lý trực tiếp xem xét.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Giải quyết việc đột xuất trong ngày",
+      "submitted_at": "2026-09-14T08:00:00+07:00",
+      "remaining_leave_days": 5.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "NOTICE_PERIOD_VIOLATED",
+      "deducted_days": 0,
+      "note": "Lê Thị Hương nộp đơn nghỉ phép năm trong ngày (báo trước 0 ngày) -> Vi phạm thời hạn báo trước tối thiểu 1 ngày làm việc, chuyển Quản lý trực tiếp xem xét."
+    }
+  },
+  {
+    "id": "TC-NOT-06",
+    "primaryEmpId": "EMP008",
+    "title": "TC-NOT-06: Nghỉ 4 ngày nộp gấp thiếu ngày báo trước",
+    "badge": "Chuyển Quản lý",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Nguyễn Thị Kim Ngân xin 4 ngày phép năm nhưng chỉ nộp trước 1 ngày làm việc (quy chế yêu cầu 3 ngày) -> Chuyển Quản lý trực tiếp xem xét đặc cách.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-17",
+      "reason": "Nghỉ phép cá nhân đột xuất",
+      "handover_person_id": "EMP010",
+      "handover": {
+        "employee_id": "EMP010",
+        "department": "Marketing & Operations",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "submitted_at": "2026-09-11T08:00:00+07:00",
+      "remaining_leave_days": 16.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "NOTICE_PERIOD_VIOLATED",
+      "deducted_days": 0,
+      "note": "Nguyễn Thị Kim Ngân xin 4 ngày phép năm nhưng chỉ nộp trước 1 ngày làm việc (quy chế yêu cầu 3 ngày) -> Chuyển Quản lý trực tiếp xem xét đặc cách."
+    }
+  },
+  {
+    "id": "TC-NOT-07",
+    "primaryEmpId": "EMP009",
+    "title": "TC-NOT-07: Nộp đơn gấp trong ngày vi phạm thời hạn báo trước",
+    "badge": "Chuyển Quản lý",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Võ Minh Khang nộp đơn nghỉ phép năm trong ngày (báo trước 0 ngày) -> Vi phạm thời hạn báo trước tối thiểu 1 ngày làm việc, chuyển Quản lý trực tiếp xem xét.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Giải quyết việc đột xuất trong ngày",
+      "submitted_at": "2026-09-14T08:00:00+07:00",
+      "remaining_leave_days": 6.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "NOTICE_PERIOD_VIOLATED",
+      "deducted_days": 0,
+      "note": "Võ Minh Khang nộp đơn nghỉ phép năm trong ngày (báo trước 0 ngày) -> Vi phạm thời hạn báo trước tối thiểu 1 ngày làm việc, chuyển Quản lý trực tiếp xem xét."
+    }
+  },
+  {
+    "id": "TC-NOT-08",
+    "primaryEmpId": "EMP010",
+    "title": "TC-NOT-08: Nghỉ 4 ngày nộp gấp thiếu ngày báo trước",
+    "badge": "Chuyển Quản lý",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Phan Thảo My xin 4 ngày phép năm nhưng chỉ nộp trước 1 ngày làm việc (quy chế yêu cầu 3 ngày) -> Chuyển Quản lý trực tiếp xem xét đặc cách.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-17",
+      "reason": "Nghỉ phép cá nhân đột xuất",
+      "handover_person_id": "EMP008",
+      "handover": {
+        "employee_id": "EMP008",
+        "department": "Marketing & Operations",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "submitted_at": "2026-09-11T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "NOTICE_PERIOD_VIOLATED",
+      "deducted_days": 0,
+      "note": "Phan Thảo My xin 4 ngày phép năm nhưng chỉ nộp trước 1 ngày làm việc (quy chế yêu cầu 3 ngày) -> Chuyển Quản lý trực tiếp xem xét đặc cách."
+    }
+  },
+  {
+    "id": "TC-NOT-09",
+    "primaryEmpId": "EMP011",
+    "title": "TC-NOT-09: Nộp đơn gấp trong ngày vi phạm thời hạn báo trước",
+    "badge": "Chuyển Quản lý",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Hoàng Kim Yến nộp đơn nghỉ phép năm trong ngày (báo trước 0 ngày) -> Vi phạm thời hạn báo trước tối thiểu 1 ngày làm việc, chuyển Quản lý trực tiếp xem xét.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Giải quyết việc đột xuất trong ngày",
+      "submitted_at": "2026-09-14T08:00:00+07:00",
+      "remaining_leave_days": 5.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "NOTICE_PERIOD_VIOLATED",
+      "deducted_days": 0,
+      "note": "Hoàng Kim Yến nộp đơn nghỉ phép năm trong ngày (báo trước 0 ngày) -> Vi phạm thời hạn báo trước tối thiểu 1 ngày làm việc, chuyển Quản lý trực tiếp xem xét."
+    }
+  },
+  {
+    "id": "TC-NOT-10",
+    "primaryEmpId": "EMP012",
+    "title": "TC-NOT-10: Nghỉ 4 ngày nộp gấp thiếu ngày báo trước",
+    "badge": "Chuyển Quản lý",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Mai Loan xin 4 ngày phép năm nhưng chỉ nộp trước 1 ngày làm việc (quy chế yêu cầu 3 ngày) -> Chuyển Quản lý trực tiếp xem xét đặc cách.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-17",
+      "reason": "Nghỉ phép cá nhân đột xuất",
+      "handover_person_id": "EMP008",
+      "handover": {
+        "employee_id": "EMP008",
+        "department": "Marketing & Operations",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "submitted_at": "2026-09-11T08:00:00+07:00",
+      "remaining_leave_days": 12.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "NOTICE_PERIOD_VIOLATED",
+      "deducted_days": 0,
+      "note": "Lê Mai Loan xin 4 ngày phép năm nhưng chỉ nộp trước 1 ngày làm việc (quy chế yêu cầu 3 ngày) -> Chuyển Quản lý trực tiếp xem xét đặc cách."
+    }
+  },
+  {
+    "id": "TC-QUO-01",
+    "primaryEmpId": "EMP005",
+    "title": "TC-QUO-01: Vượt tỷ lệ vắng mặt phòng ban (> 30% quota)",
+    "badge": "Vượt quota phòng",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Nguyễn Văn An xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép thường niên",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 8.0,
+      "employment_status": "REGULAR",
+      "team_absent_count": 2
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "TEAM_QUOTA_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Nguyễn Văn An xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực."
+    }
+  },
+  {
+    "id": "TC-QUO-02",
+    "primaryEmpId": "EMP004",
+    "title": "TC-QUO-02: Chạm ngưỡng giới hạn hiện diện theo ngày của phòng ban",
+    "badge": "Vượt quota phòng",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Văn Nam xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép thường niên",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
       "remaining_leave_days": 14.0,
+      "employment_status": "REGULAR",
+      "team_absences_by_date": {
+        "2026-09-14": 2
+      }
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "TEAM_QUOTA_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Lê Văn Nam xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực."
+    }
+  },
+  {
+    "id": "TC-QUO-03",
+    "primaryEmpId": "EMP003",
+    "title": "TC-QUO-03: Vượt tỷ lệ vắng mặt phòng ban (> 30% quota)",
+    "badge": "Vượt quota phòng",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Trần Quốc Hưng xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép thường niên",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 18.0,
+      "employment_status": "REGULAR",
+      "team_absent_count": 2
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "TEAM_QUOTA_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực."
+    }
+  },
+  {
+    "id": "TC-QUO-04",
+    "primaryEmpId": "EMP006",
+    "title": "TC-QUO-04: Chạm ngưỡng giới hạn hiện diện theo ngày của phòng ban",
+    "badge": "Vượt quota phòng",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Bùi Tuấn Kiệt xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép thường niên",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 5.0,
+      "employment_status": "REGULAR",
+      "team_absences_by_date": {
+        "2026-09-14": 2
+      }
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "TEAM_QUOTA_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực."
+    }
+  },
+  {
+    "id": "TC-QUO-05",
+    "primaryEmpId": "EMP007",
+    "title": "TC-QUO-05: Vượt tỷ lệ vắng mặt phòng ban (> 30% quota)",
+    "badge": "Vượt quota phòng",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Thị Hương xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép thường niên",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 5.0,
+      "employment_status": "REGULAR",
+      "team_absent_count": 2
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "TEAM_QUOTA_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Lê Thị Hương xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực."
+    }
+  },
+  {
+    "id": "TC-QUO-06",
+    "primaryEmpId": "EMP008",
+    "title": "TC-QUO-06: Chạm ngưỡng giới hạn hiện diện theo ngày của phòng ban",
+    "badge": "Vượt quota phòng",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Nguyễn Thị Kim Ngân xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép thường niên",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 16.0,
+      "employment_status": "REGULAR",
+      "team_absences_by_date": {
+        "2026-09-14": 2
+      }
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "TEAM_QUOTA_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Nguyễn Thị Kim Ngân xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực."
+    }
+  },
+  {
+    "id": "TC-QUO-07",
+    "primaryEmpId": "EMP009",
+    "title": "TC-QUO-07: Vượt tỷ lệ vắng mặt phòng ban (> 30% quota)",
+    "badge": "Vượt quota phòng",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Võ Minh Khang xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép thường niên",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 6.0,
+      "employment_status": "REGULAR",
+      "team_absent_count": 2
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "TEAM_QUOTA_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Võ Minh Khang xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực."
+    }
+  },
+  {
+    "id": "TC-QUO-08",
+    "primaryEmpId": "EMP010",
+    "title": "TC-QUO-08: Chạm ngưỡng giới hạn hiện diện theo ngày của phòng ban",
+    "badge": "Vượt quota phòng",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Phan Thảo My xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép thường niên",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 10.0,
+      "employment_status": "REGULAR",
+      "team_absences_by_date": {
+        "2026-09-14": 2
+      }
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "TEAM_QUOTA_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Phan Thảo My xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực."
+    }
+  },
+  {
+    "id": "TC-QUO-09",
+    "primaryEmpId": "EMP011",
+    "title": "TC-QUO-09: Vượt tỷ lệ vắng mặt phòng ban (> 30% quota)",
+    "badge": "Vượt quota phòng",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Hoàng Kim Yến xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép thường niên",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 5.0,
+      "employment_status": "REGULAR",
+      "team_absent_count": 2
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "TEAM_QUOTA_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Hoàng Kim Yến xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực."
+    }
+  },
+  {
+    "id": "TC-QUO-10",
+    "primaryEmpId": "EMP012",
+    "title": "TC-QUO-10: Chạm ngưỡng giới hạn hiện diện theo ngày của phòng ban",
+    "badge": "Vượt quota phòng",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Mai Loan xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép thường niên",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 12.0,
+      "employment_status": "REGULAR",
+      "team_absences_by_date": {
+        "2026-09-14": 2
+      }
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "TEAM_QUOTA_EXCEEDED",
+      "deducted_days": 0,
+      "note": "Lê Mai Loan xin nghỉ khi phòng ban đã có người vắng (> 30% định biên) -> Chuyển Quản lý trực tiếp điều phối nguồn lực."
+    }
+  },
+  {
+    "id": "TC-EXC-01",
+    "primaryEmpId": "EMP005",
+    "title": "TC-EXC-01: Phép năm 3 ngày có bàn giao cùng phòng cho EMP004",
+    "badge": "Chuyển DIRECT_MANAGER",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Nguyễn Văn An xin 3 ngày phép năm có bàn giao -> Thẩm quyền duyệt là Quản lý trực tiếp (Cấp 1).",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Nghỉ phép cá nhân",
+      "handover_person_id": "EMP004",
+      "handover": {
+        "employee_id": "EMP004",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 8.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "DURATION_OVER_AI_LIMIT",
+      "deducted_days": 0,
+      "note": "Nguyễn Văn An xin 3 ngày phép năm có bàn giao -> Thẩm quyền duyệt là Quản lý trực tiếp (Cấp 1)."
+    }
+  },
+  {
+    "id": "TC-EXC-02",
+    "primaryEmpId": "EMP004",
+    "title": "TC-EXC-02: Phép năm 6 ngày liên tục -> Vượt trần 5 ngày, chuyển Tổng Giám đốc",
+    "badge": "Chuyển CEO",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Lê Văn Nam xin 6 ngày phép năm liên tục -> Vượt hạn mức 5 ngày của Quản lý trực tiếp, chuyển Tổng Giám đốc (CEO) phê duyệt.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-21",
+      "reason": "Nghỉ phép gia đình dài ngày",
+      "handover_person_id": "EMP005",
+      "handover": {
+        "employee_id": "EMP005",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 14.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "CEO",
+      "error_code": "DURATION_OVER_MANAGER_LIMIT",
+      "deducted_days": 0,
+      "note": "Lê Văn Nam xin 6 ngày phép năm liên tục -> Vượt hạn mức 5 ngày của Quản lý trực tiếp, chuyển Tổng Giám đốc (CEO) phê duyệt."
+    }
+  },
+  {
+    "id": "TC-EXC-03",
+    "primaryEmpId": "EMP003",
+    "title": "TC-EXC-03: Khám thai định kỳ 1 ngày theo chế độ BHXH",
+    "badge": "Chuyển CEO",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Trần Quốc Hưng nộp đơn khám thai định kỳ kèm chứng từ y tế -> Chế độ thai sản BHXH: chuyển Tổng Giám đốc (CEO) phê duyệt.",
+    "payload": {
+      "leave_type": "MATERNITY",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Khám thai định kỳ tại Bệnh viện Phụ sản",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Phụ sản",
+        "patient_name": "Trần Quốc Hưng",
+        "issue_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "CEO",
+      "error_code": "AUTOMATION_SCOPE_UNSUPPORTED",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng nộp đơn khám thai định kỳ kèm chứng từ y tế -> Chế độ thai sản BHXH: chuyển Tổng Giám đốc (CEO) phê duyệt."
+    }
+  },
+  {
+    "id": "TC-EXC-04",
+    "primaryEmpId": "EMP006",
+    "title": "TC-EXC-04: Nghỉ do sự cố tai nạn lao động -> Chuyển Nhân sự (HR)",
+    "badge": "Chuyển HR",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Bùi Tuấn Kiệt xin nghỉ do tai nạn lao động -> Hồ sơ chế độ bảo hiểm đặc thù, chuyển Trưởng phòng Nhân sự (HR) xử lý.",
+    "payload": {
+      "leave_type": "WORK_ACCIDENT",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Sơ cứu và theo dõi do tai nạn lao động",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Cơ sở y tế & Biên bản tai nạn",
+        "patient_name": "Bùi Tuấn Kiệt",
+        "issue_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "AUTOMATION_SCOPE_UNSUPPORTED",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt xin nghỉ do tai nạn lao động -> Hồ sơ chế độ bảo hiểm đặc thù, chuyển Trưởng phòng Nhân sự (HR) xử lý."
+    }
+  },
+  {
+    "id": "TC-EXC-05",
+    "primaryEmpId": "EMP007",
+    "title": "TC-EXC-05: Nghỉ việc riêng không hưởng lương thỏa thuận (UNPAID_OTHER)",
+    "badge": "Chuyển DIRECT_MANAGER",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Lê Thị Hương xin nghỉ việc riêng không hưởng lương -> Chuyển Quản lý trực tiếp phê duyệt thỏa thuận.",
+    "payload": {
+      "leave_type": "UNPAID_OTHER",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Giải quyết việc cá nhân đột xuất không hưởng lương",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "LONG_TERM_UNPAID",
+      "deducted_days": 0,
+      "note": "Lê Thị Hương xin nghỉ việc riêng không hưởng lương -> Chuyển Quản lý trực tiếp phê duyệt thỏa thuận."
+    }
+  },
+  {
+    "id": "TC-EXC-06",
+    "primaryEmpId": "EMP008",
+    "title": "TC-EXC-06: Phép năm 3 ngày có bàn giao cùng phòng cho EMP010",
+    "badge": "Chuyển DIRECT_MANAGER",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Nguyễn Thị Kim Ngân xin 3 ngày phép năm có bàn giao -> Thẩm quyền duyệt là Quản lý trực tiếp (Cấp 1).",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Nghỉ phép cá nhân",
+      "handover_person_id": "EMP010",
+      "handover": {
+        "employee_id": "EMP010",
+        "department": "Marketing & Operations",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 16.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "DURATION_OVER_AI_LIMIT",
+      "deducted_days": 0,
+      "note": "Nguyễn Thị Kim Ngân xin 3 ngày phép năm có bàn giao -> Thẩm quyền duyệt là Quản lý trực tiếp (Cấp 1)."
+    }
+  },
+  {
+    "id": "TC-EXC-07",
+    "primaryEmpId": "EMP009",
+    "title": "TC-EXC-07: Phép năm 6 ngày liên tục -> Vượt trần 5 ngày, chuyển Tổng Giám đốc",
+    "badge": "Chuyển CEO",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Võ Minh Khang xin 6 ngày phép năm liên tục -> Vượt hạn mức 5 ngày của Quản lý trực tiếp, chuyển Tổng Giám đốc (CEO) phê duyệt.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-21",
+      "reason": "Nghỉ phép gia đình dài ngày",
+      "handover_person_id": "EMP008",
+      "handover": {
+        "employee_id": "EMP008",
+        "department": "Marketing & Operations",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 10.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "CEO",
+      "error_code": "DURATION_OVER_MANAGER_LIMIT",
+      "deducted_days": 0,
+      "note": "Võ Minh Khang xin 6 ngày phép năm liên tục -> Vượt hạn mức 5 ngày của Quản lý trực tiếp, chuyển Tổng Giám đốc (CEO) phê duyệt."
+    }
+  },
+  {
+    "id": "TC-EXC-08",
+    "primaryEmpId": "EMP010",
+    "title": "TC-EXC-08: Khám thai định kỳ 1 ngày theo chế độ BHXH",
+    "badge": "Chuyển CEO",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Phan Thảo My nộp đơn khám thai định kỳ kèm chứng từ y tế -> Chế độ thai sản BHXH: chuyển Tổng Giám đốc (CEO) phê duyệt.",
+    "payload": {
+      "leave_type": "MATERNITY",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Khám thai định kỳ tại Bệnh viện Phụ sản",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Phụ sản",
+        "patient_name": "Phan Thảo My",
+        "issue_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "CEO",
+      "error_code": "AUTOMATION_SCOPE_UNSUPPORTED",
+      "deducted_days": 0,
+      "note": "Phan Thảo My nộp đơn khám thai định kỳ kèm chứng từ y tế -> Chế độ thai sản BHXH: chuyển Tổng Giám đốc (CEO) phê duyệt."
+    }
+  },
+  {
+    "id": "TC-EXC-09",
+    "primaryEmpId": "EMP011",
+    "title": "TC-EXC-09: Nghỉ do sự cố tai nạn lao động -> Chuyển Nhân sự (HR)",
+    "badge": "Chuyển HR",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Hoàng Kim Yến xin nghỉ do tai nạn lao động -> Hồ sơ chế độ bảo hiểm đặc thù, chuyển Trưởng phòng Nhân sự (HR) xử lý.",
+    "payload": {
+      "leave_type": "WORK_ACCIDENT",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Sơ cứu và theo dõi do tai nạn lao động",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Cơ sở y tế & Biên bản tai nạn",
+        "patient_name": "Hoàng Kim Yến",
+        "issue_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "AUTOMATION_SCOPE_UNSUPPORTED",
+      "deducted_days": 0,
+      "note": "Hoàng Kim Yến xin nghỉ do tai nạn lao động -> Hồ sơ chế độ bảo hiểm đặc thù, chuyển Trưởng phòng Nhân sự (HR) xử lý."
+    }
+  },
+  {
+    "id": "TC-EXC-10",
+    "primaryEmpId": "EMP012",
+    "title": "TC-EXC-10: Nghỉ việc riêng không hưởng lương thỏa thuận (UNPAID_OTHER)",
+    "badge": "Chuyển DIRECT_MANAGER",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Lê Mai Loan xin nghỉ việc riêng không hưởng lương -> Chuyển Quản lý trực tiếp phê duyệt thỏa thuận.",
+    "payload": {
+      "leave_type": "UNPAID_OTHER",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Giải quyết việc cá nhân đột xuất không hưởng lương",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "LONG_TERM_UNPAID",
+      "deducted_days": 0,
+      "note": "Lê Mai Loan xin nghỉ việc riêng không hưởng lương -> Chuyển Quản lý trực tiếp phê duyệt thỏa thuận."
+    }
+  },
+  {
+    "id": "TC-EXC-11",
+    "primaryEmpId": "EMP005",
+    "title": "TC-EXC-11: Phép năm 3 ngày có bàn giao cùng phòng cho EMP004",
+    "badge": "Chuyển DIRECT_MANAGER",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Nguyễn Văn An xin 3 ngày phép năm có bàn giao -> Thẩm quyền duyệt là Quản lý trực tiếp (Cấp 1).",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Nghỉ phép cá nhân",
+      "handover_person_id": "EMP004",
+      "handover": {
+        "employee_id": "EMP004",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 8.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "DURATION_OVER_AI_LIMIT",
+      "deducted_days": 0,
+      "note": "Nguyễn Văn An xin 3 ngày phép năm có bàn giao -> Thẩm quyền duyệt là Quản lý trực tiếp (Cấp 1)."
+    }
+  },
+  {
+    "id": "TC-EXC-12",
+    "primaryEmpId": "EMP004",
+    "title": "TC-EXC-12: Phép năm 6 ngày liên tục -> Vượt trần 5 ngày, chuyển Tổng Giám đốc",
+    "badge": "Chuyển CEO",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Lê Văn Nam xin 6 ngày phép năm liên tục -> Vượt hạn mức 5 ngày của Quản lý trực tiếp, chuyển Tổng Giám đốc (CEO) phê duyệt.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-21",
+      "reason": "Nghỉ phép gia đình dài ngày",
+      "handover_person_id": "EMP005",
+      "handover": {
+        "employee_id": "EMP005",
+        "department": "Engineering",
+        "status": "ACTIVE",
+        "absent_dates": []
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 14.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "CEO",
+      "error_code": "DURATION_OVER_MANAGER_LIMIT",
+      "deducted_days": 0,
+      "note": "Lê Văn Nam xin 6 ngày phép năm liên tục -> Vượt hạn mức 5 ngày của Quản lý trực tiếp, chuyển Tổng Giám đốc (CEO) phê duyệt."
+    }
+  },
+  {
+    "id": "TC-EXC-13",
+    "primaryEmpId": "EMP003",
+    "title": "TC-EXC-13: Khám thai định kỳ 1 ngày theo chế độ BHXH",
+    "badge": "Chuyển CEO",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Trần Quốc Hưng nộp đơn khám thai định kỳ kèm chứng từ y tế -> Chế độ thai sản BHXH: chuyển Tổng Giám đốc (CEO) phê duyệt.",
+    "payload": {
+      "leave_type": "MATERNITY",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Khám thai định kỳ tại Bệnh viện Phụ sản",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Phụ sản",
+        "patient_name": "Trần Quốc Hưng",
+        "issue_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "CEO",
+      "error_code": "AUTOMATION_SCOPE_UNSUPPORTED",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng nộp đơn khám thai định kỳ kèm chứng từ y tế -> Chế độ thai sản BHXH: chuyển Tổng Giám đốc (CEO) phê duyệt."
+    }
+  },
+  {
+    "id": "TC-EXC-14",
+    "primaryEmpId": "EMP006",
+    "title": "TC-EXC-14: Nghỉ do sự cố tai nạn lao động -> Chuyển Nhân sự (HR)",
+    "badge": "Chuyển HR",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Bùi Tuấn Kiệt xin nghỉ do tai nạn lao động -> Hồ sơ chế độ bảo hiểm đặc thù, chuyển Trưởng phòng Nhân sự (HR) xử lý.",
+    "payload": {
+      "leave_type": "WORK_ACCIDENT",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Sơ cứu và theo dõi do tai nạn lao động",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Cơ sở y tế & Biên bản tai nạn",
+        "patient_name": "Bùi Tuấn Kiệt",
+        "issue_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "AUTOMATION_SCOPE_UNSUPPORTED",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt xin nghỉ do tai nạn lao động -> Hồ sơ chế độ bảo hiểm đặc thù, chuyển Trưởng phòng Nhân sự (HR) xử lý."
+    }
+  },
+  {
+    "id": "TC-EXC-15",
+    "primaryEmpId": "EMP007",
+    "title": "TC-EXC-15: Nghỉ việc riêng không hưởng lương thỏa thuận (UNPAID_OTHER)",
+    "badge": "Chuyển DIRECT_MANAGER",
+    "badgeClass": "bg-purple-lt",
+    "desc": "Lê Thị Hương xin nghỉ việc riêng không hưởng lương -> Chuyển Quản lý trực tiếp phê duyệt thỏa thuận.",
+    "payload": {
+      "leave_type": "UNPAID_OTHER",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Giải quyết việc cá nhân đột xuất không hưởng lương",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "LONG_TERM_UNPAID",
+      "deducted_days": 0,
+      "note": "Lê Thị Hương xin nghỉ việc riêng không hưởng lương -> Chuyển Quản lý trực tiếp phê duyệt thỏa thuận."
+    }
+  },
+  {
+    "id": "TC-PRF-01",
+    "primaryEmpId": "EMP005",
+    "title": "TC-PRF-01: [Bẫy thiếu chứng từ] Nghỉ ốm nhưng quên tải giấy khám y tế",
+    "badge": "Cần xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Nguyễn Văn An làm đơn xin nghỉ ốm nhưng không đính kèm giấy chứng nhận y tế -> Bắt lỗi PROOF_MISSING, yêu cầu bổ sung.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ ốm điều trị tại nhà",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
       "employment_status": "REGULAR"
     },
     "expected": {
       "decision": "NEED_CORRECTION",
       "target_role": "EMPLOYEE",
-      "error_code": "HANDOVER_INVALID",
+      "error_code": "PROOF_MISSING",
       "deducted_days": 0,
-      "note": "[Người bàn giao chưa phù hợp] Người được chọn bàn giao phải cùng phòng ban, đang làm việc bình thường, không phải chính bạn và không trùng lịch nghỉ. Vui lòng chọn nhân sự khác thay thế."
+      "note": "Nguyễn Văn An làm đơn xin nghỉ ốm nhưng không đính kèm giấy chứng nhận y tế -> Bắt lỗi PROOF_MISSING, yêu cầu bổ sung."
+    }
+  },
+  {
+    "id": "TC-PRF-02",
+    "primaryEmpId": "EMP004",
+    "title": "TC-PRF-02: [Bẫy ảnh mờ] Chứng từ y tế bị mờ nhòe nét con dấu",
+    "badge": "Chuyển xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Văn Nam chụp giấy khám bị nhòe nét, VLM không nhận diện được chữ ký mộc đỏ -> Báo lỗi DOC_ILLEGIBLE, chuyển Quản lý đối chiếu.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị ngoại trú có giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Cơ sở y tế",
+        "patient_name": "Lê Văn Nam",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "ILLEGIBLE"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "DOC_ILLEGIBLE",
+      "deducted_days": 0,
+      "note": "Lê Văn Nam chụp giấy khám bị nhòe nét, VLM không nhận diện được chữ ký mộc đỏ -> Báo lỗi DOC_ILLEGIBLE, chuyển Quản lý đối chiếu."
+    }
+  },
+  {
+    "id": "TC-PRF-03",
+    "primaryEmpId": "EMP003",
+    "title": "TC-PRF-03: Chứng từ y tế phòng khám tư nhân cần xác minh",
+    "badge": "Chuyển xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Trần Quốc Hưng nộp chứng từ y tế từ cơ sở ngoài danh mục liên kết -> Chuyển Quản lý/HR xác minh tính hợp lệ.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo phiếu khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Phòng khám tư nhân",
+        "patient_name": "Trần Quốc Hưng",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "UNVERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "PROOF_REVIEW_REQUIRED",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng nộp chứng từ y tế từ cơ sở ngoài danh mục liên kết -> Chuyển Quản lý/HR xác minh tính hợp lệ."
+    }
+  },
+  {
+    "id": "TC-PRF-04",
+    "primaryEmpId": "EMP006",
+    "title": "TC-PRF-04: [Bẫy thiếu chứng từ] Nghỉ ốm nhưng quên tải giấy khám y tế",
+    "badge": "Cần xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Bùi Tuấn Kiệt làm đơn xin nghỉ ốm nhưng không đính kèm giấy chứng nhận y tế -> Bắt lỗi PROOF_MISSING, yêu cầu bổ sung.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ ốm điều trị tại nhà",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "PROOF_MISSING",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt làm đơn xin nghỉ ốm nhưng không đính kèm giấy chứng nhận y tế -> Bắt lỗi PROOF_MISSING, yêu cầu bổ sung."
+    }
+  },
+  {
+    "id": "TC-PRF-05",
+    "primaryEmpId": "EMP007",
+    "title": "TC-PRF-05: [Bẫy ảnh mờ] Chứng từ y tế bị mờ nhòe nét con dấu",
+    "badge": "Chuyển xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Thị Hương chụp giấy khám bị nhòe nét, VLM không nhận diện được chữ ký mộc đỏ -> Báo lỗi DOC_ILLEGIBLE, chuyển Quản lý đối chiếu.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị ngoại trú có giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Cơ sở y tế",
+        "patient_name": "Lê Thị Hương",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "ILLEGIBLE"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "DOC_ILLEGIBLE",
+      "deducted_days": 0,
+      "note": "Lê Thị Hương chụp giấy khám bị nhòe nét, VLM không nhận diện được chữ ký mộc đỏ -> Báo lỗi DOC_ILLEGIBLE, chuyển Quản lý đối chiếu."
+    }
+  },
+  {
+    "id": "TC-PRF-06",
+    "primaryEmpId": "EMP008",
+    "title": "TC-PRF-06: Chứng từ y tế phòng khám tư nhân cần xác minh",
+    "badge": "Chuyển xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Nguyễn Thị Kim Ngân nộp chứng từ y tế từ cơ sở ngoài danh mục liên kết -> Chuyển Quản lý/HR xác minh tính hợp lệ.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo phiếu khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Phòng khám tư nhân",
+        "patient_name": "Nguyễn Thị Kim Ngân",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "UNVERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "PROOF_REVIEW_REQUIRED",
+      "deducted_days": 0,
+      "note": "Nguyễn Thị Kim Ngân nộp chứng từ y tế từ cơ sở ngoài danh mục liên kết -> Chuyển Quản lý/HR xác minh tính hợp lệ."
+    }
+  },
+  {
+    "id": "TC-PRF-07",
+    "primaryEmpId": "EMP009",
+    "title": "TC-PRF-07: [Bẫy thiếu chứng từ] Nghỉ ốm nhưng quên tải giấy khám y tế",
+    "badge": "Cần xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Võ Minh Khang làm đơn xin nghỉ ốm nhưng không đính kèm giấy chứng nhận y tế -> Bắt lỗi PROOF_MISSING, yêu cầu bổ sung.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ ốm điều trị tại nhà",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "PROOF_MISSING",
+      "deducted_days": 0,
+      "note": "Võ Minh Khang làm đơn xin nghỉ ốm nhưng không đính kèm giấy chứng nhận y tế -> Bắt lỗi PROOF_MISSING, yêu cầu bổ sung."
+    }
+  },
+  {
+    "id": "TC-PRF-08",
+    "primaryEmpId": "EMP010",
+    "title": "TC-PRF-08: [Bẫy ảnh mờ] Chứng từ y tế bị mờ nhòe nét con dấu",
+    "badge": "Chuyển xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Phan Thảo My chụp giấy khám bị nhòe nét, VLM không nhận diện được chữ ký mộc đỏ -> Báo lỗi DOC_ILLEGIBLE, chuyển Quản lý đối chiếu.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị ngoại trú có giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Cơ sở y tế",
+        "patient_name": "Phan Thảo My",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "ILLEGIBLE"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "DOC_ILLEGIBLE",
+      "deducted_days": 0,
+      "note": "Phan Thảo My chụp giấy khám bị nhòe nét, VLM không nhận diện được chữ ký mộc đỏ -> Báo lỗi DOC_ILLEGIBLE, chuyển Quản lý đối chiếu."
+    }
+  },
+  {
+    "id": "TC-PRF-09",
+    "primaryEmpId": "EMP011",
+    "title": "TC-PRF-09: Chứng từ y tế phòng khám tư nhân cần xác minh",
+    "badge": "Chuyển xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Hoàng Kim Yến nộp chứng từ y tế từ cơ sở ngoài danh mục liên kết -> Chuyển Quản lý/HR xác minh tính hợp lệ.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo phiếu khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Phòng khám tư nhân",
+        "patient_name": "Hoàng Kim Yến",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "UNVERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "PROOF_REVIEW_REQUIRED",
+      "deducted_days": 0,
+      "note": "Hoàng Kim Yến nộp chứng từ y tế từ cơ sở ngoài danh mục liên kết -> Chuyển Quản lý/HR xác minh tính hợp lệ."
+    }
+  },
+  {
+    "id": "TC-PRF-10",
+    "primaryEmpId": "EMP012",
+    "title": "TC-PRF-10: [Bẫy thiếu chứng từ] Nghỉ ốm nhưng quên tải giấy khám y tế",
+    "badge": "Cần xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Mai Loan làm đơn xin nghỉ ốm nhưng không đính kèm giấy chứng nhận y tế -> Bắt lỗi PROOF_MISSING, yêu cầu bổ sung.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ ốm điều trị tại nhà",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "PROOF_MISSING",
+      "deducted_days": 0,
+      "note": "Lê Mai Loan làm đơn xin nghỉ ốm nhưng không đính kèm giấy chứng nhận y tế -> Bắt lỗi PROOF_MISSING, yêu cầu bổ sung."
+    }
+  },
+  {
+    "id": "TC-PRF-11",
+    "primaryEmpId": "EMP005",
+    "title": "TC-PRF-11: [Bẫy ảnh mờ] Chứng từ y tế bị mờ nhòe nét con dấu",
+    "badge": "Chuyển xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Nguyễn Văn An chụp giấy khám bị nhòe nét, VLM không nhận diện được chữ ký mộc đỏ -> Báo lỗi DOC_ILLEGIBLE, chuyển Quản lý đối chiếu.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị ngoại trú có giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Cơ sở y tế",
+        "patient_name": "Nguyễn Văn An",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "ILLEGIBLE"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "DOC_ILLEGIBLE",
+      "deducted_days": 0,
+      "note": "Nguyễn Văn An chụp giấy khám bị nhòe nét, VLM không nhận diện được chữ ký mộc đỏ -> Báo lỗi DOC_ILLEGIBLE, chuyển Quản lý đối chiếu."
+    }
+  },
+  {
+    "id": "TC-PRF-12",
+    "primaryEmpId": "EMP004",
+    "title": "TC-PRF-12: Chứng từ y tế phòng khám tư nhân cần xác minh",
+    "badge": "Chuyển xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Văn Nam nộp chứng từ y tế từ cơ sở ngoài danh mục liên kết -> Chuyển Quản lý/HR xác minh tính hợp lệ.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo phiếu khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Phòng khám tư nhân",
+        "patient_name": "Lê Văn Nam",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "UNVERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "PROOF_REVIEW_REQUIRED",
+      "deducted_days": 0,
+      "note": "Lê Văn Nam nộp chứng từ y tế từ cơ sở ngoài danh mục liên kết -> Chuyển Quản lý/HR xác minh tính hợp lệ."
+    }
+  },
+  {
+    "id": "TC-PRF-13",
+    "primaryEmpId": "EMP003",
+    "title": "TC-PRF-13: [Bẫy thiếu chứng từ] Nghỉ ốm nhưng quên tải giấy khám y tế",
+    "badge": "Cần xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Trần Quốc Hưng làm đơn xin nghỉ ốm nhưng không đính kèm giấy chứng nhận y tế -> Bắt lỗi PROOF_MISSING, yêu cầu bổ sung.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ ốm điều trị tại nhà",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "PROOF_MISSING",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng làm đơn xin nghỉ ốm nhưng không đính kèm giấy chứng nhận y tế -> Bắt lỗi PROOF_MISSING, yêu cầu bổ sung."
+    }
+  },
+  {
+    "id": "TC-PRF-14",
+    "primaryEmpId": "EMP006",
+    "title": "TC-PRF-14: [Bẫy ảnh mờ] Chứng từ y tế bị mờ nhòe nét con dấu",
+    "badge": "Chuyển xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Bùi Tuấn Kiệt chụp giấy khám bị nhòe nét, VLM không nhận diện được chữ ký mộc đỏ -> Báo lỗi DOC_ILLEGIBLE, chuyển Quản lý đối chiếu.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị ngoại trú có giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Cơ sở y tế",
+        "patient_name": "Bùi Tuấn Kiệt",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "ILLEGIBLE"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "DOC_ILLEGIBLE",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt chụp giấy khám bị nhòe nét, VLM không nhận diện được chữ ký mộc đỏ -> Báo lỗi DOC_ILLEGIBLE, chuyển Quản lý đối chiếu."
+    }
+  },
+  {
+    "id": "TC-PRF-15",
+    "primaryEmpId": "EMP007",
+    "title": "TC-PRF-15: Chứng từ y tế phòng khám tư nhân cần xác minh",
+    "badge": "Chuyển xác minh",
+    "badgeClass": "bg-warning-lt",
+    "desc": "Lê Thị Hương nộp chứng từ y tế từ cơ sở ngoài danh mục liên kết -> Chuyển Quản lý/HR xác minh tính hợp lệ.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo phiếu khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Phòng khám tư nhân",
+        "patient_name": "Lê Thị Hương",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "UNVERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "PROOF_REVIEW_REQUIRED",
+      "deducted_days": 0,
+      "note": "Lê Thị Hương nộp chứng từ y tế từ cơ sở ngoài danh mục liên kết -> Chuyển Quản lý/HR xác minh tính hợp lệ."
+    }
+  },
+  {
+    "id": "TC-MIS-01",
+    "primaryEmpId": "EMP005",
+    "title": "TC-MIS-01: [Bẫy nộp nhầm] Nguyễn Văn An nộp giấy khám mang tên Lê Văn Nam",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Nguyễn Văn An nộp đơn xin nghỉ ốm nhưng tải tệp giấy chứng nhận mang tên bệnh nhân Lê Văn Nam -> Bắt lỗi lệch tên bệnh nhân NAME_MISMATCH.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Lê Văn Nam",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "NAME_MISMATCH",
+      "deducted_days": 0,
+      "note": "Nguyễn Văn An nộp đơn xin nghỉ ốm nhưng tải tệp giấy chứng nhận mang tên bệnh nhân Lê Văn Nam -> Bắt lỗi lệch tên bệnh nhân NAME_MISMATCH."
+    }
+  },
+  {
+    "id": "TC-MIS-02",
+    "primaryEmpId": "EMP004",
+    "title": "TC-MIS-02: [Bẫy lệch ngày] Đơn xin nghỉ từ 14/09 nhưng giấy khám cho nghỉ từ 15/09",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Lê Văn Nam xin nghỉ từ 14/09 nhưng bác sĩ chỉ định nghỉ từ 15/09 -> Bắt lỗi lệch thời gian MEDICAL_DAYS_MISMATCH, yêu cầu sửa ngày.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Nghỉ ốm điều trị",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Lê Văn Nam",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-15",
+        "recommended_to_date": "2026-09-16",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "MEDICAL_DAYS_MISMATCH",
+      "deducted_days": 0,
+      "note": "Lê Văn Nam xin nghỉ từ 14/09 nhưng bác sĩ chỉ định nghỉ từ 15/09 -> Bắt lỗi lệch thời gian MEDICAL_DAYS_MISMATCH, yêu cầu sửa ngày."
+    }
+  },
+  {
+    "id": "TC-MIS-03",
+    "primaryEmpId": "EMP003",
+    "title": "TC-MIS-03: [Bẫy sai loại giấy] Xin nghỉ ốm nhưng tải nhầm Giấy kết hôn",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Trần Quốc Hưng xin nghỉ ốm nhưng tải nhầm ảnh Giấy kết hôn -> Bắt lỗi sai loại giấy tờ DOC_FIELD_MISSING, yêu cầu tải lại đúng chứng từ.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo giấy tờ đính kèm",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "issuer": "UBND Phường",
+        "issue_date": "2026-09-01",
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "DOC_FIELD_MISSING",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng xin nghỉ ốm nhưng tải nhầm ảnh Giấy kết hôn -> Bắt lỗi sai loại giấy tờ DOC_FIELD_MISSING, yêu cầu tải lại đúng chứng từ."
+    }
+  },
+  {
+    "id": "TC-MIS-04",
+    "primaryEmpId": "EMP006",
+    "title": "TC-MIS-04: [Bẫy nộp nhầm] Bùi Tuấn Kiệt nộp giấy khám mang tên Lê Văn Nam",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Bùi Tuấn Kiệt nộp đơn xin nghỉ ốm nhưng tải tệp giấy chứng nhận mang tên bệnh nhân Lê Văn Nam -> Bắt lỗi lệch tên bệnh nhân NAME_MISMATCH.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Lê Văn Nam",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "NAME_MISMATCH",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt nộp đơn xin nghỉ ốm nhưng tải tệp giấy chứng nhận mang tên bệnh nhân Lê Văn Nam -> Bắt lỗi lệch tên bệnh nhân NAME_MISMATCH."
+    }
+  },
+  {
+    "id": "TC-MIS-05",
+    "primaryEmpId": "EMP007",
+    "title": "TC-MIS-05: [Bẫy lệch ngày] Đơn xin nghỉ từ 14/09 nhưng giấy khám cho nghỉ từ 15/09",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Lê Thị Hương xin nghỉ từ 14/09 nhưng bác sĩ chỉ định nghỉ từ 15/09 -> Bắt lỗi lệch thời gian MEDICAL_DAYS_MISMATCH, yêu cầu sửa ngày.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Nghỉ ốm điều trị",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Lê Thị Hương",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-15",
+        "recommended_to_date": "2026-09-16",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "MEDICAL_DAYS_MISMATCH",
+      "deducted_days": 0,
+      "note": "Lê Thị Hương xin nghỉ từ 14/09 nhưng bác sĩ chỉ định nghỉ từ 15/09 -> Bắt lỗi lệch thời gian MEDICAL_DAYS_MISMATCH, yêu cầu sửa ngày."
+    }
+  },
+  {
+    "id": "TC-MIS-06",
+    "primaryEmpId": "EMP008",
+    "title": "TC-MIS-06: [Bẫy sai loại giấy] Xin nghỉ ốm nhưng tải nhầm Giấy kết hôn",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Nguyễn Thị Kim Ngân xin nghỉ ốm nhưng tải nhầm ảnh Giấy kết hôn -> Bắt lỗi sai loại giấy tờ DOC_FIELD_MISSING, yêu cầu tải lại đúng chứng từ.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo giấy tờ đính kèm",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "issuer": "UBND Phường",
+        "issue_date": "2026-09-01",
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "DOC_FIELD_MISSING",
+      "deducted_days": 0,
+      "note": "Nguyễn Thị Kim Ngân xin nghỉ ốm nhưng tải nhầm ảnh Giấy kết hôn -> Bắt lỗi sai loại giấy tờ DOC_FIELD_MISSING, yêu cầu tải lại đúng chứng từ."
+    }
+  },
+  {
+    "id": "TC-MIS-07",
+    "primaryEmpId": "EMP009",
+    "title": "TC-MIS-07: [Bẫy nộp nhầm] Võ Minh Khang nộp giấy khám mang tên Lê Văn Nam",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Võ Minh Khang nộp đơn xin nghỉ ốm nhưng tải tệp giấy chứng nhận mang tên bệnh nhân Lê Văn Nam -> Bắt lỗi lệch tên bệnh nhân NAME_MISMATCH.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Lê Văn Nam",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "NAME_MISMATCH",
+      "deducted_days": 0,
+      "note": "Võ Minh Khang nộp đơn xin nghỉ ốm nhưng tải tệp giấy chứng nhận mang tên bệnh nhân Lê Văn Nam -> Bắt lỗi lệch tên bệnh nhân NAME_MISMATCH."
+    }
+  },
+  {
+    "id": "TC-MIS-08",
+    "primaryEmpId": "EMP010",
+    "title": "TC-MIS-08: [Bẫy lệch ngày] Đơn xin nghỉ từ 14/09 nhưng giấy khám cho nghỉ từ 15/09",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Phan Thảo My xin nghỉ từ 14/09 nhưng bác sĩ chỉ định nghỉ từ 15/09 -> Bắt lỗi lệch thời gian MEDICAL_DAYS_MISMATCH, yêu cầu sửa ngày.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Nghỉ ốm điều trị",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Phan Thảo My",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-15",
+        "recommended_to_date": "2026-09-16",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "MEDICAL_DAYS_MISMATCH",
+      "deducted_days": 0,
+      "note": "Phan Thảo My xin nghỉ từ 14/09 nhưng bác sĩ chỉ định nghỉ từ 15/09 -> Bắt lỗi lệch thời gian MEDICAL_DAYS_MISMATCH, yêu cầu sửa ngày."
+    }
+  },
+  {
+    "id": "TC-MIS-09",
+    "primaryEmpId": "EMP011",
+    "title": "TC-MIS-09: [Bẫy sai loại giấy] Xin nghỉ ốm nhưng tải nhầm Giấy kết hôn",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Hoàng Kim Yến xin nghỉ ốm nhưng tải nhầm ảnh Giấy kết hôn -> Bắt lỗi sai loại giấy tờ DOC_FIELD_MISSING, yêu cầu tải lại đúng chứng từ.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo giấy tờ đính kèm",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "issuer": "UBND Phường",
+        "issue_date": "2026-09-01",
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "DOC_FIELD_MISSING",
+      "deducted_days": 0,
+      "note": "Hoàng Kim Yến xin nghỉ ốm nhưng tải nhầm ảnh Giấy kết hôn -> Bắt lỗi sai loại giấy tờ DOC_FIELD_MISSING, yêu cầu tải lại đúng chứng từ."
+    }
+  },
+  {
+    "id": "TC-MIS-10",
+    "primaryEmpId": "EMP012",
+    "title": "TC-MIS-10: [Bẫy nộp nhầm] Lê Mai Loan nộp giấy khám mang tên Lê Văn Nam",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Lê Mai Loan nộp đơn xin nghỉ ốm nhưng tải tệp giấy chứng nhận mang tên bệnh nhân Lê Văn Nam -> Bắt lỗi lệch tên bệnh nhân NAME_MISMATCH.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Lê Văn Nam",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "NAME_MISMATCH",
+      "deducted_days": 0,
+      "note": "Lê Mai Loan nộp đơn xin nghỉ ốm nhưng tải tệp giấy chứng nhận mang tên bệnh nhân Lê Văn Nam -> Bắt lỗi lệch tên bệnh nhân NAME_MISMATCH."
+    }
+  },
+  {
+    "id": "TC-MIS-11",
+    "primaryEmpId": "EMP005",
+    "title": "TC-MIS-11: [Bẫy lệch ngày] Đơn xin nghỉ từ 14/09 nhưng giấy khám cho nghỉ từ 15/09",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Nguyễn Văn An xin nghỉ từ 14/09 nhưng bác sĩ chỉ định nghỉ từ 15/09 -> Bắt lỗi lệch thời gian MEDICAL_DAYS_MISMATCH, yêu cầu sửa ngày.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Nghỉ ốm điều trị",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Nguyễn Văn An",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-15",
+        "recommended_to_date": "2026-09-16",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "MEDICAL_DAYS_MISMATCH",
+      "deducted_days": 0,
+      "note": "Nguyễn Văn An xin nghỉ từ 14/09 nhưng bác sĩ chỉ định nghỉ từ 15/09 -> Bắt lỗi lệch thời gian MEDICAL_DAYS_MISMATCH, yêu cầu sửa ngày."
+    }
+  },
+  {
+    "id": "TC-MIS-12",
+    "primaryEmpId": "EMP004",
+    "title": "TC-MIS-12: [Bẫy sai loại giấy] Xin nghỉ ốm nhưng tải nhầm Giấy kết hôn",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Lê Văn Nam xin nghỉ ốm nhưng tải nhầm ảnh Giấy kết hôn -> Bắt lỗi sai loại giấy tờ DOC_FIELD_MISSING, yêu cầu tải lại đúng chứng từ.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo giấy tờ đính kèm",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "issuer": "UBND Phường",
+        "issue_date": "2026-09-01",
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "DOC_FIELD_MISSING",
+      "deducted_days": 0,
+      "note": "Lê Văn Nam xin nghỉ ốm nhưng tải nhầm ảnh Giấy kết hôn -> Bắt lỗi sai loại giấy tờ DOC_FIELD_MISSING, yêu cầu tải lại đúng chứng từ."
+    }
+  },
+  {
+    "id": "TC-MIS-13",
+    "primaryEmpId": "EMP003",
+    "title": "TC-MIS-13: [Bẫy nộp nhầm] Trần Quốc Hưng nộp giấy khám mang tên Lê Văn Nam",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Trần Quốc Hưng nộp đơn xin nghỉ ốm nhưng tải tệp giấy chứng nhận mang tên bệnh nhân Lê Văn Nam -> Bắt lỗi lệch tên bệnh nhân NAME_MISMATCH.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Lê Văn Nam",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-14",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "HR",
+      "error_code": "NAME_MISMATCH",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng nộp đơn xin nghỉ ốm nhưng tải tệp giấy chứng nhận mang tên bệnh nhân Lê Văn Nam -> Bắt lỗi lệch tên bệnh nhân NAME_MISMATCH."
+    }
+  },
+  {
+    "id": "TC-MIS-14",
+    "primaryEmpId": "EMP006",
+    "title": "TC-MIS-14: [Bẫy lệch ngày] Đơn xin nghỉ từ 14/09 nhưng giấy khám cho nghỉ từ 15/09",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Bùi Tuấn Kiệt xin nghỉ từ 14/09 nhưng bác sĩ chỉ định nghỉ từ 15/09 -> Bắt lỗi lệch thời gian MEDICAL_DAYS_MISMATCH, yêu cầu sửa ngày.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Nghỉ ốm điều trị",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Bùi Tuấn Kiệt",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-15",
+        "recommended_to_date": "2026-09-16",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "MEDICAL_DAYS_MISMATCH",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt xin nghỉ từ 14/09 nhưng bác sĩ chỉ định nghỉ từ 15/09 -> Bắt lỗi lệch thời gian MEDICAL_DAYS_MISMATCH, yêu cầu sửa ngày."
+    }
+  },
+  {
+    "id": "TC-MIS-15",
+    "primaryEmpId": "EMP007",
+    "title": "TC-MIS-15: [Bẫy sai loại giấy] Xin nghỉ ốm nhưng tải nhầm Giấy kết hôn",
+    "badge": "Lệch chứng từ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Lê Thị Hương xin nghỉ ốm nhưng tải nhầm ảnh Giấy kết hôn -> Bắt lỗi sai loại giấy tờ DOC_FIELD_MISSING, yêu cầu tải lại đúng chứng từ.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Điều trị theo giấy tờ đính kèm",
+      "proof": {
+        "proof_type": "MARRIAGE_CERTIFICATE",
+        "issuer": "UBND Phường",
+        "issue_date": "2026-09-01",
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "DOC_FIELD_MISSING",
+      "deducted_days": 0,
+      "note": "Lê Thị Hương xin nghỉ ốm nhưng tải nhầm ảnh Giấy kết hôn -> Bắt lỗi sai loại giấy tờ DOC_FIELD_MISSING, yêu cầu tải lại đúng chứng từ."
+    }
+  },
+  {
+    "id": "TC-DUP-01",
+    "primaryEmpId": "EMP005",
+    "title": "TC-DUP-01: [Bẫy trùng lặp] Toàn bộ ngày xin nghỉ đã có đơn được duyệt trước đó",
+    "badge": "Trùng lịch nghỉ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Nguyễn Văn An nộp đơn ngày 14/09 trùng hoàn toàn khoảng thời gian đã được phê duyệt -> Tự động từ chối REQUEST_ALREADY_COVERED để tránh trừ phép trùng lặp.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép cá nhân",
+      "approved_working_dates": [
+        "2026-09-14"
+      ],
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "REQUEST_ALREADY_COVERED",
+      "deducted_days": 0,
+      "note": "Nguyễn Văn An nộp đơn ngày 14/09 trùng hoàn toàn khoảng thời gian đã được phê duyệt -> Tự động từ chối REQUEST_ALREADY_COVERED để tránh trừ phép trùng lặp."
+    }
+  },
+  {
+    "id": "TC-DUP-02",
+    "primaryEmpId": "EMP004",
+    "title": "TC-DUP-02: [Bẫy trùng lặp] Khoảng ngày xin nghỉ trùng một phần ngày đã duyệt",
+    "badge": "Trùng lịch nghỉ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Lê Văn Nam xin nghỉ 14-15/09 nhưng ngày 14/09 đã có đơn duyệt -> Báo lỗi OVERLAPPING_REQUEST, yêu cầu sửa ngày bắt đầu sang 15/09.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Nghỉ phép cá nhân 2 ngày",
+      "approved_working_dates": [
+        "2026-09-14"
+      ],
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "OVERLAPPING_REQUEST",
+      "deducted_days": 0,
+      "note": "Lê Văn Nam xin nghỉ 14-15/09 nhưng ngày 14/09 đã có đơn duyệt -> Báo lỗi OVERLAPPING_REQUEST, yêu cầu sửa ngày bắt đầu sang 15/09."
+    }
+  },
+  {
+    "id": "TC-DUP-03",
+    "primaryEmpId": "EMP003",
+    "title": "TC-DUP-03: [Bẫy trùng lặp] Toàn bộ ngày xin nghỉ đã có đơn được duyệt trước đó",
+    "badge": "Trùng lịch nghỉ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Trần Quốc Hưng nộp đơn ngày 14/09 trùng hoàn toàn khoảng thời gian đã được phê duyệt -> Tự động từ chối REQUEST_ALREADY_COVERED để tránh trừ phép trùng lặp.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép cá nhân",
+      "approved_working_dates": [
+        "2026-09-14"
+      ],
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "REQUEST_ALREADY_COVERED",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng nộp đơn ngày 14/09 trùng hoàn toàn khoảng thời gian đã được phê duyệt -> Tự động từ chối REQUEST_ALREADY_COVERED để tránh trừ phép trùng lặp."
+    }
+  },
+  {
+    "id": "TC-DUP-04",
+    "primaryEmpId": "EMP006",
+    "title": "TC-DUP-04: [Bẫy trùng lặp] Khoảng ngày xin nghỉ trùng một phần ngày đã duyệt",
+    "badge": "Trùng lịch nghỉ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Bùi Tuấn Kiệt xin nghỉ 14-15/09 nhưng ngày 14/09 đã có đơn duyệt -> Báo lỗi OVERLAPPING_REQUEST, yêu cầu sửa ngày bắt đầu sang 15/09.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Nghỉ phép cá nhân 2 ngày",
+      "approved_working_dates": [
+        "2026-09-14"
+      ],
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "OVERLAPPING_REQUEST",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt xin nghỉ 14-15/09 nhưng ngày 14/09 đã có đơn duyệt -> Báo lỗi OVERLAPPING_REQUEST, yêu cầu sửa ngày bắt đầu sang 15/09."
+    }
+  },
+  {
+    "id": "TC-DUP-05",
+    "primaryEmpId": "EMP006",
+    "title": "TC-DUP-05: [Bẫy trùng lặp] Toàn bộ ngày xin nghỉ đã có đơn được duyệt trước đó",
+    "badge": "Trùng lịch nghỉ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Bùi Tuấn Kiệt nộp đơn ngày 14/09 trùng hoàn toàn khoảng thời gian đã được phê duyệt -> Tự động từ chối REQUEST_ALREADY_COVERED để tránh trừ phép trùng lặp.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép cá nhân",
+      "approved_working_dates": [
+        "2026-09-14"
+      ],
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "REQUEST_ALREADY_COVERED",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt nộp đơn ngày 14/09 trùng hoàn toàn khoảng thời gian đã được phê duyệt -> Tự động từ chối REQUEST_ALREADY_COVERED để tránh trừ phép trùng lặp."
+    }
+  },
+  {
+    "id": "TC-DUP-06",
+    "primaryEmpId": "EMP008",
+    "title": "TC-DUP-06: [Bẫy trùng lặp] Khoảng ngày xin nghỉ trùng một phần ngày đã duyệt",
+    "badge": "Trùng lịch nghỉ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Nguyễn Thị Kim Ngân xin nghỉ 14-15/09 nhưng ngày 14/09 đã có đơn duyệt -> Báo lỗi OVERLAPPING_REQUEST, yêu cầu sửa ngày bắt đầu sang 15/09.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Nghỉ phép cá nhân 2 ngày",
+      "approved_working_dates": [
+        "2026-09-14"
+      ],
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "OVERLAPPING_REQUEST",
+      "deducted_days": 0,
+      "note": "Nguyễn Thị Kim Ngân xin nghỉ 14-15/09 nhưng ngày 14/09 đã có đơn duyệt -> Báo lỗi OVERLAPPING_REQUEST, yêu cầu sửa ngày bắt đầu sang 15/09."
+    }
+  },
+  {
+    "id": "TC-DUP-07",
+    "primaryEmpId": "EMP009",
+    "title": "TC-DUP-07: [Bẫy trùng lặp] Toàn bộ ngày xin nghỉ đã có đơn được duyệt trước đó",
+    "badge": "Trùng lịch nghỉ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Võ Minh Khang nộp đơn ngày 14/09 trùng hoàn toàn khoảng thời gian đã được phê duyệt -> Tự động từ chối REQUEST_ALREADY_COVERED để tránh trừ phép trùng lặp.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép cá nhân",
+      "approved_working_dates": [
+        "2026-09-14"
+      ],
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "REQUEST_ALREADY_COVERED",
+      "deducted_days": 0,
+      "note": "Võ Minh Khang nộp đơn ngày 14/09 trùng hoàn toàn khoảng thời gian đã được phê duyệt -> Tự động từ chối REQUEST_ALREADY_COVERED để tránh trừ phép trùng lặp."
+    }
+  },
+  {
+    "id": "TC-DUP-08",
+    "primaryEmpId": "EMP010",
+    "title": "TC-DUP-08: [Bẫy trùng lặp] Khoảng ngày xin nghỉ trùng một phần ngày đã duyệt",
+    "badge": "Trùng lịch nghỉ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Phan Thảo My xin nghỉ 14-15/09 nhưng ngày 14/09 đã có đơn duyệt -> Báo lỗi OVERLAPPING_REQUEST, yêu cầu sửa ngày bắt đầu sang 15/09.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Nghỉ phép cá nhân 2 ngày",
+      "approved_working_dates": [
+        "2026-09-14"
+      ],
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "OVERLAPPING_REQUEST",
+      "deducted_days": 0,
+      "note": "Phan Thảo My xin nghỉ 14-15/09 nhưng ngày 14/09 đã có đơn duyệt -> Báo lỗi OVERLAPPING_REQUEST, yêu cầu sửa ngày bắt đầu sang 15/09."
+    }
+  },
+  {
+    "id": "TC-DUP-09",
+    "primaryEmpId": "EMP011",
+    "title": "TC-DUP-09: [Bẫy trùng lặp] Toàn bộ ngày xin nghỉ đã có đơn được duyệt trước đó",
+    "badge": "Trùng lịch nghỉ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Hoàng Kim Yến nộp đơn ngày 14/09 trùng hoàn toàn khoảng thời gian đã được phê duyệt -> Tự động từ chối REQUEST_ALREADY_COVERED để tránh trừ phép trùng lặp.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép cá nhân",
+      "approved_working_dates": [
+        "2026-09-14"
+      ],
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_REJECT",
+      "target_role": "EMPLOYEE",
+      "error_code": "REQUEST_ALREADY_COVERED",
+      "deducted_days": 0,
+      "note": "Hoàng Kim Yến nộp đơn ngày 14/09 trùng hoàn toàn khoảng thời gian đã được phê duyệt -> Tự động từ chối REQUEST_ALREADY_COVERED để tránh trừ phép trùng lặp."
+    }
+  },
+  {
+    "id": "TC-DUP-10",
+    "primaryEmpId": "EMP012",
+    "title": "TC-DUP-10: [Bẫy trùng lặp] Khoảng ngày xin nghỉ trùng một phần ngày đã duyệt",
+    "badge": "Trùng lịch nghỉ",
+    "badgeClass": "bg-danger-lt",
+    "desc": "Lê Mai Loan xin nghỉ 14-15/09 nhưng ngày 14/09 đã có đơn duyệt -> Báo lỗi OVERLAPPING_REQUEST, yêu cầu sửa ngày bắt đầu sang 15/09.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Nghỉ phép cá nhân 2 ngày",
+      "approved_working_dates": [
+        "2026-09-14"
+      ],
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "OVERLAPPING_REQUEST",
+      "deducted_days": 0,
+      "note": "Lê Mai Loan xin nghỉ 14-15/09 nhưng ngày 14/09 đã có đơn duyệt -> Báo lỗi OVERLAPPING_REQUEST, yêu cầu sửa ngày bắt đầu sang 15/09."
+    }
+  },
+  {
+    "id": "TC-BND-01",
+    "primaryEmpId": "EMP005",
+    "title": "TC-BND-01: Biên số dư phép - Số dư còn 1 ngày xin đúng 1 ngày (Duyệt)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Nguyễn Văn An số dư còn đúng 1 ngày phép: xin 1 ngày -> AI tự duyệt, số dư trừ về 0.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Giải quyết việc riêng gia đình",
+      "remaining_leave_days": 1.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Nguyễn Văn An số dư còn đúng 1 ngày phép: xin 1 ngày -> AI tự duyệt, số dư trừ về 0."
+    }
+  },
+  {
+    "id": "TC-BND-02",
+    "primaryEmpId": "EMP004",
+    "title": "TC-BND-02: Chạm đúng ngưỡng 30% hiện diện phòng ban (Đạt chuẩn)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Lê Văn Nam xin nghỉ khi phòng ban vắng 2/10, cộng người xin là 3/10 (30% <= 30%) -> AI phê duyệt tự động.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép cá nhân",
+      "total_team_members": 10,
+      "team_absent_count": 2,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 14.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Lê Văn Nam xin nghỉ khi phòng ban vắng 2/10, cộng người xin là 3/10 (30% <= 30%) -> AI phê duyệt tự động."
+    }
+  },
+  {
+    "id": "TC-BND-03",
+    "primaryEmpId": "EMP003",
+    "title": "TC-BND-03: Đơn xin nghỉ rơi vào Thứ Bảy & Chủ Nhật (Miễn làm đơn)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Trần Quốc Hưng xin nghỉ rơi vào 19-20/09 (cuối tuần) -> Không tính ngày làm việc, không trừ phép, không cần xin nghỉ.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-19",
+      "to_date": "2026-09-20",
+      "reason": "Nghỉ cuối tuần",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NO_LEAVE_REQUIRED",
+      "target_role": null,
+      "error_code": "DAY_ALREADY_NON_WORKING",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng xin nghỉ rơi vào 19-20/09 (cuối tuần) -> Không tính ngày làm việc, không trừ phép, không cần xin nghỉ."
+    }
+  },
+  {
+    "id": "TC-BND-04",
+    "primaryEmpId": "EMP006",
+    "title": "TC-BND-04: [Lỗi form] Thiếu ngày bắt đầu nghỉ (Bắt lỗi sửa đơn)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Bùi Tuấn Kiệt nộp đơn bỏ trống ngày bắt đầu -> Báo lỗi DATE_MISSING, yêu cầu bổ sung.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": null,
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép chưa chọn ngày",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "DATE_MISSING",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt nộp đơn bỏ trống ngày bắt đầu -> Báo lỗi DATE_MISSING, yêu cầu bổ sung."
+    }
+  },
+  {
+    "id": "TC-BND-05",
+    "primaryEmpId": "EMP007",
+    "title": "TC-BND-05: [Lỗi form] Ngày kết thúc trước ngày bắt đầu (Bắt lỗi)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Lê Thị Hương chọn ngày kết thúc (13/09) trước ngày bắt đầu (14/09) -> Bắt lỗi DATE_INVALID.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-13",
+      "reason": "Nghỉ phép",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "DATE_INVALID",
+      "deducted_days": 0,
+      "note": "Lê Thị Hương chọn ngày kết thúc (13/09) trước ngày bắt đầu (14/09) -> Bắt lỗi DATE_INVALID."
+    }
+  },
+  {
+    "id": "TC-BND-06",
+    "primaryEmpId": "EMP008",
+    "title": "TC-BND-06: [Bẫy thiếu bàn giao] Phép năm 3 ngày nhưng không điền người nhận bàn giao",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Nguyễn Thị Kim Ngân xin nghỉ 3 ngày phép năm (từ 3 ngày trở lên bắt buộc có bàn giao) nhưng để trống -> Báo lỗi HANDOVER_REQUIRED.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Nghỉ phép 3 ngày",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 16.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "HANDOVER_REQUIRED",
+      "deducted_days": 0,
+      "note": "Nguyễn Thị Kim Ngân xin nghỉ 3 ngày phép năm (từ 3 ngày trở lên bắt buộc có bàn giao) nhưng để trống -> Báo lỗi HANDOVER_REQUIRED."
+    }
+  },
+  {
+    "id": "TC-BND-07",
+    "primaryEmpId": "EMP009",
+    "title": "TC-BND-07: [Bẫy thử việc] Hợp đồng thử việc xin phép năm hưởng lương (Chặn)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Võ Minh Khang đang trong thời gian thử việc xin phép năm hưởng lương -> Bắt lỗi PROBATION_ANNUAL_RESTRICTED.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Thử việc xin phép năm",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 0.0,
+      "employment_status": "PROBATION"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "PROBATION_ANNUAL_RESTRICTED",
+      "deducted_days": 0,
+      "note": "Võ Minh Khang đang trong thời gian thử việc xin phép năm hưởng lương -> Bắt lỗi PROBATION_ANNUAL_RESTRICTED."
+    }
+  },
+  {
+    "id": "TC-BND-08",
+    "primaryEmpId": "EMP010",
+    "title": "TC-BND-08: Nghỉ ốm 2 ngày vượt ngưỡng AI tự duyệt 1 ngày -> Chuyển Quản lý",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Phan Thảo My xin nghỉ ốm 2 ngày có giấy chứng nhận hợp lệ -> Vượt ngưỡng AI tự duyệt 1 ngày, chuyển Quản lý trực tiếp duyệt BHXH.",
+    "payload": {
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Điều trị ngoại trú theo giấy khám",
+      "proof": {
+        "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
+        "issuer": "Bệnh viện Đa khoa",
+        "patient_name": "Phan Thảo My",
+        "issue_date": "2026-09-13",
+        "recommended_from_date": "2026-09-14",
+        "recommended_to_date": "2026-09-15",
+        "signature_present": true,
+        "document_readability": "READABLE",
+        "proof_verification_status": "VERIFIED"
+      },
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "error_code": "DURATION_OVER_AI_LIMIT",
+      "deducted_days": 0,
+      "note": "Phan Thảo My xin nghỉ ốm 2 ngày có giấy chứng nhận hợp lệ -> Vượt ngưỡng AI tự duyệt 1 ngày, chuyển Quản lý trực tiếp duyệt BHXH."
+    }
+  },
+  {
+    "id": "TC-BND-09",
+    "primaryEmpId": "EMP011",
+    "title": "TC-BND-09: Biên số dư phép - Số dư còn 1 ngày xin đúng 1 ngày (Duyệt)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Hoàng Kim Yến số dư còn đúng 1 ngày phép: xin 1 ngày -> AI tự duyệt, số dư trừ về 0.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Giải quyết việc riêng gia đình",
+      "remaining_leave_days": 1.0,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Hoàng Kim Yến số dư còn đúng 1 ngày phép: xin 1 ngày -> AI tự duyệt, số dư trừ về 0."
+    }
+  },
+  {
+    "id": "TC-BND-10",
+    "primaryEmpId": "EMP012",
+    "title": "TC-BND-10: Chạm đúng ngưỡng 30% hiện diện phòng ban (Đạt chuẩn)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Lê Mai Loan xin nghỉ khi phòng ban vắng 2/10, cộng người xin là 3/10 (30% <= 30%) -> AI phê duyệt tự động.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép cá nhân",
+      "total_team_members": 10,
+      "team_absent_count": 2,
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 12.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "error_code": null,
+      "deducted_days": 1,
+      "note": "Lê Mai Loan xin nghỉ khi phòng ban vắng 2/10, cộng người xin là 3/10 (30% <= 30%) -> AI phê duyệt tự động."
+    }
+  },
+  {
+    "id": "TC-BND-11",
+    "primaryEmpId": "EMP005",
+    "title": "TC-BND-11: Đơn xin nghỉ rơi vào Thứ Bảy & Chủ Nhật (Miễn làm đơn)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Nguyễn Văn An xin nghỉ rơi vào 19-20/09 (cuối tuần) -> Không tính ngày làm việc, không trừ phép, không cần xin nghỉ.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-19",
+      "to_date": "2026-09-20",
+      "reason": "Nghỉ cuối tuần",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NO_LEAVE_REQUIRED",
+      "target_role": null,
+      "error_code": "DAY_ALREADY_NON_WORKING",
+      "deducted_days": 0,
+      "note": "Nguyễn Văn An xin nghỉ rơi vào 19-20/09 (cuối tuần) -> Không tính ngày làm việc, không trừ phép, không cần xin nghỉ."
+    }
+  },
+  {
+    "id": "TC-BND-12",
+    "primaryEmpId": "EMP004",
+    "title": "TC-BND-12: [Lỗi form] Thiếu ngày bắt đầu nghỉ (Bắt lỗi sửa đơn)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Lê Văn Nam nộp đơn bỏ trống ngày bắt đầu -> Báo lỗi DATE_MISSING, yêu cầu bổ sung.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": null,
+      "to_date": "2026-09-14",
+      "reason": "Nghỉ phép chưa chọn ngày",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "DATE_MISSING",
+      "deducted_days": 0,
+      "note": "Lê Văn Nam nộp đơn bỏ trống ngày bắt đầu -> Báo lỗi DATE_MISSING, yêu cầu bổ sung."
+    }
+  },
+  {
+    "id": "TC-BND-13",
+    "primaryEmpId": "EMP003",
+    "title": "TC-BND-13: [Lỗi form] Ngày kết thúc trước ngày bắt đầu (Bắt lỗi)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Trần Quốc Hưng chọn ngày kết thúc (13/09) trước ngày bắt đầu (14/09) -> Bắt lỗi DATE_INVALID.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-13",
+      "reason": "Nghỉ phép",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "DATE_INVALID",
+      "deducted_days": 0,
+      "note": "Trần Quốc Hưng chọn ngày kết thúc (13/09) trước ngày bắt đầu (14/09) -> Bắt lỗi DATE_INVALID."
+    }
+  },
+  {
+    "id": "TC-BND-14",
+    "primaryEmpId": "EMP006",
+    "title": "TC-BND-14: [Bẫy thiếu bàn giao] Phép năm 3 ngày nhưng không điền người nhận bàn giao",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Bùi Tuấn Kiệt xin nghỉ 3 ngày phép năm (từ 3 ngày trở lên bắt buộc có bàn giao) nhưng để trống -> Báo lỗi HANDOVER_REQUIRED.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-16",
+      "reason": "Nghỉ phép 3 ngày",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 5.0,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "HANDOVER_REQUIRED",
+      "deducted_days": 0,
+      "note": "Bùi Tuấn Kiệt xin nghỉ 3 ngày phép năm (từ 3 ngày trở lên bắt buộc có bàn giao) nhưng để trống -> Báo lỗi HANDOVER_REQUIRED."
+    }
+  },
+  {
+    "id": "TC-BND-15",
+    "primaryEmpId": "EMP007",
+    "title": "TC-BND-15: [Bẫy thử việc] Hợp đồng thử việc xin phép năm hưởng lương (Chặn)",
+    "badge": "Trường hợp biên",
+    "badgeClass": "bg-secondary-lt",
+    "desc": "Lê Thị Hương đang trong thời gian thử việc xin phép năm hưởng lương -> Bắt lỗi PROBATION_ANNUAL_RESTRICTED.",
+    "payload": {
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Thử việc xin phép năm",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "total_team_members": 6,
+      "remaining_leave_days": 0.0,
+      "employment_status": "PROBATION"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": "EMPLOYEE",
+      "error_code": "PROBATION_ANNUAL_RESTRICTED",
+      "deducted_days": 0,
+      "note": "Lê Thị Hương đang trong thời gian thử việc xin phép năm hưởng lương -> Bắt lỗi PROBATION_ANNUAL_RESTRICTED."
+    }
+  },
+  {
+    "id": "TC-LNG-01",
+    "primaryEmpId": "EMP005",
+    "title": "TC-LNG-01: [Ngôn ngữ tự do] Tôi xin nghỉ phép năm ngày 14/09/2026.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Nguyễn Văn An: 'Tôi xin nghỉ phép năm ngày 14/09/2026.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\"}.",
+    "payload": {
+      "raw_text": "Tôi xin nghỉ phép năm ngày 14/09/2026.",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Tôi xin nghỉ phép năm ngày 14/09/2026.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Nguyễn Văn An: 'Tôi xin nghỉ phép năm ngày 14/09/2026.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\"}."
+    }
+  },
+  {
+    "id": "TC-LNG-02",
+    "primaryEmpId": "EMP004",
+    "title": "TC-LNG-02: [Ngôn ngữ tự do] Cho em nghỉ phép năm ngày mai nhé.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Lê Văn Nam: 'Cho em nghỉ phép năm ngày mai nhé.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-02\", \"to_date\": \"2026-09-02\"}.",
+    "payload": {
+      "raw_text": "Cho em nghỉ phép năm ngày mai nhé.",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-02",
+      "to_date": "2026-09-02",
+      "reason": "Cho em nghỉ phép năm ngày mai nhé.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Lê Văn Nam: 'Cho em nghỉ phép năm ngày mai nhé.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-02\", \"to_date\": \"2026-09-02\"}."
+    }
+  },
+  {
+    "id": "TC-LNG-03",
+    "primaryEmpId": "EMP003",
+    "title": "TC-LNG-03: [Ngôn ngữ tự do] Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Trần Quốc Hưng: 'Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.' -> Tác tử trích xuất tham số: {\"leave_type\": \"SICK_MEDICAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\"}.",
+    "payload": {
+      "raw_text": "Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Trần Quốc Hưng: 'Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.' -> Tác tử trích xuất tham số: {\"leave_type\": \"SICK_MEDICAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\"}."
+    }
+  },
+  {
+    "id": "TC-LNG-04",
+    "primaryEmpId": "EMP006",
+    "title": "TC-LNG-04: [Ngôn ngữ tự do] Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Bùi Tuấn Kiệt: 'Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.' -> Tác tử trích xuất tham số: {\"date_ambiguous\": true}.",
+    "payload": {
+      "raw_text": "Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Bùi Tuấn Kiệt: 'Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.' -> Tác tử trích xuất tham số: {\"date_ambiguous\": true}."
+    }
+  },
+  {
+    "id": "TC-LNG-05",
+    "primaryEmpId": "EMP007",
+    "title": "TC-LNG-05: [Ngôn ngữ tự do] Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Lê Thị Hương: 'Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.' -> Tác tử trích xuất tham số: {\"leave_type\": \"UNPAID_OTHER\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-15\"}.",
+    "payload": {
+      "raw_text": "Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.",
+      "leave_type": "UNPAID_OTHER",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Lê Thị Hương: 'Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.' -> Tác tử trích xuất tham số: {\"leave_type\": \"UNPAID_OTHER\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-15\"}."
+    }
+  },
+  {
+    "id": "TC-LNG-06",
+    "primaryEmpId": "EMP008",
+    "title": "TC-LNG-06: [Ngôn ngữ tự do] Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Nguyễn Thị Kim Ngân: 'Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\", \"handover_person_name\": \"Lê Văn Nam\"}.",
+    "payload": {
+      "raw_text": "Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Nguyễn Thị Kim Ngân: 'Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\", \"handover_person_name\": \"Lê Văn Nam\"}."
+    }
+  },
+  {
+    "id": "TC-LNG-07",
+    "primaryEmpId": "EMP009",
+    "title": "TC-LNG-07: [Ngôn ngữ tự do] Tôi xin nghỉ phép năm ngày 14/09/2026.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Võ Minh Khang: 'Tôi xin nghỉ phép năm ngày 14/09/2026.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\"}.",
+    "payload": {
+      "raw_text": "Tôi xin nghỉ phép năm ngày 14/09/2026.",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Tôi xin nghỉ phép năm ngày 14/09/2026.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Võ Minh Khang: 'Tôi xin nghỉ phép năm ngày 14/09/2026.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\"}."
+    }
+  },
+  {
+    "id": "TC-LNG-08",
+    "primaryEmpId": "EMP010",
+    "title": "TC-LNG-08: [Ngôn ngữ tự do] Cho em nghỉ phép năm ngày mai nhé.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Phan Thảo My: 'Cho em nghỉ phép năm ngày mai nhé.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-02\", \"to_date\": \"2026-09-02\"}.",
+    "payload": {
+      "raw_text": "Cho em nghỉ phép năm ngày mai nhé.",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-02",
+      "to_date": "2026-09-02",
+      "reason": "Cho em nghỉ phép năm ngày mai nhé.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Phan Thảo My: 'Cho em nghỉ phép năm ngày mai nhé.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-02\", \"to_date\": \"2026-09-02\"}."
+    }
+  },
+  {
+    "id": "TC-LNG-09",
+    "primaryEmpId": "EMP011",
+    "title": "TC-LNG-09: [Ngôn ngữ tự do] Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Hoàng Kim Yến: 'Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.' -> Tác tử trích xuất tham số: {\"leave_type\": \"SICK_MEDICAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\"}.",
+    "payload": {
+      "raw_text": "Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.",
+      "leave_type": "SICK_MEDICAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Hoàng Kim Yến: 'Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.' -> Tác tử trích xuất tham số: {\"leave_type\": \"SICK_MEDICAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\"}."
+    }
+  },
+  {
+    "id": "TC-LNG-10",
+    "primaryEmpId": "EMP012",
+    "title": "TC-LNG-10: [Ngôn ngữ tự do] Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Lê Mai Loan: 'Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.' -> Tác tử trích xuất tham số: {\"date_ambiguous\": true}.",
+    "payload": {
+      "raw_text": "Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "NEED_CORRECTION",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Lê Mai Loan: 'Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.' -> Tác tử trích xuất tham số: {\"date_ambiguous\": true}."
+    }
+  },
+  {
+    "id": "TC-LNG-11",
+    "primaryEmpId": "EMP005",
+    "title": "TC-LNG-11: [Ngôn ngữ tự do] Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Nguyễn Văn An: 'Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.' -> Tác tử trích xuất tham số: {\"leave_type\": \"UNPAID_OTHER\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-15\"}.",
+    "payload": {
+      "raw_text": "Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.",
+      "leave_type": "UNPAID_OTHER",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-15",
+      "reason": "Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Nguyễn Văn An: 'Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.' -> Tác tử trích xuất tham số: {\"leave_type\": \"UNPAID_OTHER\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-15\"}."
+    }
+  },
+  {
+    "id": "TC-LNG-12",
+    "primaryEmpId": "EMP004",
+    "title": "TC-LNG-12: [Ngôn ngữ tự do] Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.",
+    "badge": "Mẫu ngôn ngữ",
+    "badgeClass": "bg-info-lt",
+    "desc": "Mẫu văn bản tự do của Lê Văn Nam: 'Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\", \"handover_person_name\": \"Lê Văn Nam\"}.",
+    "payload": {
+      "raw_text": "Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "AUTO_APPROVE",
+      "target_role": null,
+      "note": "Mẫu văn bản tự do của Lê Văn Nam: 'Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.' -> Tác tử trích xuất tham số: {\"leave_type\": \"ANNUAL\", \"from_date\": \"2026-09-14\", \"to_date\": \"2026-09-14\", \"handover_person_name\": \"Lê Văn Nam\"}."
+    }
+  },
+  {
+    "id": "TC-LNG-13",
+    "primaryEmpId": "EMP003",
+    "title": "TC-LNG-13: [Phản hồi người duyệt] Đồng ý phê duyệt đơn.",
+    "badge": "Ý định duyệt",
+    "badgeClass": "bg-primary-lt",
+    "desc": "Phản hồi từ cấp Quản lý: 'Đồng ý phê duyệt đơn.' -> Nhận diện ý định phê duyệt: APPROVE_OVERRIDE.",
+    "payload": {
+      "raw_text": "Đồng ý phê duyệt đơn.",
+      "reviewer_reply": "Đồng ý phê duyệt đơn.",
+      "intent": "APPROVE_OVERRIDE",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Mẫu phản hồi duyệt",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "intent": "APPROVE_OVERRIDE",
+      "note": "Phản hồi từ cấp Quản lý: 'Đồng ý phê duyệt đơn.' -> Nhận diện ý định phê duyệt: APPROVE_OVERRIDE."
+    }
+  },
+  {
+    "id": "TC-LNG-14",
+    "primaryEmpId": "EMP006",
+    "title": "TC-LNG-14: [Phản hồi người duyệt] Từ chối duyệt đơn do không đủ nhân sự phòng ban.",
+    "badge": "Ý định duyệt",
+    "badgeClass": "bg-primary-lt",
+    "desc": "Phản hồi từ cấp Quản lý: 'Từ chối duyệt đơn do không đủ nhân sự phòng ban.' -> Nhận diện ý định phê duyệt: REJECT.",
+    "payload": {
+      "raw_text": "Từ chối duyệt đơn do không đủ nhân sự phòng ban.",
+      "reviewer_reply": "Từ chối duyệt đơn do không đủ nhân sự phòng ban.",
+      "intent": "REJECT",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Mẫu phản hồi duyệt",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "intent": "REJECT",
+      "note": "Phản hồi từ cấp Quản lý: 'Từ chối duyệt đơn do không đủ nhân sự phòng ban.' -> Nhận diện ý định phê duyệt: REJECT."
+    }
+  },
+  {
+    "id": "TC-LNG-15",
+    "primaryEmpId": "EMP007",
+    "title": "TC-LNG-15: [Phản hồi người duyệt] Yêu cầu bổ sung giấy chứng nhận y tế có mộc bệnh viện.",
+    "badge": "Ý định duyệt",
+    "badgeClass": "bg-primary-lt",
+    "desc": "Phản hồi từ cấp Quản lý: 'Yêu cầu bổ sung giấy chứng nhận y tế có mộc bệnh viện.' -> Nhận diện ý định phê duyệt: REQUEST_MORE_INFO.",
+    "payload": {
+      "raw_text": "Yêu cầu bổ sung giấy chứng nhận y tế có mộc bệnh viện.",
+      "reviewer_reply": "Yêu cầu bổ sung giấy chứng nhận y tế có mộc bệnh viện.",
+      "intent": "REQUEST_MORE_INFO",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Mẫu phản hồi duyệt",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "intent": "REQUEST_MORE_INFO",
+      "note": "Phản hồi từ cấp Quản lý: 'Yêu cầu bổ sung giấy chứng nhận y tế có mộc bệnh viện.' -> Nhận diện ý định phê duyệt: REQUEST_MORE_INFO."
+    }
+  },
+  {
+    "id": "TC-LNG-16",
+    "primaryEmpId": "EMP008",
+    "title": "TC-LNG-16: [Phản hồi người duyệt] Đề nghị sửa ngày bắt đầu sang 15/09/2026 để kịp bàn giao.",
+    "badge": "Ý định duyệt",
+    "badgeClass": "bg-primary-lt",
+    "desc": "Phản hồi từ cấp Quản lý: 'Đề nghị sửa ngày bắt đầu sang 15/09/2026 để kịp bàn giao.' -> Nhận diện ý định phê duyệt: MODIFY_CONDITIONAL.",
+    "payload": {
+      "raw_text": "Đề nghị sửa ngày bắt đầu sang 15/09/2026 để kịp bàn giao.",
+      "reviewer_reply": "Đề nghị sửa ngày bắt đầu sang 15/09/2026 để kịp bàn giao.",
+      "intent": "MODIFY_CONDITIONAL",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Mẫu phản hồi duyệt",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "intent": "MODIFY_CONDITIONAL",
+      "note": "Phản hồi từ cấp Quản lý: 'Đề nghị sửa ngày bắt đầu sang 15/09/2026 để kịp bàn giao.' -> Nhận diện ý định phê duyệt: MODIFY_CONDITIONAL."
+    }
+  },
+  {
+    "id": "TC-LNG-17",
+    "primaryEmpId": "EMP009",
+    "title": "TC-LNG-17: [Phản hồi người duyệt] Để tôi xem xét lại lịch trực tuần tới rồi trả lời sau.",
+    "badge": "Ý định duyệt",
+    "badgeClass": "bg-primary-lt",
+    "desc": "Phản hồi từ cấp Quản lý: 'Để tôi xem xét lại lịch trực tuần tới rồi trả lời sau.' -> Nhận diện ý định phê duyệt: AMBIGUOUS.",
+    "payload": {
+      "raw_text": "Để tôi xem xét lại lịch trực tuần tới rồi trả lời sau.",
+      "reviewer_reply": "Để tôi xem xét lại lịch trực tuần tới rồi trả lời sau.",
+      "intent": "AMBIGUOUS",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Mẫu phản hồi duyệt",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "intent": "AMBIGUOUS",
+      "note": "Phản hồi từ cấp Quản lý: 'Để tôi xem xét lại lịch trực tuần tới rồi trả lời sau.' -> Nhận diện ý định phê duyệt: AMBIGUOUS."
+    }
+  },
+  {
+    "id": "TC-LNG-18",
+    "primaryEmpId": "EMP010",
+    "title": "TC-LNG-18: [Phản hồi người duyệt] Chưa quyết định, cần trao đổi thêm với Tech Lead.",
+    "badge": "Ý định duyệt",
+    "badgeClass": "bg-primary-lt",
+    "desc": "Phản hồi từ cấp Quản lý: 'Chưa quyết định, cần trao đổi thêm với Tech Lead.' -> Nhận diện ý định phê duyệt: AMBIGUOUS.",
+    "payload": {
+      "raw_text": "Chưa quyết định, cần trao đổi thêm với Tech Lead.",
+      "reviewer_reply": "Chưa quyết định, cần trao đổi thêm với Tech Lead.",
+      "intent": "AMBIGUOUS",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Mẫu phản hồi duyệt",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "intent": "AMBIGUOUS",
+      "note": "Phản hồi từ cấp Quản lý: 'Chưa quyết định, cần trao đổi thêm với Tech Lead.' -> Nhận diện ý định phê duyệt: AMBIGUOUS."
+    }
+  },
+  {
+    "id": "TC-LNG-19",
+    "primaryEmpId": "EMP011",
+    "title": "TC-LNG-19: [Phản hồi người duyệt] Không đồng ý nghỉ vào đợt release sản phẩm.",
+    "badge": "Ý định duyệt",
+    "badgeClass": "bg-primary-lt",
+    "desc": "Phản hồi từ cấp Quản lý: 'Không đồng ý nghỉ vào đợt release sản phẩm.' -> Nhận diện ý định phê duyệt: REJECT.",
+    "payload": {
+      "raw_text": "Không đồng ý nghỉ vào đợt release sản phẩm.",
+      "reviewer_reply": "Không đồng ý nghỉ vào đợt release sản phẩm.",
+      "intent": "REJECT",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Mẫu phản hồi duyệt",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "intent": "REJECT",
+      "note": "Phản hồi từ cấp Quản lý: 'Không đồng ý nghỉ vào đợt release sản phẩm.' -> Nhận diện ý định phê duyệt: REJECT."
+    }
+  },
+  {
+    "id": "TC-LNG-20",
+    "primaryEmpId": "EMP012",
+    "title": "TC-LNG-20: [Phản hồi người duyệt] Tôi cần kiểm tra lại tiến độ dự án trước khi duyệt.",
+    "badge": "Ý định duyệt",
+    "badgeClass": "bg-primary-lt",
+    "desc": "Phản hồi từ cấp Quản lý: 'Tôi cần kiểm tra lại tiến độ dự án trước khi duyệt.' -> Nhận diện ý định phê duyệt: AMBIGUOUS.",
+    "payload": {
+      "raw_text": "Tôi cần kiểm tra lại tiến độ dự án trước khi duyệt.",
+      "reviewer_reply": "Tôi cần kiểm tra lại tiến độ dự án trước khi duyệt.",
+      "intent": "AMBIGUOUS",
+      "leave_type": "ANNUAL",
+      "from_date": "2026-09-14",
+      "to_date": "2026-09-14",
+      "reason": "Mẫu phản hồi duyệt",
+      "submitted_at": "2026-09-01T08:00:00+07:00",
+      "remaining_leave_days": 10.0,
+      "total_team_members": 6,
+      "employment_status": "REGULAR"
+    },
+    "expected": {
+      "decision": "ESCALATE",
+      "target_role": "DIRECT_MANAGER",
+      "intent": "AMBIGUOUS",
+      "note": "Phản hồi từ cấp Quản lý: 'Tôi cần kiểm tra lại tiến độ dự án trước khi duyệt.' -> Nhận diện ý định phê duyệt: AMBIGUOUS."
     }
   }
 ];
@@ -3400,805 +4807,1405 @@ const STAFF_TEST_CASES = [
 /* METADATA SPRINT 1: PHÂN LOẠI 3 NHÓM BẤT ĐỊNH & CÂU HỎI HÀNH ĐỘNG CỤ THỂ   */
 /* ========================================================================= */
 const TESTCASE_SPRINT1_METADATA = {
-  "TC-HARD-03": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Cấp CEO)",
-    primary: "Nghỉ phép năm",
-    duration: "6 ngày làm việc",
-    subtext: "Du lịch gia đình dài ngày • Bàn giao cho Lê Văn Nam",
-    leaveTypeFriendly: "Nghỉ phép năm (6 ngày làm việc) - Du lịch gia đình dài ngày • Bàn giao cho Lê Văn Nam",
-    actionableQuestion: "Đơn nghỉ phép năm 6 ngày làm việc liên tục vượt trần 5 ngày của Quản lý trực tiếp. Tổng Giám đốc (CEO) có phê duyệt chấp thuận đợt nghỉ phép dài ngày này không?"
-  },
-  "TC-EMP003-01": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ việc riêng có lương",
-    duration: "1 ngày làm việc",
-    subtext: "Lễ thành hôn con trai (Trần Quốc Anh) • UBND Phường Dịch Vọng Hậu",
-    leaveTypeFriendly: "Nghỉ việc riêng có lương (1 ngày làm việc) - Con kết hôn (Trần Quốc Anh) • UBND Phường Dịch Vọng Hậu",
-    actionableQuestion: "Nhân viên Trần Quốc Hưng xin nghỉ 1 ngày tham dự lễ thành hôn của con trai ruột kèm Giấy kết hôn. Quản lý trực tiếp có phê duyệt hưởng nguyên lương 01 ngày theo Điều 115 BLLĐ không?"
-  },
-  "TC-EMP003-02": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ ốm nội trú",
-    duration: "2 ngày làm việc",
-    subtext: "Phẫu thuật tán sỏi nội soi • Giấy ra viện BV Bạch Mai",
-    leaveTypeFriendly: "Nghỉ ốm nội trú (2 ngày làm việc) - Phẫu thuật tán sỏi nội soi • BV Bạch Mai",
-    actionableQuestion: "Nhân viên xin nghỉ ốm 2 ngày làm việc theo Giấy ra viện phẫu thuật tại BV Bạch Mai. Quản lý trực tiếp có xác nhận duyệt hưởng chế độ ốm đau BHXH không?"
-  },
-  "TC-MGR-01": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ phép năm",
-    duration: "4 ngày làm việc",
-    subtext: "Nghỉ phép thường niên • Bàn giao cho Trần Quốc Hưng",
-    leaveTypeFriendly: "Nghỉ phép năm (4 ngày làm việc) - Nghỉ phép thường niên • Bàn giao cho Trần Quốc Hưng",
-    actionableQuestion: "Nhân viên Lê Văn Nam xin 4 ngày phép năm có bàn giao công việc cho EMP003 cùng phòng. Quản lý Kỹ thuật có phê duyệt đợt nghỉ phép này không?"
-  },
-  "TC-HARD-06": {
-    group: "UNCERTAIN_FACTS",
-    groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    shortPrefix: "Chưa rõ (Bàn giao sai phòng)",
-    primary: "Nghỉ phép năm",
-    duration: "3 ngày làm việc",
-    subtext: "Nghỉ phép thường niên • Bàn giao sai phòng ban (EMP009 - Marketing)",
-    leaveTypeFriendly: "Nghỉ phép năm (3 ngày làm việc) - Nghỉ phép thường niên • Bàn giao sai phòng ban (EMP009 - Marketing)",
-    actionableQuestion: "Đơn bàn giao công việc chéo cho nhân sự khác phòng ban (EMP009 - Marketing). Nhân viên vui lòng chỉ định người nhận bàn giao cùng phòng ban Kỹ thuật."
-  },
-  "TC-VLM-05": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ ốm hưởng BHXH",
-    duration: "3 ngày làm việc",
-    subtext: "Viêm xoang hàm cấp có mủ • BV Đa khoa Hồng Ngọc (Chữ ký điện tử)",
-    leaveTypeFriendly: "Nghỉ ốm hưởng BHXH (3 ngày làm việc) - Viêm xoang hàm cấp có mủ • BV Đa khoa Hồng Ngọc (Chữ ký số)",
-    actionableQuestion: "Chứng từ y tế BV Hồng Ngọc có chữ ký điện tử hợp lệ theo TT 25/2025/TT-BYT. Quản lý trực tiếp có phê duyệt 3 ngày nghỉ ốm đau BHXH không?"
-  },
-  "TC-VLM-03": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt ngưỡng AI tự duyệt (Lead Team)",
-    primary: "Nghỉ ốm hưởng BHXH",
-    duration: "3 ngày làm việc",
-    subtext: "Rối loạn tiêu hóa cấp • BV Đa khoa Quốc tế Hà Nội",
-    leaveTypeFriendly: "Nghỉ ốm hưởng BHXH (3 ngày làm việc) - Rối loạn tiêu hóa cấp • BV Đa khoa Quốc tế Hà Nội",
-    actionableQuestion: "Chứng từ hợp lệ chỉ định đủ 3 ngày nghỉ ốm. Đơn vượt ngưỡng AI tự duyệt 1 ngày; Lead Team có phê duyệt theo phân cấp không?"
-  },
-  "TC-AI-01": {
-    group: "ROUTINE",
-    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
-    shortPrefix: "Rõ ràng (Duyệt)",
-    primary: "Nghỉ phép năm",
-    duration: "1 ngày làm việc",
-    subtext: "Giải quyết việc riêng gia đình",
-    leaveTypeFriendly: "Nghỉ phép năm (1 ngày làm việc) - Giải quyết việc riêng gia đình",
-    actionableQuestion: "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư, hệ thống AI tự động duyệt & trừ 1 ngày phép."
-  },
-  "TC-AI-05": {
-    group: "ROUTINE",
-    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
-    shortPrefix: "Rõ ràng (Miễn xin phép)",
-    primary: "Nghỉ lễ luật định",
-    duration: "0 ngày làm việc",
-    subtext: "Giỗ Tổ Hùng Vương & nghỉ bù • Miễn trừ làm đơn xin nghỉ",
-    leaveTypeFriendly: "Nghỉ lễ luật định (0 ngày làm việc) - Giỗ Tổ Hùng Vương & nghỉ bù • Miễn trừ làm đơn",
-    actionableQuestion: "Tự động xử lý hoàn toàn: Khoảng thời gian xin nghỉ trùng ngày lễ Giỗ Tổ & nghỉ bù luật định, không cần làm đơn xin nghỉ phép."
-  },
-  "TC-MGR-04": {
-    group: "UNCERTAIN_FACTS",
-    groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    shortPrefix: "Chưa rõ (Thân nhân họ hàng)",
-    primary: "Nghỉ việc riêng không lương",
-    duration: "1 ngày làm việc",
-    subtext: "Về quê lo việc họ hàng (Chưa rõ mức độ thân nhân hưởng lương)",
-    leaveTypeFriendly: "Nghỉ việc riêng không lương (1 ngày làm việc) - Về quê lo việc họ hàng (Chưa rõ thân nhân)",
-    actionableQuestion: "Đơn xin nghỉ 'về quê lo việc họ hàng' chưa rõ mức độ thân nhân hưởng lương hay không hưởng lương. Quản lý trực tiếp có chấp thuận duyệt đơn nghỉ không lương này không?"
-  },
-  "TC-HARD-04": {
-    group: "OUT_OF_POLICY",
-    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
-    shortPrefix: "Ngoài quy định (Cờ lạm dụng)",
-    primary: "Nghỉ phép năm",
-    duration: "1 ngày làm việc",
-    subtext: "Nghỉ việc riêng thứ Hai • Cảnh báo mẫu nghỉ lặp lại đầu tuần",
-    leaveTypeFriendly: "Nghỉ phép năm (1 ngày làm việc) - Nghỉ việc riêng thứ Hai • Cảnh báo mẫu nghỉ lặp lại đầu tuần",
-    actionableQuestion: "Đơn nghỉ phép rơi vào ngày thứ Hai sau chuỗi nghỉ các đầu tuần trước (hệ thống gắn cờ nghi vấn lạm dụng). Quản lý trực tiếp có chấp thuận hay yêu cầu nhân sự giải trình?"
-  },
-  "TC-EMP005-02": {
-    group: "OUT_OF_POLICY",
-    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
-    shortPrefix: "Ngoài quy định (Quá hạn nộp chứng từ)",
-    primary: "Nghỉ ốm hưởng BHXH",
-    duration: "2 ngày làm việc",
-    subtext: "Viêm họng phế quản cấp • BV Thu Cúc (Nộp bổ sung quá hạn 5 tháng)",
-    leaveTypeFriendly: "Nghỉ ốm hưởng BHXH (2 ngày làm việc) - Viêm họng phế quản cấp • BV Thu Cúc (Nộp bổ sung quá hạn)",
-    actionableQuestion: "Chứng từ khám sức khỏe nộp trễ quá thời hạn 3 ngày làm việc theo quy chế công ty. Quản lý có chấp thuận cho hưởng chế độ ngoại lệ hay chuyển sang trừ phép năm?"
-  },
-  "TC-AI-03A": {
-    group: "ROUTINE",
-    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
-    shortPrefix: "Rõ ràng (Duyệt)",
-    primary: "Nghỉ phép năm",
-    duration: "1 ngày làm việc",
-    subtext: "Giải quyết việc cá nhân (Số dư phép vừa đủ 1.0 ngày)",
-    leaveTypeFriendly: "Nghỉ phép năm (1 ngày làm việc) - Giải quyết việc cá nhân (Số dư phép vừa đủ 1.0 ngày)",
-    actionableQuestion: "Tự động xử lý hoàn toàn: Số dư vừa đủ 1 ngày, hệ thống AI tự động duyệt & trừ 1 ngày phép."
-  },
-  "TC-AI-03B": {
-    group: "ROUTINE",
-    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
-    shortPrefix: "Rõ ràng (Từ chối tự động)",
-    primary: "Nghỉ phép năm",
-    duration: "2 ngày làm việc",
-    subtext: "Nghỉ việc gia đình • Vượt quá số dư hiện có (Số dư còn 1.0 ngày)",
-    leaveTypeFriendly: "Nghỉ phép năm (2 ngày làm việc) - Nghỉ việc gia đình • Vượt quá số dư hiện có (còn 1.0 ngày)",
-    actionableQuestion: "Tự động xử lý hoàn toàn: Bị từ chối tự động do số ngày yêu cầu (2) vượt quá số dư phép năm còn lại (1)."
-  },
-  "TC-EMP006-01": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ ốm hưởng BHXH",
-    duration: "2 ngày làm việc",
-    subtext: "Viêm amidan hốc mủ cấp tính • BV Đa khoa Đống Đa",
-    leaveTypeFriendly: "Nghỉ ốm hưởng BHXH (2 ngày làm việc) - Viêm amidan hốc mủ cấp tính • BV Đa khoa Đống Đa",
-    actionableQuestion: "Nhân viên điều trị ngoại trú viêm amidan hốc mủ cấp tính 2 ngày kèm Giấy chứng nhận BV Đa khoa Đống Đa. Quản lý có phê duyệt chế độ ốm đau BHXH không?"
-  },
-  "TC-EMP006-02": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Cấp cứu khẩn cấp",
-    duration: "1 ngày làm việc",
-    subtext: "Đau bụng cấp nghi viêm ruột thừa • Khoa Cấp cứu BV E",
-    leaveTypeFriendly: "Cấp cứu khẩn cấp (1 ngày làm việc) - Đau bụng cấp nghi ruột thừa • Khoa Cấp cứu BV E",
-    actionableQuestion: "Nhân viên cấp cứu ban đêm tai nạn sinh hoạt nhẹ tại BV E nộp Giấy cấp cứu. Quản lý trực tiếp có phê duyệt chế độ hỗ trợ khẩn cấp không?"
-  },
-  "TC-AI-04A": {
-    group: "UNCERTAIN_FACTS",
-    groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    shortPrefix: "Chưa rõ (Thử việc chưa có phép năm)",
-    primary: "Nghỉ phép năm",
-    duration: "1 ngày làm việc",
-    subtext: "Nhân sự thử việc • Chưa đủ điều kiện hưởng ngày phép năm có lương",
-    leaveTypeFriendly: "Nghỉ phép năm (1 ngày làm việc) - Thử việc chưa đủ điều kiện hưởng phép năm",
-    actionableQuestion: "Nhân sự đang trong thời gian thử việc chưa đủ điều kiện hưởng ngày phép năm có lương. Nhân viên có muốn điều chỉnh sang nghỉ việc riêng không hưởng lương không?"
-  },
-  "TC-AI-04B": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ việc riêng không lương",
-    duration: "1 ngày làm việc",
-    subtext: "Giải quyết việc cá nhân đột xuất • Nhân sự thử việc",
-    leaveTypeFriendly: "Nghỉ việc riêng không lương (1 ngày làm việc) - Giải quyết việc cá nhân đột xuất • Thử việc",
-    actionableQuestion: "Nhân sự thử việc xin nghỉ việc riêng không lương 1 ngày giải quyết việc cá nhân đột xuất. Quản lý trực tiếp có đồng ý phê duyệt đơn này không?"
-  },
-  "TC-EMP007-01": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ ốm hưởng BHXH",
-    duration: "1 ngày làm việc",
-    subtext: "Migraine tiền đình cấp, hạ đường huyết • PK Medlatec Cầu Giấy",
-    leaveTypeFriendly: "Nghỉ ốm hưởng BHXH (1 ngày làm việc) - Migraine cấp, hạ đường huyết • PK Medlatec Cầu Giấy",
-    actionableQuestion: "Nhân sự thử việc nghỉ ốm 1 ngày có chứng nhận y tế PK Medlatec. Quản lý trực tiếp có phê duyệt nghỉ ốm theo quy định BHXH không?"
-  },
-  "TC-EMP007-02": {
-    group: "UNCERTAIN_FACTS",
-    groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    shortPrefix: "Chưa rõ (Chứng từ thiếu chữ ký bác sĩ)",
-    primary: "Nghỉ ốm hưởng BHXH",
-    duration: "1 ngày làm việc",
-    subtext: "Cúm mùa A • BV Giao thông Vận tải (Thiếu chữ ký bác sĩ điều trị)",
-    leaveTypeFriendly: "Nghỉ ốm hưởng BHXH (1 ngày làm việc) - Cúm mùa A • BV Giao thông Vận tải (Thiếu chữ ký bác sĩ)",
-    actionableQuestion: "Giấy chứng nhận nghỉ việc thiếu chữ ký của bác sĩ điều trị. Nhân viên vui lòng liên hệ cơ sở y tế để bổ sung chữ ký hợp lệ trước khi gửi lại."
-  },
-  "TC-EMP008-01": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Cấp CEO)",
-    primary: "Khám thai định kỳ",
-    duration: "1 ngày làm việc",
-    subtext: "Khám thai định kỳ tuần thứ 28 • BV Phụ sản Hà Nội",
-    leaveTypeFriendly: "Khám thai định kỳ (1 ngày làm việc) - Tuần thứ 28 • BV Phụ sản Hà Nội",
-    actionableQuestion: "Nhân viên mang thai tuần 28 xin nghỉ 1 ngày khám thai định kỳ kèm chứng nhận y tế BV Phụ sản Hà Nội. Tổng Giám đốc (CEO) có phê duyệt 1 ngày nghỉ chế độ thai sản BHXH không?"
-  },
-  "TC-EMP008-02": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ việc riêng có lương",
-    duration: "3 ngày làm việc",
-    subtext: "Tang lễ mẹ ruột (Trần Thị Lan) • Trích lục UBND Xã Hải Hậu",
-    leaveTypeFriendly: "Nghỉ việc riêng có lương (3 ngày làm việc) - Tang lễ mẹ ruột (Trần Thị Lan) • UBND Xã Hải Hậu",
-    actionableQuestion: "Nhân viên xin nghỉ 3 ngày lo tang lễ cho mẹ ruột (Trần Thị Lan) kèm giấy tờ xác nhận. Quản lý trực tiếp có phê duyệt 03 ngày nghỉ nguyên lương theo Điều 115 BLLĐ không?"
-  },
-  "TC-EMP008-03": {
-    group: "ROUTINE",
-    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
-    shortPrefix: "Rõ ràng (Duyệt)",
-    primary: "Nghỉ phép năm",
-    duration: "2 ngày làm việc",
-    subtext: "Nghỉ phép thường niên • Bàn giao cho Phan Thảo My",
-    leaveTypeFriendly: "Nghỉ phép năm (2 ngày làm việc) - Nghỉ phép thường niên • Bàn giao cho Phan Thảo My",
-    actionableQuestion: "Tự động xử lý hoàn toàn: Phép năm 2 ngày có bàn giao cùng phòng ban cho EMP010, hệ thống AI tự động duyệt & trừ 2 ngày phép."
-  },
-  "TC-MGR-03": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ việc riêng có lương",
-    duration: "3 ngày làm việc",
-    subtext: "Kết hôn bản thân (Nguyễn Thu Thảo) • Giấy kết hôn UBND Phường Dịch Vọng Hậu",
-    leaveTypeFriendly: "Nghỉ việc riêng có lương (3 ngày làm việc) - Kết hôn bản thân (Nguyễn Thu Thảo) • UBND Phường Dịch Vọng Hậu",
-    actionableQuestion: "Nhân viên Võ Minh Khang xin nghỉ 3 ngày kết hôn kèm Giấy chứng nhận kết hôn hợp lệ. Quản lý trực tiếp có phê duyệt 3 ngày nghỉ chế độ đặc biệt hưởng 100% lương theo Điều 115 BLLĐ không?"
-  },
-  "TC-VLM-02": {
-    group: "UNCERTAIN_FACTS",
-    groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    shortPrefix: "Chưa rõ (Sai tên người bệnh)",
-    primary: "Nghỉ ốm hưởng BHXH",
-    duration: "3 ngày làm việc",
-    subtext: "Viêm họng hạt cấp • BV Medlatec (Tên giấy khám: Võ Hoàng Long)",
-    leaveTypeFriendly: "Nghỉ ốm hưởng BHXH (3 ngày làm việc) - Viêm họng hạt cấp • BV Medlatec (Lệch tên người bệnh)",
-    actionableQuestion: "Họ tên bệnh nhân trên chứng từ y tế là 'Võ Hoàng Long', không khớp với tên nhân viên 'Võ Minh Khang'. Nhân viên có nộp nhầm giấy khám bệnh của người khác không?"
-  },
-  "TC-EMP009-03": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ phép năm",
-    duration: "3 ngày làm việc",
-    subtext: "Giải quyết việc gia đình • Bàn giao cho Nguyễn Thị Kim Ngân",
-    leaveTypeFriendly: "Nghỉ phép năm (3 ngày làm việc) - Giải quyết việc gia đình • Bàn giao cho Nguyễn Thị Kim Ngân",
-    actionableQuestion: "Nhân viên xin nghỉ việc gia đình 3 ngày có bàn giao công việc. Quản lý trực tiếp có phê duyệt đợt nghỉ phép này không?"
-  },
-  "TC-MGR-02": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ phép năm",
-    duration: "4 ngày làm việc",
-    subtext: "Nghỉ phép cá nhân • Bàn giao cho Nguyễn Thị Kim Ngân",
-    leaveTypeFriendly: "Nghỉ phép năm (4 ngày làm việc) - Nghỉ phép cá nhân • Bàn giao cho Nguyễn Thị Kim Ngân",
-    actionableQuestion: "Phan Thảo My xin nghỉ 4 ngày phép năm có bàn giao. Quản lý trực tiếp (Dương Mỹ Duyên) có phê duyệt đợt nghỉ phép này không?"
-  },
-  "TC-HARD-05": {
-    group: "OUT_OF_POLICY",
-    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
-    shortPrefix: "Ngoài quy định (Vượt quota vắng mặt)",
-    primary: "Nghỉ phép năm",
-    duration: "1 ngày làm việc",
-    subtext: "Nghỉ cá nhân • Cảnh báo tỷ lệ vắng mặt phòng Marketing đạt 33% (vượt quota 30%)",
-    leaveTypeFriendly: "Nghỉ phép năm (1 ngày làm việc) - Nghỉ cá nhân • Vắng mặt phòng Marketing vượt quota 30%",
-    actionableQuestion: "Đơn xin nghỉ khiến tỷ lệ vắng mặt của phòng ban vượt ngưỡng an toàn 30%. Quản lý trực tiếp có chấp thuận phê duyệt ngoại lệ trong đợt cao điểm không?"
-  },
-  "TC-VLM-04": {
-    group: "UNCERTAIN_FACTS",
-    groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    shortPrefix: "Chưa rõ (Ảnh mờ nhòe)",
-    primary: "Nghỉ ốm hưởng BHXH",
-    duration: "3 ngày làm việc",
-    subtext: "Điều trị sốt virus • BV Thanh Nhàn (Ảnh chứng từ mờ nhòe không đọc được)",
-    leaveTypeFriendly: "Nghỉ ốm hưởng BHXH (3 ngày làm việc) - Sốt virus • BV Thanh Nhàn (Chứng từ mờ nhòe)",
-    actionableQuestion: "Hình ảnh chứng từ y tế bị mờ nhòe, không nhận diện được ngày tháng và chẩn đoán bác sĩ. Nhân viên vui lòng chụp lại chứng từ rõ nét."
-  },
-  "TC-EMP010-02": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ ốm hưởng BHXH",
-    duration: "3 ngày làm việc",
-    subtext: "Sốt virus nhiễm khuẩn hô hấp cấp • BV Thanh Nhàn",
-    leaveTypeFriendly: "Nghỉ ốm hưởng BHXH (3 ngày làm việc) - Sốt virus hô hấp cấp • BV Thanh Nhàn",
-    actionableQuestion: "Nhân viên sốt virus hô hấp điều trị 3 ngày có giấy chứng nhận BV Thanh Nhàn. Quản lý trực tiếp có phê duyệt chế độ ốm đau BHXH không?"
-  },
-  "TC-AI-02": {
-    group: "ROUTINE",
-    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
-    shortPrefix: "Rõ ràng (Duyệt)",
-    primary: "Nghỉ ốm hưởng BHXH",
-    duration: "1 ngày làm việc",
-    subtext: "Viêm dạ dày ruột cấp tính • BV Đa khoa Quốc tế Hà Nội",
-    leaveTypeFriendly: "Nghỉ ốm hưởng BHXH (1 ngày làm việc) - Viêm dạ dày ruột cấp • BV Đa khoa Quốc tế Hà Nội",
-    actionableQuestion: "Tự động xử lý hoàn toàn: Nghỉ ốm 1 ngày có chứng từ hợp lệ, hệ thống AI tự động phê duyệt chế độ ốm đau."
-  },
-  "TC-EMP011-02": {
-    group: "OUT_OF_POLICY",
-    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
-    shortPrefix: "Ngoài quy định (Tai nạn lao động)",
-    primary: "Nghỉ tai nạn lao động",
-    duration: "2 ngày làm việc",
-    subtext: "Bong gân cổ chân do ngã cầu thang bộ Tầng 6 • BV Giao thông Vận tải",
-    leaveTypeFriendly: "Nghỉ tai nạn lao động (2 ngày làm việc) - Ngã cầu thang bộ Tầng 6 • BV Giao thông Vận tải",
-    actionableQuestion: "Nhân viên trượt ngã cầu thang bộ tầng 6 tòa nhà công ty bị bong gân có phiếu sơ cứu BV Giao thông Vận tải. Quản lý có phê duyệt chế độ tai nạn lao động không?"
-  },
-  "TC-EMP011-03": {
-    group: "ROUTINE",
-    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
-    shortPrefix: "Rõ ràng (Duyệt)",
-    primary: "Nghỉ phép năm",
-    duration: "1 ngày làm việc",
-    subtext: "Giải quyết việc riêng gia đình",
-    leaveTypeFriendly: "Nghỉ phép năm (1 ngày làm việc) - Giải quyết việc riêng gia đình",
-    actionableQuestion: "Tự động xử lý hoàn toàn: Nghỉ phép năm 1 ngày đủ số dư, hệ thống AI tự động duyệt & trừ 1 ngày phép."
-  },
-  "TC-HARD-02": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Cấp CEO)",
-    primary: "Nghỉ việc riêng không lương",
-    duration: "21 ngày làm việc",
-    subtext: "Nghỉ việc riêng dài hạn • Bàn giao cho Phan Thảo My (Cấp CEO phê duyệt)",
-    leaveTypeFriendly: "Nghỉ việc riêng không lương (21 ngày làm việc) - Việc riêng dài hạn • Bàn giao Phan Thảo My",
-    actionableQuestion: "Nhân viên xin nghỉ việc riêng không lương dài hạn 21 ngày làm việc (19/10 - 16/11/2026). Tổng Giám đốc (CEO) có phê duyệt trường hợp nghỉ không lương dài ngày này không?"
-  },
-  "TC-EMP012-02": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ chăm con ốm (BHXH)",
-    duration: "1 ngày làm việc",
-    subtext: "Chăm con trai 3 tuổi (Đặng Minh Khôi) • BV Nhi Trung ương",
-    leaveTypeFriendly: "Nghỉ chăm con ốm (BHXH) (1 ngày làm việc) - Chăm con trai 3 tuổi (Đặng Minh Khôi) • BV Nhi Trung ương",
-    actionableQuestion: "Nhân viên nghỉ chăm con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh kèm Giấy chứng nhận y tế BV Nhi Trung ương. Quản lý có phê duyệt chế độ con ốm đau BHXH không?"
-  },
-  "TC-EMP012-03": {
-    group: "OUT_OF_POLICY",
-    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
-    shortPrefix: "Ngoài quy định (Cưới em gái không có lương)",
-    primary: "Nghỉ việc riêng",
-    duration: "1 ngày làm việc",
-    subtext: "Dự cưới em gái ruột (Lê Mai Linh) • Giấy kết hôn UBND Phường Quan Hoa (Không có lương theo luật)",
-    leaveTypeFriendly: "Nghỉ việc riêng (1 ngày làm việc) - Cưới em gái ruột (Lê Mai Linh) • UBND Phường Quan Hoa",
-    actionableQuestion: "Nghỉ đám cưới em gái ruột không thuộc diện hưởng nguyên lương theo Điều 115 BLLĐ (chỉ áp dụng cho con ruột/bản thân). Quản lý có chấp thuận cho chuyển sang nghỉ phép năm hoặc không lương không?"
-  },
-  "TC-HARD-01": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    shortPrefix: "Vượt thẩm quyền (Cấp CEO)",
-    primary: "Nghỉ phép năm",
-    duration: "3 ngày làm việc",
-    subtext: "Cấp Quản lý (Engineering Manager) xin nghỉ phép • Bàn giao cho Trần Quốc Hưng",
-    leaveTypeFriendly: "Nghỉ phép năm (3 ngày làm việc) - Quản lý Kỹ thuật xin nghỉ • Bàn giao cho Trần Quốc Hưng",
-    actionableQuestion: "Engineering Manager (Đỗ Hoàng Long) xin nghỉ phép cá nhân 3 ngày. Tổng Giám đốc (CEO) có phê duyệt đơn nghỉ phép của cấp Quản lý này không?"
-  },
-  "TC-EXT-01": {
+  "TC-VAL-01": {
     "group": "ROUTINE",
     "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
     "shortPrefix": "Rõ ràng (Duyệt)",
     "primary": "Nghỉ phép năm",
     "duration": "1 ngày làm việc",
-    "subtext": "Giải quyết việc riêng • Nguyễn Văn An",
-    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày làm việc) - Giải quyết việc riêng",
-    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư, không cần chuyển người duyệt."
+    "subtext": "Trần Quốc Hưng • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-02": {
+  "TC-VAL-02": {
     "group": "ROUTINE",
     "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
     "shortPrefix": "Rõ ràng (Duyệt)",
     "primary": "Nghỉ phép năm",
     "duration": "2 ngày làm việc",
-    "subtext": "Nghỉ thường niên • Bàn giao cho Trần Quốc Hưng",
-    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày làm việc) - Bàn giao cho Trần Quốc Hưng",
-    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm 2 ngày có bàn giao hợp lệ, không cần chuyển người duyệt."
+    "subtext": "Lê Văn Nam • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-03": {
+  "TC-VAL-03": {
     "group": "ROUTINE",
     "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
     "shortPrefix": "Rõ ràng (Duyệt)",
     "primary": "Nghỉ phép năm",
     "duration": "1 ngày làm việc",
-    "subtext": "Nghỉ thường niên • Nguyễn Thị Kim Ngân",
-    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày làm việc) - Nghỉ phép thường niên",
-    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư, không cần chuyển người duyệt."
+    "subtext": "Nguyễn Văn An • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-04": {
+  "TC-VAL-04": {
     "group": "ROUTINE",
     "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
     "shortPrefix": "Rõ ràng (Duyệt)",
     "primary": "Nghỉ phép năm",
     "duration": "2 ngày làm việc",
-    "subtext": "Nghỉ cá nhân • Bàn giao cho Nguyễn Thị Kim Ngân",
-    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày làm việc) - Bàn giao cho Nguyễn Thị Kim Ngân",
-    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm 2 ngày có bàn giao hợp lệ, không cần chuyển người duyệt."
+    "subtext": "Nguyễn Thị Kim Ngân • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-05": {
+  "TC-VAL-05": {
     "group": "ROUTINE",
     "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
     "shortPrefix": "Rõ ràng (Duyệt)",
     "primary": "Nghỉ phép năm",
     "duration": "1 ngày làm việc",
-    "subtext": "Giải quyết việc riêng • Lê Mai Loan",
-    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày làm việc) - Lê Mai Loan",
-    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư, không cần chuyển người duyệt."
+    "subtext": "Trần Quốc Hưng • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-06": {
-    "group": "ROUTINE",
-    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
-    "shortPrefix": "Biên số dư (Đạt)",
-    "primary": "Nghỉ phép năm",
-    "duration": "1 ngày làm việc",
-    "subtext": "Số dư còn 1 ngày • Xin vừa đủ 1 ngày",
-    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày làm việc) - Biên số dư đạt chuẩn",
-    "actionableQuestion": "Tự động xử lý hoàn toàn: Số dư vừa đủ (1 ngày), AI tự động duyệt & trừ về 0."
-  },
-  "TC-EXT-07": {
+  "TC-VAL-06": {
     "group": "ROUTINE",
     "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
     "shortPrefix": "Rõ ràng (Duyệt)",
-    "primary": "Nghỉ ốm hưởng BHXH",
-    "duration": "1 ngày làm việc",
-    "subtext": "Khám ngoại trú • PK Đa khoa Quốc tế",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (1 ngày) - PK Đa khoa Quốc tế",
-    "actionableQuestion": "Tự động xử lý hoàn toàn: Nghỉ ốm 1 ngày có chứng từ y tế hợp lệ theo quy chế §3.1, AI tự động duyệt."
+    "primary": "Nghỉ phép năm",
+    "duration": "2 ngày làm việc",
+    "subtext": "Lê Văn Nam • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-08": {
+  "TC-VAL-07": {
     "group": "ROUTINE",
     "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
     "shortPrefix": "Rõ ràng (Duyệt)",
-    "primary": "Nghỉ ốm hưởng BHXH",
+    "primary": "Nghỉ phép năm",
     "duration": "1 ngày làm việc",
-    "subtext": "Khám buổi sáng • Bệnh viện Đa khoa",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (1 ngày) - Khám buổi sáng hợp lệ",
-    "actionableQuestion": "Tự động xử lý hoàn toàn: Nghỉ ốm 1 ngày có chứng từ hợp lệ, AI tự động phê duyệt chế độ BHXH."
+    "subtext": "Nguyễn Văn An • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-09": {
+  "TC-VAL-08": {
     "group": "ROUTINE",
     "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
-    "shortPrefix": "Cấp cứu khẩn",
-    "primary": "Nghỉ ốm cấp cứu",
-    "duration": "1 ngày làm việc",
-    "subtext": "Khoa Cấp cứu BV E • Phiếu xác nhận",
-    "leaveTypeFriendly": "Nghỉ ốm cấp cứu (1 ngày) - BV E",
-    "actionableQuestion": "Tự động xử lý hoàn toàn: Ca cấp cứu ban đêm có phiếu tiếp nhận BV E, AI tự động duyệt chế độ BHXH."
+    "shortPrefix": "Rõ ràng (Duyệt)",
+    "primary": "Nghỉ phép năm",
+    "duration": "2 ngày làm việc",
+    "subtext": "Nguyễn Thị Kim Ngân • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-10": {
+  "TC-VAL-09": {
     "group": "ROUTINE",
     "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
-    "shortPrefix": "Lễ luật định",
-    "primary": "Nghỉ lễ Quốc khánh",
-    "duration": "0 ngày làm việc",
-    "subtext": "Nghỉ lễ Quốc khánh 02/09 • Không trừ phép",
-    "leaveTypeFriendly": "Nghỉ lễ Quốc khánh (0 ngày) - Miễn làm đơn",
-    "actionableQuestion": "Tự động xử lý hoàn toàn: Ngày 02/09 là ngày nghỉ lễ luật định hưởng nguyên lương, không cần xin phép."
-  },
-  "TC-EXT-11": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Vượt thẩm quyền (Quản lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
     "primary": "Nghỉ phép năm",
-    "duration": "3 ngày làm việc",
-    "subtext": "Phép năm 3 ngày • Bàn giao cho Lê Văn Nam",
-    "leaveTypeFriendly": "Nghỉ phép năm (3 ngày) - Bàn giao cho Lê Văn Nam",
-    "actionableQuestion": "Trần Quốc Hưng xin nghỉ 3 ngày phép năm có bàn giao. Quản lý trực tiếp (Đỗ Hoàng Long) có phê duyệt không?"
-  },
-  "TC-EXT-12": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Vượt thẩm quyền (Quản lý)",
-    "primary": "Nghỉ phép năm",
-    "duration": "4 ngày làm việc",
-    "subtext": "Phép năm 4 ngày • Bàn giao cho Nguyễn Văn An",
-    "leaveTypeFriendly": "Nghỉ phép năm (4 ngày) - Bàn giao cho Nguyễn Văn An",
-    "actionableQuestion": "Lê Văn Nam xin 4 ngày phép năm có bàn giao. Quản lý trực tiếp có phê duyệt không?"
-  },
-  "TC-EXT-13": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Vượt thẩm quyền (Quản lý)",
-    "primary": "Nghỉ phép năm",
-    "duration": "4 ngày làm việc",
-    "subtext": "Phép năm 4 ngày • Bàn giao cho Phan Thảo My",
-    "leaveTypeFriendly": "Nghỉ phép năm (4 ngày) - Bàn giao cho Phan Thảo My",
-    "actionableQuestion": "Nguyễn Thị Kim Ngân xin nghỉ 4 ngày phép năm. Quản lý Marketing (Dương Mỹ Duyên) có phê duyệt không?"
-  },
-  "TC-EXT-14": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Vượt thẩm quyền (Quản lý)",
-    "primary": "Nghỉ phép năm",
-    "duration": "5 ngày làm việc",
-    "subtext": "Chạm trần Quản lý 5 ngày • Bàn giao cho Nguyễn Thị Kim Ngân",
-    "leaveTypeFriendly": "Nghỉ phép năm (5 ngày) - Chạm trần Quản lý",
-    "actionableQuestion": "Phan Thảo My xin 5 ngày phép năm chạm trần thẩm quyền Quản lý. Quản lý trực tiếp có phê duyệt không?"
-  },
-  "TC-EXT-15": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Vượt thẩm quyền (Cấp CEO)",
-    "primary": "Nghỉ phép năm",
-    "duration": "6 ngày làm việc",
-    "subtext": "Nghỉ 6 ngày liên tiếp • Vượt trần 5 ngày Quản lý",
-    "leaveTypeFriendly": "Nghỉ phép năm (6 ngày) - Chuyển Tổng Giám đốc (CEO)",
-    "actionableQuestion": "Đơn nghỉ 6 ngày vượt trần 5 ngày của Quản lý trực tiếp. Tổng Giám đốc (CEO) có phê duyệt đợt nghỉ dài ngày này không?"
-  },
-  "TC-EXT-16": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Vượt thẩm quyền (Cấp CEO)",
-    "primary": "Nghỉ phép năm",
-    "duration": "7 ngày làm việc",
-    "subtext": "Nghỉ 7 ngày làm việc • Chuyển Tổng Giám đốc",
-    "leaveTypeFriendly": "Nghỉ phép năm (7 ngày) - Chuyển Tổng Giám đốc",
-    "actionableQuestion": "Lê Văn Nam xin nghỉ 7 ngày phép năm. Tổng Giám đốc (CEO) có chấp thuận không?"
-  },
-  "TC-EXT-17": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Vượt thẩm quyền (Cấp CEO)",
-    "primary": "Nghỉ phép năm",
-    "duration": "8 ngày làm việc",
-    "subtext": "Nghỉ 8 ngày làm việc • Chuyển Tổng Giám đốc",
-    "leaveTypeFriendly": "Nghỉ phép năm (8 ngày) - Chuyển Tổng Giám đốc",
-    "actionableQuestion": "Nguyễn Thị Kim Ngân xin nghỉ 8 ngày phép năm. Tổng Giám đốc (CEO) có chấp thuận không?"
-  },
-  "TC-EXT-18": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Vượt thẩm quyền (Quản lý)",
-    "primary": "Nghỉ ốm hưởng BHXH",
-    "duration": "2 ngày làm việc",
-    "subtext": "Sốt virus cấp tính • BV Đa khoa Quốc tế",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (2 ngày) - BV Đa khoa Quốc tế",
-    "actionableQuestion": "Lê Văn Nam xin nghỉ ốm 2 ngày làm việc có chứng từ y tế hợp lệ. Quản lý trực tiếp có phê duyệt chế độ BHXH không?"
-  },
-  "TC-EXT-19": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Vượt thẩm quyền (Quản lý)",
-    "primary": "Nghỉ ốm hưởng BHXH",
-    "duration": "2 ngày làm việc",
-    "subtext": "Viêm amidan cấp • BV Đa khoa Đống Đa",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (2 ngày) - BV Đống Đa",
-    "actionableQuestion": "Bùi Tuấn Kiệt xin nghỉ ốm 2 ngày có giấy chứng nhận BV Đống Đa. Quản lý trực tiếp có phê duyệt không?"
-  },
-  "TC-EXT-20": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Vượt thẩm quyền (Quản lý)",
-    "primary": "Nghỉ ốm hưởng BHXH",
-    "duration": "3 ngày làm việc",
-    "subtext": "Viêm phế quản cấp • Giấy khám tiêu chuẩn",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (3 ngày) - Phan Thảo My",
-    "actionableQuestion": "Phan Thảo My xin nghỉ ốm 3 ngày có giấy chứng nhận y tế. Quản lý trực tiếp có phê duyệt hưởng chế độ BHXH không?"
-  },
-  "TC-EXT-21": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Chữ ký điện tử",
-    "primary": "Nghỉ ốm hưởng BHXH",
-    "duration": "3 ngày làm việc",
-    "subtext": "Chữ ký số BV Hồng Ngọc • TT 25/2025/TT-BYT",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (3 ngày) - Chữ ký số hợp lệ",
-    "actionableQuestion": "Chứng từ có chữ ký số điện tử hợp lệ theo TT 25/2025/TT-BYT. Quản lý trực tiếp có phê duyệt không?"
-  },
-  "TC-EXT-22": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Chữ ký điện tử",
-    "primary": "Nghỉ ốm hưởng BHXH",
-    "duration": "3 ngày làm việc",
-    "subtext": "Chữ ký số xác thực • Không bắt bẻ mộc đỏ",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (3 ngày) - Chữ ký số",
-    "actionableQuestion": "Chứng từ có chữ ký số xác thực hợp lệ. Quản lý trực tiếp có phê duyệt chế độ BHXH không?"
-  },
-  "TC-EXT-23": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Nguyên lương (Cưới)",
-    "primary": "Nghỉ việc riêng có lương",
-    "duration": "3 ngày làm việc",
-    "subtext": "Kết hôn bản thân • Điều 115 BLLĐ",
-    "leaveTypeFriendly": "Nghỉ việc riêng có lương (3 ngày) - Bản thân kết hôn",
-    "actionableQuestion": "Võ Minh Khang xin nghỉ 3 ngày kết hôn bản thân có Giấy kết hôn. Quản lý trực tiếp có phê duyệt 3 ngày hưởng nguyên lương không?"
-  },
-  "TC-EXT-24": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Nguyên lương (Cưới)",
-    "primary": "Nghỉ việc riêng có lương",
-    "duration": "3 ngày làm việc",
-    "subtext": "Bản thân kết hôn • 03 ngày nguyên lương",
-    "leaveTypeFriendly": "Nghỉ việc riêng có lương (3 ngày) - Bản thân kết hôn",
-    "actionableQuestion": "Nguyễn Văn An xin nghỉ 3 ngày đám cưới kèm Giấy kết hôn. Quản lý trực tiếp có phê duyệt hưởng nguyên lương không?"
-  },
-  "TC-EXT-25": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Nguyên lương (Tang)",
-    "primary": "Nghỉ việc riêng có lương",
-    "duration": "3 ngày làm việc",
-    "subtext": "Tang mẹ đẻ • Điều 115 BLLĐ 03 ngày",
-    "leaveTypeFriendly": "Nghỉ việc riêng có lương (3 ngày) - Tang tứ thân phụ mẫu",
-    "actionableQuestion": "Nguyễn Thị Kim Ngân xin nghỉ 3 ngày lo tang lễ mẹ ruột. Quản lý trực tiếp có phê duyệt hưởng nguyên lương theo Điều 115 BLLĐ không?"
-  },
-  "TC-EXT-26": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Nguyên lương (Con cưới)",
-    "primary": "Nghỉ việc riêng có lương",
     "duration": "1 ngày làm việc",
-    "subtext": "Con kết hôn • 01 ngày nguyên lương",
-    "leaveTypeFriendly": "Nghỉ việc riêng có lương (1 ngày) - Con kết hôn",
-    "actionableQuestion": "Trần Quốc Hưng xin nghỉ 1 ngày dự cưới con trai ruột kèm Giấy kết hôn. Quản lý có duyệt 1 ngày hưởng nguyên lương không?"
+    "subtext": "Võ Minh Khang • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-27": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Luật BHXH (Con ốm)",
-    "primary": "Nghỉ con ốm BHXH",
-    "duration": "1 ngày làm việc",
-    "subtext": "Chăm sóc con ốm • Luật BHXH",
-    "leaveTypeFriendly": "Nghỉ con ốm BHXH (1 ngày) - Bệnh viện Nhi",
-    "actionableQuestion": "Lê Mai Loan xin nghỉ 1 ngày chăm con ốm có chứng nhận viện Nhi. Quản lý trực tiếp có phê duyệt chế độ BHXH không?"
-  },
-  "TC-EXT-28": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Cấp CEO (Thai sản)",
-    "primary": "Nghỉ thai sản BHXH",
-    "duration": "1 ngày làm việc",
-    "subtext": "Khám thai định kỳ • BV Phụ sản Hà Nội",
-    "leaveTypeFriendly": "Nghỉ thai sản BHXH (1 ngày) - Khám thai định kỳ",
-    "actionableQuestion": "Nguyễn Thị Kim Ngân xin nghỉ khám thai định kỳ theo chế độ thai sản BHXH. Tổng Giám đốc (CEO) có phê duyệt không?"
-  },
-  "TC-EXT-29": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Cấp HR (Tai nạn LĐ)",
-    "primary": "Nghỉ tai nạn lao động",
-    "duration": "1 ngày làm việc",
-    "subtext": "Sự cố tai nạn lao động • Hồ sơ HR",
-    "leaveTypeFriendly": "Nghỉ tai nạn lao động (1 ngày) - Chuyển HR",
-    "actionableQuestion": "Hồ sơ tai nạn lao động cần xác minh chế độ BHXH đặc thù. Trưởng phòng Nhân sự (HR) có xác nhận phê duyệt không?"
-  },
-  "TC-EXT-30": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Anti-Self-Approval",
+  "TC-VAL-10": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
     "primary": "Nghỉ phép năm",
     "duration": "2 ngày làm việc",
-    "subtext": "Quản lý Marketing xin nghỉ • Chuyển Tổng Giám đốc",
-    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Quản lý nộp đơn",
-    "actionableQuestion": "Quản lý Marketing (Dương Mỹ Duyên) nộp đơn phép năm 2 ngày. Tổng Giám đốc (CEO) có phê duyệt không?"
+    "subtext": "Phan Thảo My • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-31": {
-    "group": "UNCERTAIN_FACTS",
-    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    "shortPrefix": "Lệch người bệnh",
-    "primary": "Nghỉ ốm hưởng BHXH",
-    "duration": "3 ngày làm việc",
-    "subtext": "Nộp nhầm giấy khám của Lê Văn Nam • Lỗi NAME_MISMATCH",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (3 ngày) - Lệch tên bệnh nhân",
-    "actionableQuestion": "Chứng từ đính kèm mang tên bệnh nhân 'Lê Văn Nam', không khớp với nhân viên nộp đơn 'Nguyễn Văn An'. Nhân viên vui lòng tải đúng chứng từ của mình."
-  },
-  "TC-EXT-32": {
-    "group": "UNCERTAIN_FACTS",
-    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    "shortPrefix": "Lệch người bệnh",
-    "primary": "Nghỉ ốm hưởng BHXH",
+  "TC-VAL-11": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
+    "primary": "Nghỉ phép năm",
     "duration": "1 ngày làm việc",
-    "subtext": "Tên bệnh nhân trên giấy không khớp Võ Minh Khang",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (1 ngày) - Lệch tên chứng từ",
-    "actionableQuestion": "Tên bệnh nhân trên chứng từ không khớp với nhân viên nộp đơn. Nhân viên vui lòng kiểm tra và bổ sung chứng từ chính xác."
+    "subtext": "Hoàng Kim Yến • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-33": {
-    "group": "UNCERTAIN_FACTS",
-    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    "shortPrefix": "Lệch số ngày",
-    "primary": "Nghỉ ốm hưởng BHXH",
-    "duration": "3 ngày làm việc",
-    "subtext": "Đơn xin 3 ngày nhưng bác sĩ chỉ cho nghỉ 1 ngày",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (3 ngày) - Lệch ngày chỉ định",
-    "actionableQuestion": "Đơn xin nghỉ 3 ngày nhưng chứng từ y tế chỉ xác nhận nghỉ 1 ngày (16/12/2026). Nhân viên vui lòng chỉnh sửa lại thời gian xin nghỉ."
-  },
-  "TC-EXT-34": {
-    "group": "UNCERTAIN_FACTS",
-    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    "shortPrefix": "Chứng từ mờ",
-    "primary": "Nghỉ ốm hưởng BHXH",
-    "duration": "1 ngày làm việc",
-    "subtext": "Ảnh chụp mờ nhòe • Không nhận diện được mộc",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (1 ngày) - Chứng từ mờ nhòe",
-    "actionableQuestion": "Ảnh chứng từ bị mờ/mất nét, không đủ căn cứ xác thực. Nhân viên vui lòng chụp lại ảnh chứng từ rõ ràng, đủ sáng."
-  },
-  "TC-EXT-35": {
-    "group": "UNCERTAIN_FACTS",
-    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    "shortPrefix": "Thiếu chữ ký",
-    "primary": "Nghỉ ốm hưởng BHXH",
-    "duration": "1 ngày làm việc",
-    "subtext": "Thiếu chữ ký bác sĩ • Bệnh viện GTVT",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH (1 ngày) - Thiếu chữ ký bác sĩ",
-    "actionableQuestion": "Chứng từ thiếu chữ ký của bác sĩ điều trị. Nhân viên vui lòng xin bổ sung chữ ký xác nhận của cơ sở y tế."
-  },
-  "TC-EXT-36": {
-    "group": "AUTHORITY_ESCALATION",
-    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
-    "shortPrefix": "Quá hạn nộp",
-    "primary": "Nghỉ ốm hưởng BHXH",
+  "TC-VAL-12": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
+    "primary": "Nghỉ phép năm",
     "duration": "2 ngày làm việc",
-    "subtext": "Giấy khám tháng 5 nộp trễ vào tháng 12",
-    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Quá hạn nộp chứng từ",
-    "actionableQuestion": "Chứng từ nộp quá thời hạn 3 ngày làm việc theo quy định nội bộ. Quản lý trực tiếp có chấp thuận lý do nộp muộn không?"
+    "subtext": "Lê Mai Loan • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-37": {
-    "group": "UNCERTAIN_FACTS",
-    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    "shortPrefix": "Bàn giao sai",
-    "primary": "Nghỉ phép năm",
-    "duration": "3 ngày làm việc",
-    "subtext": "Bàn giao chéo sang phòng Marketing • Bị chặn",
-    "leaveTypeFriendly": "Nghỉ phép năm (3 ngày) - Bàn giao sai phòng ban",
-    "actionableQuestion": "Người nhận bàn giao thuộc phòng ban khác (Marketing). Nhân viên vui lòng chỉ định đồng nghiệp cùng phòng Kỹ thuật."
-  },
-  "TC-EXT-38": {
-    "group": "UNCERTAIN_FACTS",
-    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    "shortPrefix": "Thử việc bị chặn",
+  "TC-VAL-13": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
     "primary": "Nghỉ phép năm",
     "duration": "1 ngày làm việc",
-    "subtext": "Hợp đồng thử việc • Chưa có phép năm hưởng lương",
-    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Thử việc xin phép năm",
-    "actionableQuestion": "Nhân viên đang trong thời gian thử việc chưa phát sinh ngày phép năm hưởng lương. Vui lòng chuyển sang loại nghỉ không lương (UNPAID_OTHER)."
+    "subtext": "Trần Quốc Hưng • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-39": {
-    "group": "UNCERTAIN_FACTS",
-    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    "shortPrefix": "Bẫy quy chế",
-    "primary": "Nghỉ việc riêng có lương",
+  "TC-VAL-14": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
+    "primary": "Nghỉ phép năm",
+    "duration": "2 ngày làm việc",
+    "subtext": "Lê Văn Nam • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
+  },
+  "TC-VAL-15": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
+    "primary": "Nghỉ phép năm",
     "duration": "1 ngày làm việc",
-    "subtext": "Cưới em gái ruột không thuộc diện hưởng lương Đ115",
-    "leaveTypeFriendly": "Nghỉ việc riêng (1 ngày) - Cưới anh/chị/em ruột",
-    "actionableQuestion": "Theo Điều 115 BLLĐ, cưới anh/chị/em ruột không thuộc diện nghỉ hưởng lương. Nhân viên vui lòng chuyển sang nghỉ không lương luật định hoặc trừ phép năm."
+    "subtext": "Nguyễn Văn An • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
   },
-  "TC-EXT-40": {
+  "TC-VAL-16": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
+    "primary": "Nghỉ phép năm",
+    "duration": "2 ngày làm việc",
+    "subtext": "Nguyễn Thị Kim Ngân • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
+  },
+  "TC-VAL-17": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Võ Minh Khang • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
+  },
+  "TC-VAL-18": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
+    "primary": "Nghỉ phép năm",
+    "duration": "2 ngày làm việc",
+    "subtext": "Phan Thảo My • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
+  },
+  "TC-VAL-19": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Hoàng Kim Yến • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
+  },
+  "TC-VAL-20": {
+    "group": "ROUTINE",
+    "groupName": "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    "shortPrefix": "Rõ ràng (Duyệt)",
+    "primary": "Nghỉ phép năm",
+    "duration": "2 ngày làm việc",
+    "subtext": "Lê Mai Loan • Đủ số dư",
+    "leaveTypeFriendly": "Nghỉ phép năm (2 ngày) - Đủ số dư",
+    "actionableQuestion": "Tự động xử lý hoàn toàn: Phép năm hợp lệ, đủ số dư và thời gian báo trước, hệ thống tự động duyệt."
+  },
+  "TC-BAL-01": {
     "group": "OUT_OF_POLICY",
     "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
     "shortPrefix": "Vượt số dư",
     "primary": "Nghỉ phép năm",
+    "duration": "31 ngày làm việc",
+    "subtext": "Nguyễn Văn An • Vượt quá quỹ phép (31 ngày)",
+    "leaveTypeFriendly": "Nghỉ phép năm (31 ngày) - Vượt số dư phép",
+    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (31 ngày) vượt quá số dư phép năm còn lại của nhân sự (12.0 ngày)."
+  },
+  "TC-BAL-02": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Vượt số dư",
+    "primary": "Nghỉ phép năm",
+    "duration": "30 ngày làm việc",
+    "subtext": "Lê Văn Nam • Vượt quá quỹ phép (30 ngày)",
+    "leaveTypeFriendly": "Nghỉ phép năm (30 ngày) - Vượt số dư phép",
+    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (30 ngày) vượt quá số dư phép năm còn lại của nhân sự (12.0 ngày)."
+  },
+  "TC-BAL-03": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Vượt số dư",
+    "primary": "Nghỉ phép năm",
+    "duration": "31 ngày làm việc",
+    "subtext": "Trần Quốc Hưng • Vượt quá quỹ phép (31 ngày)",
+    "leaveTypeFriendly": "Nghỉ phép năm (31 ngày) - Vượt số dư phép",
+    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (31 ngày) vượt quá số dư phép năm còn lại của nhân sự (12.0 ngày)."
+  },
+  "TC-BAL-04": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Vượt số dư",
+    "primary": "Nghỉ phép năm",
+    "duration": "30 ngày làm việc",
+    "subtext": "Bùi Tuấn Kiệt • Vượt quá quỹ phép (30 ngày)",
+    "leaveTypeFriendly": "Nghỉ phép năm (30 ngày) - Vượt số dư phép",
+    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (30 ngày) vượt quá số dư phép năm còn lại của nhân sự (12.0 ngày)."
+  },
+  "TC-BAL-05": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Vượt số dư",
+    "primary": "Nghỉ phép năm",
+    "duration": "31 ngày làm việc",
+    "subtext": "Bùi Tuấn Kiệt • Vượt quá quỹ phép (31 ngày)",
+    "leaveTypeFriendly": "Nghỉ phép năm (31 ngày) - Vượt số dư phép",
+    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (31 ngày) vượt quá số dư phép năm còn lại của nhân sự (12.0 ngày)."
+  },
+  "TC-BAL-06": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Vượt số dư",
+    "primary": "Nghỉ phép năm",
+    "duration": "30 ngày làm việc",
+    "subtext": "Nguyễn Thị Kim Ngân • Vượt quá quỹ phép (30 ngày)",
+    "leaveTypeFriendly": "Nghỉ phép năm (30 ngày) - Vượt số dư phép",
+    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (30 ngày) vượt quá số dư phép năm còn lại của nhân sự (12.0 ngày)."
+  },
+  "TC-BAL-07": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Vượt số dư",
+    "primary": "Nghỉ phép năm",
+    "duration": "31 ngày làm việc",
+    "subtext": "Võ Minh Khang • Vượt quá quỹ phép (31 ngày)",
+    "leaveTypeFriendly": "Nghỉ phép năm (31 ngày) - Vượt số dư phép",
+    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (31 ngày) vượt quá số dư phép năm còn lại của nhân sự (12.0 ngày)."
+  },
+  "TC-BAL-08": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Vượt số dư",
+    "primary": "Nghỉ phép năm",
+    "duration": "30 ngày làm việc",
+    "subtext": "Phan Thảo My • Vượt quá quỹ phép (30 ngày)",
+    "leaveTypeFriendly": "Nghỉ phép năm (30 ngày) - Vượt số dư phép",
+    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (30 ngày) vượt quá số dư phép năm còn lại của nhân sự (12.0 ngày)."
+  },
+  "TC-BAL-09": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Vượt số dư",
+    "primary": "Nghỉ phép năm",
+    "duration": "31 ngày làm việc",
+    "subtext": "Hoàng Kim Yến • Vượt quá quỹ phép (31 ngày)",
+    "leaveTypeFriendly": "Nghỉ phép năm (31 ngày) - Vượt số dư phép",
+    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (31 ngày) vượt quá số dư phép năm còn lại của nhân sự (12.0 ngày)."
+  },
+  "TC-BAL-10": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Vượt số dư",
+    "primary": "Nghỉ phép năm",
+    "duration": "30 ngày làm việc",
+    "subtext": "Lê Mai Loan • Vượt quá quỹ phép (30 ngày)",
+    "leaveTypeFriendly": "Nghỉ phép năm (30 ngày) - Vượt số dư phép",
+    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (30 ngày) vượt quá số dư phép năm còn lại của nhân sự (12.0 ngày)."
+  },
+  "TC-NOT-01": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Nộp gấp",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Nguyễn Văn An • Vi phạm báo trước",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Báo trước không đủ hạn",
+    "actionableQuestion": "Nguyễn Văn An nộp đơn gấp chưa đủ thời hạn báo trước quy định. Quản lý trực tiếp có đồng ý duyệt đặc cách không?"
+  },
+  "TC-NOT-02": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Nộp gấp",
+    "primary": "Nghỉ phép năm",
+    "duration": "4 ngày làm việc",
+    "subtext": "Lê Văn Nam • Vi phạm báo trước",
+    "leaveTypeFriendly": "Nghỉ phép năm (4 ngày) - Báo trước không đủ hạn",
+    "actionableQuestion": "Lê Văn Nam nộp đơn gấp chưa đủ thời hạn báo trước quy định. Quản lý trực tiếp có đồng ý duyệt đặc cách không?"
+  },
+  "TC-NOT-03": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Nộp gấp",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Trần Quốc Hưng • Vi phạm báo trước",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Báo trước không đủ hạn",
+    "actionableQuestion": "Trần Quốc Hưng nộp đơn gấp chưa đủ thời hạn báo trước quy định. Quản lý trực tiếp có đồng ý duyệt đặc cách không?"
+  },
+  "TC-NOT-04": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Nộp gấp",
+    "primary": "Nghỉ phép năm",
+    "duration": "4 ngày làm việc",
+    "subtext": "Bùi Tuấn Kiệt • Vi phạm báo trước",
+    "leaveTypeFriendly": "Nghỉ phép năm (4 ngày) - Báo trước không đủ hạn",
+    "actionableQuestion": "Bùi Tuấn Kiệt nộp đơn gấp chưa đủ thời hạn báo trước quy định. Quản lý trực tiếp có đồng ý duyệt đặc cách không?"
+  },
+  "TC-NOT-05": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Nộp gấp",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Thị Hương • Vi phạm báo trước",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Báo trước không đủ hạn",
+    "actionableQuestion": "Lê Thị Hương nộp đơn gấp chưa đủ thời hạn báo trước quy định. Quản lý trực tiếp có đồng ý duyệt đặc cách không?"
+  },
+  "TC-NOT-06": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Nộp gấp",
+    "primary": "Nghỉ phép năm",
+    "duration": "4 ngày làm việc",
+    "subtext": "Nguyễn Thị Kim Ngân • Vi phạm báo trước",
+    "leaveTypeFriendly": "Nghỉ phép năm (4 ngày) - Báo trước không đủ hạn",
+    "actionableQuestion": "Nguyễn Thị Kim Ngân nộp đơn gấp chưa đủ thời hạn báo trước quy định. Quản lý trực tiếp có đồng ý duyệt đặc cách không?"
+  },
+  "TC-NOT-07": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Nộp gấp",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Võ Minh Khang • Vi phạm báo trước",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Báo trước không đủ hạn",
+    "actionableQuestion": "Võ Minh Khang nộp đơn gấp chưa đủ thời hạn báo trước quy định. Quản lý trực tiếp có đồng ý duyệt đặc cách không?"
+  },
+  "TC-NOT-08": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Nộp gấp",
+    "primary": "Nghỉ phép năm",
+    "duration": "4 ngày làm việc",
+    "subtext": "Phan Thảo My • Vi phạm báo trước",
+    "leaveTypeFriendly": "Nghỉ phép năm (4 ngày) - Báo trước không đủ hạn",
+    "actionableQuestion": "Phan Thảo My nộp đơn gấp chưa đủ thời hạn báo trước quy định. Quản lý trực tiếp có đồng ý duyệt đặc cách không?"
+  },
+  "TC-NOT-09": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Nộp gấp",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Hoàng Kim Yến • Vi phạm báo trước",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Báo trước không đủ hạn",
+    "actionableQuestion": "Hoàng Kim Yến nộp đơn gấp chưa đủ thời hạn báo trước quy định. Quản lý trực tiếp có đồng ý duyệt đặc cách không?"
+  },
+  "TC-NOT-10": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Nộp gấp",
+    "primary": "Nghỉ phép năm",
+    "duration": "4 ngày làm việc",
+    "subtext": "Lê Mai Loan • Vi phạm báo trước",
+    "leaveTypeFriendly": "Nghỉ phép năm (4 ngày) - Báo trước không đủ hạn",
+    "actionableQuestion": "Lê Mai Loan nộp đơn gấp chưa đủ thời hạn báo trước quy định. Quản lý trực tiếp có đồng ý duyệt đặc cách không?"
+  },
+  "TC-QUO-01": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Vượt quota",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Nguyễn Văn An • Vắng > 30% phòng ban",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Vượt quota phòng ban",
+    "actionableQuestion": "Phòng ban có tỷ lệ vắng vượt ngưỡng 30% trong ngày. Quản lý trực tiếp có đồng ý phê duyệt đơn của Nguyễn Văn An không?"
+  },
+  "TC-QUO-02": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Vượt quota",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Văn Nam • Vắng > 30% phòng ban",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Vượt quota phòng ban",
+    "actionableQuestion": "Phòng ban có tỷ lệ vắng vượt ngưỡng 30% trong ngày. Quản lý trực tiếp có đồng ý phê duyệt đơn của Lê Văn Nam không?"
+  },
+  "TC-QUO-03": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Vượt quota",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Trần Quốc Hưng • Vắng > 30% phòng ban",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Vượt quota phòng ban",
+    "actionableQuestion": "Phòng ban có tỷ lệ vắng vượt ngưỡng 30% trong ngày. Quản lý trực tiếp có đồng ý phê duyệt đơn của Trần Quốc Hưng không?"
+  },
+  "TC-QUO-04": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Vượt quota",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Bùi Tuấn Kiệt • Vắng > 30% phòng ban",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Vượt quota phòng ban",
+    "actionableQuestion": "Phòng ban có tỷ lệ vắng vượt ngưỡng 30% trong ngày. Quản lý trực tiếp có đồng ý phê duyệt đơn của Bùi Tuấn Kiệt không?"
+  },
+  "TC-QUO-05": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Vượt quota",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Thị Hương • Vắng > 30% phòng ban",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Vượt quota phòng ban",
+    "actionableQuestion": "Phòng ban có tỷ lệ vắng vượt ngưỡng 30% trong ngày. Quản lý trực tiếp có đồng ý phê duyệt đơn của Lê Thị Hương không?"
+  },
+  "TC-QUO-06": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Vượt quota",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Nguyễn Thị Kim Ngân • Vắng > 30% phòng ban",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Vượt quota phòng ban",
+    "actionableQuestion": "Phòng ban có tỷ lệ vắng vượt ngưỡng 30% trong ngày. Quản lý trực tiếp có đồng ý phê duyệt đơn của Nguyễn Thị Kim Ngân không?"
+  },
+  "TC-QUO-07": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Vượt quota",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Võ Minh Khang • Vắng > 30% phòng ban",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Vượt quota phòng ban",
+    "actionableQuestion": "Phòng ban có tỷ lệ vắng vượt ngưỡng 30% trong ngày. Quản lý trực tiếp có đồng ý phê duyệt đơn của Võ Minh Khang không?"
+  },
+  "TC-QUO-08": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Vượt quota",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Phan Thảo My • Vắng > 30% phòng ban",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Vượt quota phòng ban",
+    "actionableQuestion": "Phòng ban có tỷ lệ vắng vượt ngưỡng 30% trong ngày. Quản lý trực tiếp có đồng ý phê duyệt đơn của Phan Thảo My không?"
+  },
+  "TC-QUO-09": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Vượt quota",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Hoàng Kim Yến • Vắng > 30% phòng ban",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Vượt quota phòng ban",
+    "actionableQuestion": "Phòng ban có tỷ lệ vắng vượt ngưỡng 30% trong ngày. Quản lý trực tiếp có đồng ý phê duyệt đơn của Hoàng Kim Yến không?"
+  },
+  "TC-QUO-10": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Vượt quota",
+    "primary": "Nghỉ phép năm",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Mai Loan • Vắng > 30% phòng ban",
+    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Vượt quota phòng ban",
+    "actionableQuestion": "Phòng ban có tỷ lệ vắng vượt ngưỡng 30% trong ngày. Quản lý trực tiếp có đồng ý phê duyệt đơn của Lê Mai Loan không?"
+  },
+  "TC-EXC-01": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp DIRECT_MANAGER",
+    "primary": "ANNUAL",
     "duration": "3 ngày làm việc",
-    "subtext": "Số dư còn 1 ngày • Xin 3 ngày (Vượt 2 ngày)",
-    "leaveTypeFriendly": "Nghỉ phép năm (3 ngày) - Vượt số dư phép",
-    "actionableQuestion": "Tự động từ chối hoàn toàn: Số ngày yêu cầu (3 ngày) vượt quá số dư phép năm còn lại (1 ngày)."
+    "subtext": "Nguyễn Văn An • Thẩm quyền DIRECT_MANAGER",
+    "leaveTypeFriendly": "ANNUAL (3 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền DIRECT_MANAGER. Cấp có thẩm quyền có phê duyệt đơn này không?"
   },
-  "TC-EXT-41": {
-    "group": "OUT_OF_POLICY",
-    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
-    "shortPrefix": "Hết số dư",
-    "primary": "Nghỉ phép năm",
+  "TC-EXC-02": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp CEO",
+    "primary": "ANNUAL",
+    "duration": "6 ngày làm việc",
+    "subtext": "Lê Văn Nam • Thẩm quyền CEO",
+    "leaveTypeFriendly": "ANNUAL (6 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền CEO. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-03": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp CEO",
+    "primary": "MATERNITY",
     "duration": "1 ngày làm việc",
-    "subtext": "Số dư phép năm còn 0 ngày • Bị từ chối",
-    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Hết số dư phép",
-    "actionableQuestion": "Tự động từ chối hoàn toàn: Số dư phép năm còn 0 ngày, không đủ điều kiện tạo đơn phép năm."
+    "subtext": "Trần Quốc Hưng • Thẩm quyền CEO",
+    "leaveTypeFriendly": "MATERNITY (1 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền CEO. Cấp có thẩm quyền có phê duyệt đơn này không?"
   },
-  "TC-EXT-42": {
-    "group": "OUT_OF_POLICY",
-    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
-    "shortPrefix": "Trùng lịch nghỉ",
-    "primary": "Nghỉ phép năm",
+  "TC-EXC-04": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp HR",
+    "primary": "WORK_ACCIDENT",
     "duration": "1 ngày làm việc",
-    "subtext": "Trùng khoảng thời gian đã được duyệt trước đó",
-    "leaveTypeFriendly": "Nghỉ phép năm (1 ngày) - Trùng ngày đã duyệt",
-    "actionableQuestion": "Tự động từ chối hoàn toàn: Ngày 28/12/2026 đã có đơn nghỉ phép được phê duyệt trước đó."
+    "subtext": "Bùi Tuấn Kiệt • Thẩm quyền HR",
+    "leaveTypeFriendly": "WORK_ACCIDENT (1 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền HR. Cấp có thẩm quyền có phê duyệt đơn này không?"
   },
-  "TC-EXT-43": {
+  "TC-EXC-05": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp DIRECT_MANAGER",
+    "primary": "UNPAID_OTHER",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Thị Hương • Thẩm quyền DIRECT_MANAGER",
+    "leaveTypeFriendly": "UNPAID_OTHER (1 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền DIRECT_MANAGER. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-06": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp DIRECT_MANAGER",
+    "primary": "ANNUAL",
+    "duration": "3 ngày làm việc",
+    "subtext": "Nguyễn Thị Kim Ngân • Thẩm quyền DIRECT_MANAGER",
+    "leaveTypeFriendly": "ANNUAL (3 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền DIRECT_MANAGER. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-07": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp CEO",
+    "primary": "ANNUAL",
+    "duration": "6 ngày làm việc",
+    "subtext": "Võ Minh Khang • Thẩm quyền CEO",
+    "leaveTypeFriendly": "ANNUAL (6 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền CEO. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-08": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp CEO",
+    "primary": "MATERNITY",
+    "duration": "1 ngày làm việc",
+    "subtext": "Phan Thảo My • Thẩm quyền CEO",
+    "leaveTypeFriendly": "MATERNITY (1 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền CEO. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-09": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp HR",
+    "primary": "WORK_ACCIDENT",
+    "duration": "1 ngày làm việc",
+    "subtext": "Hoàng Kim Yến • Thẩm quyền HR",
+    "leaveTypeFriendly": "WORK_ACCIDENT (1 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền HR. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-10": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp DIRECT_MANAGER",
+    "primary": "UNPAID_OTHER",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Mai Loan • Thẩm quyền DIRECT_MANAGER",
+    "leaveTypeFriendly": "UNPAID_OTHER (1 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền DIRECT_MANAGER. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-11": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp DIRECT_MANAGER",
+    "primary": "ANNUAL",
+    "duration": "3 ngày làm việc",
+    "subtext": "Nguyễn Văn An • Thẩm quyền DIRECT_MANAGER",
+    "leaveTypeFriendly": "ANNUAL (3 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền DIRECT_MANAGER. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-12": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp CEO",
+    "primary": "ANNUAL",
+    "duration": "6 ngày làm việc",
+    "subtext": "Lê Văn Nam • Thẩm quyền CEO",
+    "leaveTypeFriendly": "ANNUAL (6 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền CEO. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-13": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp CEO",
+    "primary": "MATERNITY",
+    "duration": "1 ngày làm việc",
+    "subtext": "Trần Quốc Hưng • Thẩm quyền CEO",
+    "leaveTypeFriendly": "MATERNITY (1 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền CEO. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-14": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp HR",
+    "primary": "WORK_ACCIDENT",
+    "duration": "1 ngày làm việc",
+    "subtext": "Bùi Tuấn Kiệt • Thẩm quyền HR",
+    "leaveTypeFriendly": "WORK_ACCIDENT (1 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền HR. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-EXC-15": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    "shortPrefix": "Cấp DIRECT_MANAGER",
+    "primary": "UNPAID_OTHER",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Thị Hương • Thẩm quyền DIRECT_MANAGER",
+    "leaveTypeFriendly": "UNPAID_OTHER (1 ngày làm việc)",
+    "actionableQuestion": "Yêu cầu nghỉ phép thuộc thẩm quyền DIRECT_MANAGER. Cấp có thẩm quyền có phê duyệt đơn này không?"
+  },
+  "TC-PRF-01": {
     "group": "UNCERTAIN_FACTS",
     "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
-    "shortPrefix": "Bàn giao sai",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Nguyễn Văn An • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Nguyễn Văn An cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-02": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Văn Nam • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Lê Văn Nam cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-03": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Trần Quốc Hưng • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Trần Quốc Hưng cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-04": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Bùi Tuấn Kiệt • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Bùi Tuấn Kiệt cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-05": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Thị Hương • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Lê Thị Hương cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-06": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Nguyễn Thị Kim Ngân • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Nguyễn Thị Kim Ngân cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-07": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Võ Minh Khang • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Võ Minh Khang cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-08": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Phan Thảo My • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Phan Thảo My cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-09": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Hoàng Kim Yến • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Hoàng Kim Yến cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-10": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Mai Loan • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Lê Mai Loan cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-11": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Nguyễn Văn An • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Nguyễn Văn An cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-12": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Văn Nam • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Lê Văn Nam cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-13": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Trần Quốc Hưng • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Trần Quốc Hưng cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-14": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Bùi Tuấn Kiệt • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Bùi Tuấn Kiệt cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-PRF-15": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Kiểm tra chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Thị Hương • Vấn đề chứng từ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Kiểm tra tính hợp lệ chứng từ",
+    "actionableQuestion": "Chứng từ đính kèm của Lê Thị Hương cần được kiểm tra lại. Cấp thẩm quyền vui lòng xem xét và phản hồi."
+  },
+  "TC-MIS-01": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Nguyễn Văn An • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Nguyễn Văn An. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-02": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Lê Văn Nam • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Lê Văn Nam. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-03": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Trần Quốc Hưng • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Trần Quốc Hưng. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-04": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Bùi Tuấn Kiệt • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Bùi Tuấn Kiệt. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-05": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Lê Thị Hương • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Lê Thị Hương. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-06": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Nguyễn Thị Kim Ngân • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Nguyễn Thị Kim Ngân. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-07": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Võ Minh Khang • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Võ Minh Khang. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-08": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Phan Thảo My • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Phan Thảo My. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-09": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Hoàng Kim Yến • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Hoàng Kim Yến. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-10": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Lê Mai Loan • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Lê Mai Loan. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-11": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Nguyễn Văn An • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Nguyễn Văn An. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-12": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Lê Văn Nam • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Lê Văn Nam. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-13": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Trần Quốc Hưng • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Trần Quốc Hưng. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-14": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Bùi Tuấn Kiệt • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Bùi Tuấn Kiệt. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-MIS-15": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Lệch chứng từ",
+    "primary": "Nghỉ ốm hưởng BHXH",
+    "duration": "1-3 ngày",
+    "subtext": "Lê Thị Hương • Bẫy sai lệch hồ sơ",
+    "leaveTypeFriendly": "Nghỉ ốm hưởng BHXH - Bẫy sai lệch hồ sơ y tế",
+    "actionableQuestion": "Phát hiện điểm sai lệch giữa chứng từ và đơn của Lê Thị Hương. Vui lòng kiểm tra và sửa đơn."
+  },
+  "TC-DUP-01": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Trùng lịch",
     "primary": "Nghỉ phép năm",
+    "duration": "1-2 ngày",
+    "subtext": "Nguyễn Văn An • Trùng đơn đã duyệt",
+    "leaveTypeFriendly": "Nghỉ phép năm - Trùng lặp lịch nghỉ",
+    "actionableQuestion": "Đơn của Nguyễn Văn An bị trùng với khoảng thời gian đã được phê duyệt trước đó. Vui lòng kiểm tra lại."
+  },
+  "TC-DUP-02": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Trùng lịch",
+    "primary": "Nghỉ phép năm",
+    "duration": "1-2 ngày",
+    "subtext": "Lê Văn Nam • Trùng đơn đã duyệt",
+    "leaveTypeFriendly": "Nghỉ phép năm - Trùng lặp lịch nghỉ",
+    "actionableQuestion": "Đơn của Lê Văn Nam bị trùng với khoảng thời gian đã được phê duyệt trước đó. Vui lòng kiểm tra lại."
+  },
+  "TC-DUP-03": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Trùng lịch",
+    "primary": "Nghỉ phép năm",
+    "duration": "1-2 ngày",
+    "subtext": "Trần Quốc Hưng • Trùng đơn đã duyệt",
+    "leaveTypeFriendly": "Nghỉ phép năm - Trùng lặp lịch nghỉ",
+    "actionableQuestion": "Đơn của Trần Quốc Hưng bị trùng với khoảng thời gian đã được phê duyệt trước đó. Vui lòng kiểm tra lại."
+  },
+  "TC-DUP-04": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Trùng lịch",
+    "primary": "Nghỉ phép năm",
+    "duration": "1-2 ngày",
+    "subtext": "Bùi Tuấn Kiệt • Trùng đơn đã duyệt",
+    "leaveTypeFriendly": "Nghỉ phép năm - Trùng lặp lịch nghỉ",
+    "actionableQuestion": "Đơn của Bùi Tuấn Kiệt bị trùng với khoảng thời gian đã được phê duyệt trước đó. Vui lòng kiểm tra lại."
+  },
+  "TC-DUP-05": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Trùng lịch",
+    "primary": "Nghỉ phép năm",
+    "duration": "1-2 ngày",
+    "subtext": "Bùi Tuấn Kiệt • Trùng đơn đã duyệt",
+    "leaveTypeFriendly": "Nghỉ phép năm - Trùng lặp lịch nghỉ",
+    "actionableQuestion": "Đơn của Bùi Tuấn Kiệt bị trùng với khoảng thời gian đã được phê duyệt trước đó. Vui lòng kiểm tra lại."
+  },
+  "TC-DUP-06": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Trùng lịch",
+    "primary": "Nghỉ phép năm",
+    "duration": "1-2 ngày",
+    "subtext": "Nguyễn Thị Kim Ngân • Trùng đơn đã duyệt",
+    "leaveTypeFriendly": "Nghỉ phép năm - Trùng lặp lịch nghỉ",
+    "actionableQuestion": "Đơn của Nguyễn Thị Kim Ngân bị trùng với khoảng thời gian đã được phê duyệt trước đó. Vui lòng kiểm tra lại."
+  },
+  "TC-DUP-07": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Trùng lịch",
+    "primary": "Nghỉ phép năm",
+    "duration": "1-2 ngày",
+    "subtext": "Võ Minh Khang • Trùng đơn đã duyệt",
+    "leaveTypeFriendly": "Nghỉ phép năm - Trùng lặp lịch nghỉ",
+    "actionableQuestion": "Đơn của Võ Minh Khang bị trùng với khoảng thời gian đã được phê duyệt trước đó. Vui lòng kiểm tra lại."
+  },
+  "TC-DUP-08": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Trùng lịch",
+    "primary": "Nghỉ phép năm",
+    "duration": "1-2 ngày",
+    "subtext": "Phan Thảo My • Trùng đơn đã duyệt",
+    "leaveTypeFriendly": "Nghỉ phép năm - Trùng lặp lịch nghỉ",
+    "actionableQuestion": "Đơn của Phan Thảo My bị trùng với khoảng thời gian đã được phê duyệt trước đó. Vui lòng kiểm tra lại."
+  },
+  "TC-DUP-09": {
+    "group": "OUT_OF_POLICY",
+    "groupName": "3. Vi phạm chính sách (Từ chối tự động)",
+    "shortPrefix": "Trùng lịch",
+    "primary": "Nghỉ phép năm",
+    "duration": "1-2 ngày",
+    "subtext": "Hoàng Kim Yến • Trùng đơn đã duyệt",
+    "leaveTypeFriendly": "Nghỉ phép năm - Trùng lặp lịch nghỉ",
+    "actionableQuestion": "Đơn của Hoàng Kim Yến bị trùng với khoảng thời gian đã được phê duyệt trước đó. Vui lòng kiểm tra lại."
+  },
+  "TC-DUP-10": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    "shortPrefix": "Trùng lịch",
+    "primary": "Nghỉ phép năm",
+    "duration": "1-2 ngày",
+    "subtext": "Lê Mai Loan • Trùng đơn đã duyệt",
+    "leaveTypeFriendly": "Nghỉ phép năm - Trùng lặp lịch nghỉ",
+    "actionableQuestion": "Đơn của Lê Mai Loan bị trùng với khoảng thời gian đã được phê duyệt trước đó. Vui lòng kiểm tra lại."
+  },
+  "TC-BND-01": {
+    "group": "ROUTINE",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "1 ngày làm việc",
+    "subtext": "Nguyễn Văn An • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (1 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Nguyễn Văn An: Nguyễn Văn An số dư còn đúng 1 ngày phép: xin 1 ngày -> AI tự duyệt, số dư trừ về 0."
+  },
+  "TC-BND-02": {
+    "group": "ROUTINE",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Văn Nam • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (1 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Lê Văn Nam: Lê Văn Nam xin nghỉ khi phòng ban vắng 2/10, cộng người xin là 3/10 (30% <= 30%) -> AI phê duyệt tự động."
+  },
+  "TC-BND-03": {
+    "group": "ROUTINE",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "0 ngày làm việc",
+    "subtext": "Trần Quốc Hưng • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (0 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Trần Quốc Hưng: Trần Quốc Hưng xin nghỉ rơi vào 19-20/09 (cuối tuần) -> Không tính ngày làm việc, không trừ phép, không cần xin nghỉ."
+  },
+  "TC-BND-04": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "0 ngày làm việc",
+    "subtext": "Bùi Tuấn Kiệt • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (0 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Bùi Tuấn Kiệt: Bùi Tuấn Kiệt nộp đơn bỏ trống ngày bắt đầu -> Báo lỗi DATE_MISSING, yêu cầu bổ sung."
+  },
+  "TC-BND-05": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "0 ngày làm việc",
+    "subtext": "Lê Thị Hương • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (0 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Lê Thị Hương: Lê Thị Hương chọn ngày kết thúc (13/09) trước ngày bắt đầu (14/09) -> Bắt lỗi DATE_INVALID."
+  },
+  "TC-BND-06": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
     "duration": "3 ngày làm việc",
-    "subtext": "Tự bàn giao cho chính mình • Bị chặn",
-    "leaveTypeFriendly": "Nghỉ phép năm (3 ngày) - Tự bàn giao chính mình",
-    "actionableQuestion": "Người làm đơn không thể tự nhận bàn giao công việc của chính mình. Nhân viên vui lòng chỉ định đồng nghiệp khác."
+    "subtext": "Nguyễn Thị Kim Ngân • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (3 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Nguyễn Thị Kim Ngân: Nguyễn Thị Kim Ngân xin nghỉ 3 ngày phép năm (từ 3 ngày trở lên bắt buộc có bàn giao) nhưng để trống -> Báo lỗi HANDOVER_REQUIRED."
+  },
+  "TC-BND-07": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "1 ngày làm việc",
+    "subtext": "Võ Minh Khang • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (1 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Võ Minh Khang: Võ Minh Khang đang trong thời gian thử việc xin phép năm hưởng lương -> Bắt lỗi PROBATION_ANNUAL_RESTRICTED."
+  },
+  "TC-BND-08": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "SICK_MEDICAL",
+    "duration": "2 ngày làm việc",
+    "subtext": "Phan Thảo My • Kiểm thử biên",
+    "leaveTypeFriendly": "SICK_MEDICAL (2 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Phan Thảo My: Phan Thảo My xin nghỉ ốm 2 ngày có giấy chứng nhận hợp lệ -> Vượt ngưỡng AI tự duyệt 1 ngày, chuyển Quản lý trực tiếp duyệt BHXH."
+  },
+  "TC-BND-09": {
+    "group": "ROUTINE",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "1 ngày làm việc",
+    "subtext": "Hoàng Kim Yến • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (1 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Hoàng Kim Yến: Hoàng Kim Yến số dư còn đúng 1 ngày phép: xin 1 ngày -> AI tự duyệt, số dư trừ về 0."
+  },
+  "TC-BND-10": {
+    "group": "ROUTINE",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Mai Loan • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (1 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Lê Mai Loan: Lê Mai Loan xin nghỉ khi phòng ban vắng 2/10, cộng người xin là 3/10 (30% <= 30%) -> AI phê duyệt tự động."
+  },
+  "TC-BND-11": {
+    "group": "ROUTINE",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "0 ngày làm việc",
+    "subtext": "Nguyễn Văn An • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (0 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Nguyễn Văn An: Nguyễn Văn An xin nghỉ rơi vào 19-20/09 (cuối tuần) -> Không tính ngày làm việc, không trừ phép, không cần xin nghỉ."
+  },
+  "TC-BND-12": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "0 ngày làm việc",
+    "subtext": "Lê Văn Nam • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (0 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Lê Văn Nam: Lê Văn Nam nộp đơn bỏ trống ngày bắt đầu -> Báo lỗi DATE_MISSING, yêu cầu bổ sung."
+  },
+  "TC-BND-13": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "0 ngày làm việc",
+    "subtext": "Trần Quốc Hưng • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (0 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Trần Quốc Hưng: Trần Quốc Hưng chọn ngày kết thúc (13/09) trước ngày bắt đầu (14/09) -> Bắt lỗi DATE_INVALID."
+  },
+  "TC-BND-14": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "3 ngày làm việc",
+    "subtext": "Bùi Tuấn Kiệt • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (3 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Bùi Tuấn Kiệt: Bùi Tuấn Kiệt xin nghỉ 3 ngày phép năm (từ 3 ngày trở lên bắt buộc có bàn giao) nhưng để trống -> Báo lỗi HANDOVER_REQUIRED."
+  },
+  "TC-BND-15": {
+    "group": "UNCERTAIN_FACTS",
+    "groupName": "Trường hợp biên quy chế",
+    "shortPrefix": "Biên quy chế",
+    "primary": "ANNUAL",
+    "duration": "1 ngày làm việc",
+    "subtext": "Lê Thị Hương • Kiểm thử biên",
+    "leaveTypeFriendly": "ANNUAL (1 ngày làm việc) - Kiểm thử biên",
+    "actionableQuestion": "Trường hợp biên quy chế của Lê Thị Hương: Lê Thị Hương đang trong thời gian thử việc xin phép năm hưởng lương -> Bắt lỗi PROBATION_ANNUAL_RESTRICTED."
+  },
+  "TC-LNG-01": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Nguyễn Văn An",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Tôi xin nghỉ phép năm ngày 14/09/2026.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Tôi xin nghỉ phép năm ngày 14/09/2026.'"
+  },
+  "TC-LNG-02": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Lê Văn Nam",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Cho em nghỉ phép năm ngày mai nhé.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Cho em nghỉ phép năm ngày mai nhé.'"
+  },
+  "TC-LNG-03": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Trần Quốc Hưng",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.'"
+  },
+  "TC-LNG-04": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Bùi Tuấn Kiệt",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.'"
+  },
+  "TC-LNG-05": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Lê Thị Hương",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.'"
+  },
+  "TC-LNG-06": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Nguyễn Thị Kim Ngân",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.'"
+  },
+  "TC-LNG-07": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Võ Minh Khang",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Tôi xin nghỉ phép năm ngày 14/09/2026.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Tôi xin nghỉ phép năm ngày 14/09/2026.'"
+  },
+  "TC-LNG-08": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Phan Thảo My",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Cho em nghỉ phép năm ngày mai nhé.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Cho em nghỉ phép năm ngày mai nhé.'"
+  },
+  "TC-LNG-09": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Hoàng Kim Yến",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Em xin nghỉ ốm ngày 14/09/2026 do bị sốt xuất huyết.'"
+  },
+  "TC-LNG-10": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Lê Mai Loan",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Em muốn nghỉ một hôm tuần này, chưa biết ngày nào.'"
+  },
+  "TC-LNG-11": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Nguyễn Văn An",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.'"
+  },
+  "TC-LNG-12": {
+    "group": "ROUTINE",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Văn bản tự do • Lê Văn Nam",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Lê Văn Nam.'"
+  },
+  "TC-LNG-13": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Ý định người duyệt • Trần Quốc Hưng",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Đồng ý phê duyệt đơn.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Đồng ý phê duyệt đơn.'"
+  },
+  "TC-LNG-14": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Ý định người duyệt • Bùi Tuấn Kiệt",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Từ chối duyệt đơn do không đủ nhân sự phòng ban.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Từ chối duyệt đơn do không đủ nhân sự phòng ban.'"
+  },
+  "TC-LNG-15": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Ý định người duyệt • Lê Thị Hương",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Yêu cầu bổ sung giấy chứng nhận y tế có mộc bệnh viện.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Yêu cầu bổ sung giấy chứng nhận y tế có mộc bệnh viện.'"
+  },
+  "TC-LNG-16": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Ý định người duyệt • Nguyễn Thị Kim Ngân",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Đề nghị sửa ngày bắt đầu sang 15/09/2026 để kịp bàn giao.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Đề nghị sửa ngày bắt đầu sang 15/09/2026 để kịp bàn giao.'"
+  },
+  "TC-LNG-17": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Ý định người duyệt • Võ Minh Khang",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Để tôi xem xét lại lịch trực tuần tới rồi trả lời sau.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Để tôi xem xét lại lịch trực tuần tới rồi trả lời sau.'"
+  },
+  "TC-LNG-18": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Ý định người duyệt • Phan Thảo My",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Chưa quyết định, cần trao đổi thêm với Tech Lead.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Chưa quyết định, cần trao đổi thêm với Tech Lead.'"
+  },
+  "TC-LNG-19": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Ý định người duyệt • Hoàng Kim Yến",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Không đồng ý nghỉ vào đợt release sản phẩm.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Không đồng ý nghỉ vào đợt release sản phẩm.'"
+  },
+  "TC-LNG-20": {
+    "group": "AUTHORITY_ESCALATION",
+    "groupName": "Mẫu ngôn ngữ & Phản hồi người duyệt",
+    "shortPrefix": "Ngôn ngữ / NLP",
+    "primary": "Trích xuất ngôn ngữ tự nhiên",
+    "duration": "1 ngày",
+    "subtext": "Ý định người duyệt • Lê Mai Loan",
+    "leaveTypeFriendly": "Mẫu ngôn ngữ: 'Tôi cần kiểm tra lại tiến độ dự án trước khi duyệt.'",
+    "actionableQuestion": "Kiểm thử khả năng xử lý ngôn ngữ tự nhiên: 'Tôi cần kiểm tra lại tiến độ dự án trước khi duyệt.'"
   }
 };
 
@@ -4356,7 +6363,7 @@ function renderStaffTestCaseCard() {
   }
 
   const subtitle = document.getElementById("repo-case-subtitle");
-  if (subtitle) subtitle.textContent = `${STAFF_TEST_CASES.length} kịch bản toàn công ty · ${REPO_OUTCOME_GROUPS_CONFIG.length} nhóm chính`;
+  if (subtitle) subtitle.textContent = `Bộ dữ liệu chuẩn (Correctness Suite): ${STAFF_TEST_CASES.length} ca kiểm thử · 43 mẫu độc lập`;
 
   // 1. Filter by outcome group or legacy category
   let filteredCases = STAFF_TEST_CASES;
@@ -4912,57 +6919,134 @@ function switchToEmployee(empId) {
 }
 
 const TESTCASE_PROOF_MAP = {
-  // EMP003
-  "TC-EMP003-01": { file: "proof_emp003_wedding_child.png", type: "MARRIAGE_CERTIFICATE" },
-  "TC-EMP003-02": { file: "proof_emp003_discharge_inpatient.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  // EMP004
-  "TC-VLM-05": { file: "proof_emp004_sick_digital_valid.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  "TC-VLM-03": { file: "proof_emp004_sick_3days_valid.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  // EMP005
-  "TC-EMP005-02": { file: "proof_emp005_sick_expired.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  // EMP006
-  "TC-EMP006-01": { file: "proof_emp006_sick_standard_2days.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  "TC-EMP006-02": { file: "proof_emp006_emergency_slip.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  // EMP007
-  "TC-EMP007-01": { file: "proof_emp007_sick_probation_valid.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  "TC-EMP007-02": { file: "proof_emp007_sick_missing_signature.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  // EMP008
-  "TC-EMP008-01": { file: "proof_emp008_maternity_prenatal.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  "TC-EMP008-02": { file: "proof_emp008_funeral_direct.png", type: "OTHER" },
-  // EMP009
-  "TC-MGR-03": { file: "proof_emp009_wedding_valid.png", type: "MARRIAGE_CERTIFICATE" },
-  "TC-VLM-02": { file: "proof_emp009_sick_name_mismatch.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  // EMP010
-  "TC-VLM-04": { file: "proof_emp010_sick_blurry.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  "TC-EMP010-02": { file: "proof_emp010_sick_standard_3days.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  // EMP011
-  "TC-AI-02": { file: "proof_emp011_sick_morning_valid.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  "TC-EMP011-02": { file: "proof_emp011_work_accident.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  // EMP012
-  "TC-EMP012-02": { file: "proof_emp012_child_sick_care.png", type: "MEDICAL_LEAVE_CERTIFICATE" },
-  "TC-EMP012-03": { file: "proof_emp012_wedding_sibling.png", type: "MARRIAGE_CERTIFICATE" },
-  "TC-EXT-07": {"file": "proof_emp005_sick_clinic_valid.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-08": {"file": "proof_emp011_sick_morning_valid.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-09": {"file": "proof_emp006_emergency_slip.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-18": {"file": "proof_sick_valid_3days.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-19": {"file": "proof_emp006_sick_standard_2days.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-20": {"file": "proof_emp010_sick_standard_3days.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-21": {"file": "proof_emp004_sick_digital_valid.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-22": {"file": "proof_digital_signed.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-23": {"file": "proof_emp009_wedding_valid.png", "type": "MARRIAGE_CERTIFICATE"},
-  "TC-EXT-24": {"file": "proof_wedding_cert.png", "type": "MARRIAGE_CERTIFICATE"},
-  "TC-EXT-25": {"file": "proof_emp008_funeral_direct.png", "type": "OTHER"},
-  "TC-EXT-26": {"file": "proof_emp003_wedding_child.png", "type": "MARRIAGE_CERTIFICATE"},
-  "TC-EXT-27": {"file": "proof_emp012_child_sick_care.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-28": {"file": "proof_emp008_maternity_prenatal.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-29": {"file": "proof_emp011_work_accident.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-31": {"file": "proof_emp004_sick_3days_valid.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-32": {"file": "proof_emp009_sick_name_mismatch.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-33": {"file": "proof_emp004_sick_days_mismatch.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-34": {"file": "proof_emp010_sick_blurry.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-35": {"file": "proof_emp007_sick_missing_signature.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-36": {"file": "proof_emp005_sick_expired.png", "type": "MEDICAL_LEAVE_CERTIFICATE"},
-  "TC-EXT-39": {"file": "proof_emp012_wedding_sibling.png", "type": "MARRIAGE_CERTIFICATE"}
+  "TC-EXC-03": {
+    "file": "proof_emp008_maternity_prenatal.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-EXC-04": {
+    "file": "proof_emp011_work_accident.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-EXC-08": {
+    "file": "proof_emp008_maternity_prenatal.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-EXC-09": {
+    "file": "proof_emp011_work_accident.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-EXC-13": {
+    "file": "proof_emp008_maternity_prenatal.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-EXC-14": {
+    "file": "proof_emp011_work_accident.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-PRF-02": {
+    "file": "proof_emp010_sick_blurry.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-PRF-03": {
+    "file": "proof_emp005_sick_clinic_valid.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-PRF-05": {
+    "file": "proof_emp010_sick_blurry.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-PRF-06": {
+    "file": "proof_emp005_sick_clinic_valid.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-PRF-08": {
+    "file": "proof_emp010_sick_blurry.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-PRF-09": {
+    "file": "proof_emp005_sick_clinic_valid.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-PRF-11": {
+    "file": "proof_emp010_sick_blurry.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-PRF-12": {
+    "file": "proof_emp005_sick_clinic_valid.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-PRF-14": {
+    "file": "proof_emp010_sick_blurry.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-PRF-15": {
+    "file": "proof_emp005_sick_clinic_valid.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-01": {
+    "file": "proof_emp004_sick_3days_valid.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-02": {
+    "file": "proof_emp004_sick_days_mismatch.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-03": {
+    "file": "proof_wedding_cert.png",
+    "type": "MARRIAGE_CERTIFICATE"
+  },
+  "TC-MIS-04": {
+    "file": "proof_emp004_sick_3days_valid.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-05": {
+    "file": "proof_emp004_sick_days_mismatch.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-06": {
+    "file": "proof_wedding_cert.png",
+    "type": "MARRIAGE_CERTIFICATE"
+  },
+  "TC-MIS-07": {
+    "file": "proof_emp004_sick_3days_valid.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-08": {
+    "file": "proof_emp004_sick_days_mismatch.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-09": {
+    "file": "proof_wedding_cert.png",
+    "type": "MARRIAGE_CERTIFICATE"
+  },
+  "TC-MIS-10": {
+    "file": "proof_emp004_sick_3days_valid.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-11": {
+    "file": "proof_emp004_sick_days_mismatch.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-12": {
+    "file": "proof_wedding_cert.png",
+    "type": "MARRIAGE_CERTIFICATE"
+  },
+  "TC-MIS-13": {
+    "file": "proof_emp004_sick_3days_valid.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-14": {
+    "file": "proof_emp004_sick_days_mismatch.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  },
+  "TC-MIS-15": {
+    "file": "proof_wedding_cert.png",
+    "type": "MARRIAGE_CERTIFICATE"
+  },
+  "TC-BND-08": {
+    "file": "proof_sick_valid_3days.png",
+    "type": "MEDICAL_LEAVE_CERTIFICATE"
+  }
 };
 
 async function attachProofFileFromUrl(url, fileName, proofType) {
@@ -5086,17 +7170,21 @@ async function fillStaffTestCaseIntoForm(tc) {
   if (fromEl && tc.payload.from_date) fromEl.value = tc.payload.from_date;
   if (toEl && tc.payload.to_date) toEl.value = tc.payload.to_date;
   if (reasonEl && tc.payload.reason) reasonEl.value = tc.payload.reason;
-  if (handoverEl && tc.payload.handover_person_id) {
-    if (!Array.from(handoverEl.options).some(o => o.value === tc.payload.handover_person_id)) {
-      // Kịch bản kiểm thử bàn giao sai (vd khác phòng ban): ô chọn chỉ liệt kê đồng nghiệp cùng phòng,
-      // nên thêm tạm lựa chọn này để kiểm tra bước xác thực bàn giao phía server.
-      const emp = employeesCache.find(e => e.employee_id === tc.payload.handover_person_id);
-      const opt = document.createElement("option");
-      opt.value = tc.payload.handover_person_id;
-      opt.text = emp ? `${emp.name} (${emp.department})` : tc.payload.handover_person_id;
-      handoverEl.appendChild(opt);
+  if (handoverEl) {
+    if (tc.payload.handover_person_id && tc.expected?.decision !== "AUTO_APPROVE") {
+      if (!Array.from(handoverEl.options).some(o => o.value === tc.payload.handover_person_id)) {
+        // Kịch bản kiểm thử bàn giao sai (vd khác phòng ban): ô chọn chỉ liệt kê đồng nghiệp cùng phòng,
+        // nên thêm tạm lựa chọn này để kiểm tra bước xác thực bàn giao phía server.
+        const emp = employeesCache.find(e => e.employee_id === tc.payload.handover_person_id);
+        const opt = document.createElement("option");
+        opt.value = tc.payload.handover_person_id;
+        opt.text = emp ? `${emp.name} (${emp.department})` : tc.payload.handover_person_id;
+        handoverEl.appendChild(opt);
+      }
+      handoverEl.value = tc.payload.handover_person_id;
+    } else {
+      handoverEl.value = "";
     }
-    handoverEl.value = tc.payload.handover_person_id;
   }
 
   // BUG FIX: Nạp reason_category vào hidden select (quan trọng cho SPECIAL_PAID / STATUTORY_UNPAID)

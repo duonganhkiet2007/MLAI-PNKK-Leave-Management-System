@@ -9,8 +9,9 @@ Hệ thống điều phối phê duyệt nghỉ phép tích hợp AI (MLAI Hacka
 
 **Tài liệu & Demo**
 
-- [Proposal](https://docs.google.com/document/d/1vvmc66DHWcx4OMFSgipeEEpDdnL_SFszAKhkrALF1Xg/edit?usp=sharing)
-- [Video Demo](https://drive.google.com/file/d/17AcEXeBfeE7FbaUK6FAuJROpsaZFLUgh/view?usp=sharing)
+- Link Proposal: https://docs.google.com/document/d/1vvmc66DHWcx4OMFSgipeEEpDdnL_SFszAKhkrALF1Xg/edit?usp=sharing
+- Link Video Demo: https://drive.google.com/file/d/17AcEXeBfeE7FbaUK6FAuJROpsaZFLUgh/view?usp=sharing
+- Link Dataset: https://docs.google.com/spreadsheets/d/1_d9vUImx0TX7yeGoFwtnWIQRDaDFpi_XKqALEeNs1KA/edit?usp=sharing
 
 ---
 

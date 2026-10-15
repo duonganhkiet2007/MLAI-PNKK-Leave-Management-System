@@ -82,3 +82,6 @@ evaluation/benchmarks/results/20*/
 # ------ Docs (tài liệu tham khảo, không cần commit) ---------
 docs/
 
+# ------ Scripts tiện ích one-off (không cần commit) ----------
+scripts/
+

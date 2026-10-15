@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from pydantic import Field
 from domain import (RequestFacts, VerifiedProof, LeaveType,
                     names_approximately_match, should_deduct_annual_balance,
-                    TEAM_ABSENCE_THRESHOLD)
+                    TEAM_ABSENCE_THRESHOLD, assess_event_relationship)
 from calendar_service import CalendarService, CalendarUnavailable, calculate_workdays
 from taxonomy import (DecisionType as D, UncertaintyCategory as C, TargetApproverRole as R,
                       ErrorCode as E, EscalationDetail, ApprovalResult)
@@ -39,9 +39,107 @@ OPERATIONAL = {'ANNUAL', 'UNPAID_OTHER'}
 NO_PROOF_REQUIRED = {'ANNUAL', 'UNPAID_OTHER', 'STATUTORY_UNPAID'}
 PROOF_REQUIRED = MEDICAL | {'SPECIAL_PAID'}
 MEDICAL_PROOFS = {'MEDICAL_LEAVE_CERTIFICATE','HOSPITAL_DISCHARGE','MEDICAL_RECORD_SUMMARY','INJURY_CERTIFICATE','ACCIDENT_REPORT','ACCIDENT_CERTIFICATE','LAB_RESULT','MATERNITY_CERTIFICATE','EMERGENCY_ADMISSION','SURGERY_NOTICE'}
+MATERNITY_CHECKUP_PROOFS = {'MEDICAL_LEAVE_CERTIFICATE', 'MATERNITY_CERTIFICATE'}
 STATUTORY_PARENT_LOSS = {'PARENT_DEATH', 'SPOUSE_PARENT_DEATH'}
 RULE_STAGES = ['INPUT_DATES','CALENDAR','ENTITLEMENT','INPUT_COMPLETENESS','PROOF',
                'WORKING_DAYS','OVERLAP','BALANCE','NOTICE','TEAM_CAPACITY','HANDOVER','AUTHORITY','FINAL']
+
+
+def _is_maternity_checkup(request, workdays):
+    phase = str(request.proof.maternity_phase or '').strip().upper()
+    reason = (request.reason or '').casefold()
+    return (
+        request.leave_type == 'MATERNITY'
+        and workdays == 1
+        and (phase == 'PREGNANCY_CHECKUP' or 'khám thai' in reason or 'kham thai' in reason or 'pregnancy checkup' in reason)
+    )
+
+
+def _maternity_checkup_proof_issue(request, dates):
+    proof = request.proof
+    proof_type = getattr(proof.proof_type, 'value', proof.proof_type)
+    phase = str(proof.maternity_phase or '').strip().upper()
+    if proof_type not in MATERNITY_CHECKUP_PROOFS:
+        return 'Chứng từ không phải giấy khám thai hoặc giấy chứng nhận nghỉ thai sản phù hợp'
+    if phase and phase not in {'PRENATAL', 'PREGNANCY_CHECKUP'}:
+        return 'Chưa xác định được giai đoạn khám thai trên chứng từ'
+    patient_name = proof.patient_name or proof.subject_name
+    if not patient_name:
+        return 'Chứng từ chưa có tên người khám'
+    if proof.patient_name_match not in (None, 'MATCH'):
+        return 'Tên người khám trên chứng từ chưa được xác minh khớp với nhân sự'
+    if not names_approximately_match(patient_name, request.employee_name):
+        return 'Tên người khám trên chứng từ không khớp với nhân sự'
+    if not proof.issuer or not proof.issue_date:
+        return 'Chứng từ thiếu nơi cấp hoặc ngày cấp'
+    if proof.document_readability != 'READABLE':
+        return 'Chứng từ chưa đủ rõ để đối chiếu'
+    if not (proof.signature_present or proof.digital_signature_present or proof.has_doctor_signature):
+        return 'Chứng từ chưa có chữ ký xác nhận của cơ sở y tế'
+    if not proof.recommended_from_date or not proof.recommended_to_date:
+        return 'Chứng từ chưa thể hiện ngày khám hoặc thời gian được chỉ định'
+    if proof.recommended_from_date > proof.recommended_to_date or any(
+        not proof.recommended_from_date <= day <= proof.recommended_to_date for day in dates
+    ):
+        return 'Ngày nghỉ không khớp với thời gian ghi trên chứng từ'
+    if proof.proof_verification_status in {'REJECTED', 'NEEDS_HR_REVIEW'}:
+        return 'Chứng từ cần được xác minh thêm trước khi duyệt'
+    if proof.needs_manager_review or proof.is_tampered is True or proof.ai_edited is True:
+        return 'Chứng từ có dấu hiệu cần được kiểm tra thủ công'
+    return None
+
+
+def _relationship_verification_status(proof, reason_category=None) -> str:
+    relationship = (
+        getattr(proof, 'relationship_label', None)
+        or getattr(proof, 'relationship', None)
+        or getattr(proof, 'relationship_to_employee', None)
+    )
+    normalized = str(relationship or '').strip()
+    if not normalized:
+        return 'UNVERIFIED'
+    lowered = normalized.lower()
+    if 'mâu thuẫn' in lowered or 'conflict' in lowered or 'không khớp' in lowered:
+        return 'CONFLICT'
+    if 'chưa xác minh' in lowered or 'chưa rõ' in lowered or 'unverified' in lowered or 'not verified' in lowered:
+        return 'UNVERIFIED'
+    if 'đã xác minh' in lowered or 'verified' in lowered or 'xác minh' in lowered:
+        return 'VERIFIED'
+    assessment = assess_event_relationship(reason_category, normalized)
+    if assessment:
+        return assessment['status']
+    return 'VERIFIED' if any(word in lowered for word in ['cha', 'mẹ', 'bố', 'vợ', 'chồng', 'con', 'ông', 'bà', 'anh', 'chị', 'em']) else 'UNVERIFIED'
+
+
+def _family_event_auto_eligible(request, proof, dates):
+    if request.leave_type != 'SPECIAL_PAID':
+        return False
+    rel_status = _relationship_verification_status(proof, request.reason_category)
+    if rel_status != 'VERIFIED':
+        return False
+    category = getattr(request.reason_category, 'value', request.reason_category)
+    allowed = {'PARENT_DEATH', 'SPOUSE_PARENT_DEATH', 'SPOUSE_DEATH', 'CHILD_DEATH'}
+    if category not in allowed:
+        return False
+    if not (proof.subject_name or proof.deceased_name or proof.event_type):
+        return False
+    event_dates = (proof.date_of_death, proof.funeral_date)
+    if not any(event_dates):
+        return False
+    if proof.document_readability != 'READABLE':
+        return False
+    try:
+        requested_start = date.fromisoformat(request.from_date)
+        requested_end = date.fromisoformat(request.to_date)
+        for event_date in event_dates:
+            if event_date is not None:
+                event_day = event_date if isinstance(event_date, date) else date.fromisoformat(str(event_date))
+                if not requested_start <= event_day <= requested_end:
+                    return False
+    except (TypeError, ValueError):
+        return False
+    return True
+
 
 class LeaveRuleEngine:
     @staticmethod
@@ -106,11 +204,33 @@ class LeaveRuleEngine:
         roles: list = []
         if q.leave_type not in {x.value for x in LeaveType}:
             return correction(E.LEAVE_TYPE_MISSING,'[Loại nghỉ chưa nhận diện] Loại nghỉ gửi lên không nằm trong danh mục quy chế công ty. Vui lòng chọn lại loại nghỉ phép hợp lệ.')
-        if q.leave_type in {'WORK_ACCIDENT','MATERNITY'}:
+        maternity_checkup = _is_maternity_checkup(q, n)
+        maternity_ceo_approved = q.leave_type == 'MATERNITY' and R.CEO in q.granted_roles
+        maternity_manager_approved = (
+            q.leave_type == 'MATERNITY'
+            and R.DIRECT_MANAGER in q.granted_roles
+            and E.PROOF_REVIEW_REQUIRED in q.waived_errors
+        )
+        if q.leave_type == 'MATERNITY':
+            if not maternity_checkup and not maternity_ceo_approved:
+                return finish(
+                    D.ESCALATE, E.AUTOMATION_SCOPE_UNSUPPORTED,
+                    '[Nghỉ thai sản dài hạn] Hồ sơ nghỉ sinh, dưỡng thai hoặc thời lượng nghỉ trên 1 ngày thuộc thẩm quyền Tổng Giám đốc. Đơn được chuyển Tổng Giám đốc xem xét; không trừ phép năm, chế độ BHXH được xử lý theo quy định.',
+                    C.OUT_OF_POLICY, R.CEO, 'MAT-01', [R.CEO],
+                )
+            if maternity_checkup:
+                proof_issue = _maternity_checkup_proof_issue(q, dates)
+                if proof_issue and not maternity_manager_approved:
+                    return finish(
+                        D.ESCALATE, E.PROOF_REVIEW_REQUIRED,
+                        f'[Hồ sơ khám thai cần quản lý đối chiếu] {proof_issue}. Đơn được chuyển Quản lý trực tiếp kiểm tra trước khi quyết định.',
+                        C.AUTHORITY_ESCALATION, R.DIRECT_MANAGER, 'MAT-01', [R.DIRECT_MANAGER],
+                    )
+        elif q.leave_type == 'WORK_ACCIDENT':
             roles = [R.HR]
             remaining = [r for r in roles if r not in q.granted_roles]
             if remaining and E.AUTOMATION_SCOPE_UNSUPPORTED not in q.waived_errors:
-                return finish(D.ESCALATE,E.AUTOMATION_SCOPE_UNSUPPORTED,'[Chế độ đặc thù BHXH] Bạn nộp đơn theo chế độ Thai sản hoặc Tai nạn lao động cần đối soát hồ sơ hưởng trợ cấp theo luật. Đơn chuyển tới Phòng Nhân sự (HR) để tiếp nhận và hướng dẫn thủ tục trực tiếp.',C.OUT_OF_POLICY,R.HR,'HR-SCOPE',roles)
+                return finish(D.ESCALATE,E.AUTOMATION_SCOPE_UNSUPPORTED,'[Chế độ đặc thù BHXH] Đơn nghỉ theo chế độ Tai nạn lao động cần được đối soát hồ sơ hưởng trợ cấp theo quy định. Hồ sơ được chuyển tới Phòng Nhân sự (HR) để tiếp nhận và hướng dẫn thủ tục.',C.OUT_OF_POLICY,R.HR,'HR-SCOPE',roles)
         if should_deduct_annual_balance(q.leave_type) and q.employment_status == 'PROBATION':
             return correction(E.PROBATION_ANNUAL_RESTRICTED,'[Nhân sự đang thử việc] Theo quy chế nội bộ, nhân sự thử việc chưa áp dụng trừ quỹ phép năm. Vui lòng chọn loại đơn Nghỉ không lương để quản lý duyệt; số ngày phép năm sẽ được bảo lưu.','EMP-01')
         result.paid = q.leave_type in {'ANNUAL','SPECIAL_PAID'} if q.leave_type not in MEDICAL else None
@@ -177,10 +297,16 @@ class LeaveRuleEngine:
             # TRƯỚC khi chuyển người duyệt đối chiếu chứng từ; nếu không, người duyệt nhận những chứng từ sai hiển nhiên.
             if q.leave_type in MEDICAL:
                 name_match = getattr(p, 'patient_name_match', None)
-                if p.patient_name and (name_match == 'MISMATCH' or (
-                    name_match is None and not names_approximately_match(p.patient_name, q.employee_name)
-                )):
-                    return correction(E.NAME_MISMATCH,f'[Họ tên trên chứng từ không khớp] Họ tên trên giấy y tế ({p.patient_name}) khác với nhân viên làm đơn ({q.employee_name}). Vui lòng kiểm tra lại file đính kèm hoặc bổ sung giải trình.','MED-01')
+                if p.patient_name and name_match != 'MATCH' and not names_approximately_match(p.patient_name, q.employee_name):
+                    return finish(
+                        D.ESCALATE,
+                        E.NAME_MISMATCH,
+                        f'[Họ tên trên chứng từ không khớp] Tên trên giấy y tế ({p.patient_name}) khác với nhân viên làm đơn ({q.employee_name}). Hồ sơ chuyển HR xác minh trước khi quyết định.',
+                        C.AUTHORITY_ESCALATION,
+                        R.HR,
+                        'MED-01',
+                        [R.HR],
+                    )
                 if p.patient_name and name_match in {'UNCERTAIN', 'NOT_APPLICABLE'}:
                     roles = [R.DIRECT_MANAGER]
                     remaining = [r for r in roles if r not in q.granted_roles]
@@ -195,6 +321,8 @@ class LeaveRuleEngine:
                 if p.document_readability == 'READABLE' and p.signature_present is False and not p.digital_signature_present:
                     return correction(E.DOC_FIELD_MISSING,'[Chứng từ thiếu chữ ký] Giấy y tế chưa có chữ ký của bác sĩ / người có thẩm quyền (hoặc chữ ký số). Vui lòng xin xác nhận chữ ký và tải lại chứng từ.','MED-01')
             if p.proof_verification_status != 'VERIFIED' and E.PROOF_REVIEW_REQUIRED not in q.waived_errors:
+                relationship_status = _relationship_verification_status(p, q.reason_category)
+                family_event_verified = _family_event_auto_eligible(q, p, dates)
                 short_medical_valid = (
                     q.leave_type in MEDICAL and
                     n < 3 and
@@ -203,8 +331,30 @@ class LeaveRuleEngine:
                     bool(p.patient_name) and bool(p.recommended_from_date) and bool(p.recommended_to_date) and
                     (bool(p.signature_present) or bool(p.digital_signature_present))
                 )
-                if not short_medical_valid and not self_marriage_auto_eligible:
-                    return finish(D.ESCALATE,E.PROOF_REVIEW_REQUIRED,'[Chứng từ cần HR đối chiếu] Hệ thống đã tiếp nhận chứng từ của bạn. Đơn chuyển tới Phòng Nhân sự (HR) để đối soát các thông tin chuyên môn trước khi duyệt.',C.OUT_OF_POLICY,R.HR,'PROOF-01',[R.HR])
+                if not short_medical_valid and not self_marriage_auto_eligible and not family_event_verified:
+                    proof_issues = []
+                    if getattr(p, 'signature_present', None) is False and not getattr(p, 'digital_signature_present', None):
+                        proof_issues.append('chứng từ thiếu chữ ký người có thẩm quyền')
+                    if q.leave_type in {'SPECIAL_PAID', 'STATUTORY_UNPAID'}:
+                        rel_label = getattr(p, 'relationship_label', None) or getattr(p, 'relationship_to_employee', None) or ''
+                        if not rel_label or 'chưa xác minh' in rel_label.lower() or 'chưa rõ' in rel_label.lower():
+                            proof_issues.append('quan hệ trên giấy chưa xác minh rõ ràng')
+                    if not p.issuer or not p.issue_date:
+                        proof_issues.append('thông tin nơi cấp hoặc ngày cấp chưa rõ')
+                    if not proof_issues:
+                        proof_issues.append('các thông tin chuyên môn trên chứng từ cần đối chiếu lại')
+                    issue_text = '; '.join(proof_issues)
+                    review_role = R.DIRECT_MANAGER if q.leave_type in {'SPECIAL_PAID', 'STATUTORY_UNPAID'} else R.HR
+                    review_role_label = 'Quản lý trực tiếp' if review_role == R.DIRECT_MANAGER else 'Phòng Nhân sự (HR)'
+                    return finish(
+                        D.ESCALATE,
+                        E.PROOF_REVIEW_REQUIRED,
+                        f'[Chứng từ cần đối chiếu] Hệ thống đã tiếp nhận chứng từ của bạn. Đơn chuyển tới {review_role_label} để đối chiếu {issue_text} trước khi duyệt.',
+                        C.OUT_OF_POLICY,
+                        review_role,
+                        'PROOF-01',
+                        [review_role],
+                    )
             allowed = MEDICAL_PROOFS if q.leave_type in MEDICAL else (
                 {'MARRIAGE_CERTIFICATE'} if (hasattr(q.reason_category,'value') and q.reason_category.value == 'SELF_MARRIAGE') else
                 {'MARRIAGE_CERTIFICATE','WEDDING_INVITATION'} if (hasattr(q.reason_category,'value') and q.reason_category.value == 'CHILD_MARRIAGE') else {'DEATH_CERTIFICATE'})
@@ -293,12 +443,16 @@ class LeaveRuleEngine:
         if q.leave_type == 'SPECIAL_PAID':
             if self_marriage_auto_eligible and not quota_dates:
                 roles = []
+            elif _family_event_auto_eligible(q, q.proof, result.working_dates) and not quota_dates:
+                roles = []
             else:
                 roles = [R.DIRECT_MANAGER]
         if q.leave_type == 'STATUTORY_UNPAID':
             roles = [R.DIRECT_MANAGER]
-        if q.leave_type in {'WORK_ACCIDENT', 'MATERNITY'}:
+        if q.leave_type == 'WORK_ACCIDENT':
             roles = [R.HR]
+        elif q.leave_type == 'MATERNITY':
+            roles = [] if maternity_checkup or maternity_ceo_approved else [R.CEO]
         if operational and not roles: roles = [R.DIRECT_MANAGER]
         remaining = [r for r in roles if r not in q.granted_roles]
         for code, message, clause in operational:
@@ -325,10 +479,17 @@ class LeaveRuleEngine:
                 msg = f'[Vượt thẩm quyền Quản lý trực tiếp] Đơn xin nghỉ {n} ngày hợp lệ về số dư nhưng vượt mức 5 ngày của Quản lý trực tiếp; chuyển tới {target_name} phê duyệt.'
             else:
                 code = E.DURATION_OVER_AI_LIMIT
-                msg = f'[Vượt hạn mức tự duyệt của AI] Đơn xin nghỉ {n} ngày hợp lệ về số dư nhưng vượt trần tự duyệt 2 ngày của AI; chuyển tới {target_name} phê duyệt.'
+                ai_limit = 1 if q.leave_type in MEDICAL else 2
+                msg = f'[Vượt hạn mức tự duyệt của AI] Đơn xin nghỉ {n} ngày hợp lệ về số dư nhưng vượt trần tự duyệt {ai_limit} ngày của AI; chuyển tới {target_name} phê duyệt.'
             return finish(D.ESCALATE, code, msg, C.AUTHORITY_ESCALATION, target, 'AUTH-01', roles)
         trace('AUTHORITY')
-        if should_deduct_annual_balance(q.leave_type):
+        if maternity_manager_approved:
+            msg = '[Khám thai một ngày đã được Quản lý trực tiếp phê duyệt] Hồ sơ đã được đối chiếu và chấp thuận; không trừ phép năm.'
+        elif maternity_ceo_approved:
+            msg = '[Thai sản đã được Tổng Giám đốc phê duyệt] Hồ sơ được ghi nhận theo quyết định của Tổng Giám đốc; không trừ phép năm.'
+        elif maternity_checkup:
+            msg = '[Khám thai một ngày hợp lệ] Thông tin nhân sự, chứng từ và ngày khám đã khớp. Đơn được tự động duyệt; không trừ phép năm.'
+        elif should_deduct_annual_balance(q.leave_type):
             msg = f'[Tự động duyệt thành công] Đơn nghỉ {n} ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép.'
         else:
             msg = f'[Tự động duyệt thành công] Đơn nghỉ {n} ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt, không trừ quỹ phép năm.'

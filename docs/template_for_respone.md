@@ -153,7 +153,7 @@ Chúng tôi đã đọc Giấy chứng nhận kết hôn của bạn. Chứng t�
 | Chứng từ | ⚠️ Cần xem xét | Có dấu đỏ, rõ nét, thiếu chữ ký cơ quan |
 ```
 
-### Ví dụ 3: Chuyển cấp vì vượt hạn mức tự duyệt (nghỉ ốm 2 ngày)
+### Ví dụ 3: Chuyển cấp vì vượt ngưỡng tự duyệt (nghỉ ốm 2 ngày)
 
 **Input (rút gọn)**
 - Nghỉ ốm 15-16/10/2026, 2 ngày; bác sĩ chỉ định 15-16/10 (khớp); tên khớp
@@ -164,7 +164,7 @@ Chúng tôi đã đọc Giấy chứng nhận kết hôn của bạn. Chứng t�
 ```markdown
 ### 🔄 Đơn đã chuyển Quản lý trực tiếp phê duyệt
 
-Giấy chứng nhận nghỉ ốm của bạn hợp lệ và khoảng nghỉ nằm trong chỉ định của bác sĩ. Do đơn nghỉ 2 ngày vượt hạn mức tự duyệt, đơn cần Quản lý trực tiếp phê duyệt.
+Giấy chứng nhận nghỉ ốm của bạn hợp lệ và khoảng nghỉ nằm trong chỉ định của bác sĩ. Do đơn nghỉ ốm 2 ngày vượt ngưỡng AI tự duyệt 1 ngày, đơn cần Quản lý trực tiếp phê duyệt.
 
 | Hạng mục | Kết quả | Ghi chú |
 |---|---|---|
@@ -172,7 +172,7 @@ Giấy chứng nhận nghỉ ốm của bạn hợp lệ và khoảng nghỉ n�
 | Chứng từ | ✅ Đạt | Giấy nghỉ ốm · Bệnh viện Giao thông Vận tải · cấp 15/10/2026 · có dấu đỏ, chữ ký bác sĩ · rõ nét |
 | Tên trên giấy | ✅ Đạt | Khớp hồ sơ nhân sự |
 | Khoảng nghỉ so với chỉ định bác sĩ | ✅ Đạt | 15-16/10/2026, nằm trong chỉ định |
-| Hạn mức tự duyệt | ⚠️ Cần xem xét | Đơn 2 ngày, cần quản lý phê duyệt |
+| Hạn mức tự duyệt | ⚠️ Cần xem xét | Đơn ốm 2 ngày vượt ngưỡng tự duyệt 1 ngày |
 ```
 
 ### Ví dụ 4: Tự động duyệt (không cần chứng từ)

@@ -14,11 +14,65 @@
   <link rel="stylesheet" href="/static/vendor/tabler/tabler.min.css">
   
   <!-- Custom Styling & Refinements -->
-  <link rel="stylesheet" href="styles.css?v=20261014_v81">
+  <link rel="stylesheet" href="styles.css?v=20261015_v90">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231e40af'/><text x='16' y='22' font-family='sans-serif' font-size='16' font-weight='bold' fill='white' text-anchor='middle'>HR</text></svg>">
-  <link rel="stylesheet" href="employee_management.css?v=20261013">
+  <link rel="stylesheet" href="employee_management.css?v=20261015c">
 </head>
 <body>
+  <!-- ===================== MÀN HÌNH CHÀO (hiện lần đầu trong mỗi phiên) ===================== -->
+  <div id="splash-screen" class="splash" role="dialog" aria-label="Màn hình chào">
+    <div class="splash-inner">
+      <div class="splash-left">
+        <div class="splash-chip">MLAI HACKATHON 2026 · ĐỘI PNKK</div>
+        <h1 class="splash-title">The Escalation<br><span>Referee</span></h1>
+        <div class="splash-keywords">
+          <span class="kw-green">Tự động</span><span class="kw-sep">–</span><span class="kw-blue">Chính xác</span><span class="kw-sep">–</span><span class="kw-purple">Minh bạch</span>
+        </div>
+        <p class="splash-sub">Hệ thống phê duyệt nghỉ phép tự động</p>
+        <button type="button" id="splash-start" class="splash-start">
+          Start
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </button>
+      </div>
+      <div class="splash-right" aria-hidden="true">
+        <div class="splash-badge splash-badge-warn">Cần sửa đơn</div>
+        <div class="splash-card">
+          <div class="splash-card-label">ĐƠN NGHỈ PHÉP</div>
+          <div class="splash-card-name">Nguyễn Văn An</div>
+          <div class="splash-card-meta">Phép năm · 16/10 – 17/10/2026 · 2 ngày</div>
+          <div class="splash-card-rows">
+            <div><span class="ok">✓</span>Số dư phép<b>Đủ (8 ngày)</b></div>
+            <div><span class="ok">✓</span>Báo trước<b>Đúng hạn</b></div>
+            <div><span class="ok">✓</span>Quân số phòng<b>Dưới 30%</b></div>
+            <div><span class="ok">✓</span>Chứng từ<b>Không yêu cầu</b></div>
+          </div>
+          <div class="splash-card-result">TỰ ĐỘNG DUYỆT</div>
+        </div>
+        <div class="splash-badge splash-badge-escalate">Chuyển Manager duyệt</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Đã bấm Start trong phiên này thì không hiện lại khi tải lại trang
+    try { if (sessionStorage.getItem('pnkk_splash_seen') === '1') document.getElementById('splash-screen').remove(); } catch (e) {}
+    // Nút Start (để ngay tại đây, không phụ thuộc app.js)
+    (function () {
+      var splash = document.getElementById('splash-screen');
+      if (!splash) return;
+      var leaving = false;
+      function enterApp() {
+        if (leaving) return;
+        leaving = true;
+        try { sessionStorage.setItem('pnkk_splash_seen', '1'); } catch (e) {}
+        splash.classList.add('is-leaving');
+        document.removeEventListener('keydown', onKey);
+        setTimeout(function () { splash.remove(); }, 450);
+      }
+      function onKey(event) { if (event.key === 'Enter') enterApp(); }
+      document.getElementById('splash-start').addEventListener('click', enterApp);
+      document.addEventListener('keydown', onKey);
+    })();
+  </script>
   <div class="saas-app-container">
 
     <!-- ======================================================================= -->
@@ -97,6 +151,13 @@
             </svg>
             <span class="saas-nav-text">Kho dữ liệu</span>
           </button>
+
+          <button class="saas-nav-item" id="btn-reset-database" title="Khôi phục toàn bộ database về trạng thái demo ban đầu" style="margin-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px;">
+            <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"></path>
+            </svg>
+            <span class="saas-nav-text">Reset DB</span>
+          </button>
         </nav>
         
         <!-- Sidebar Navigation for STAFF -->
@@ -152,12 +213,6 @@
 
 
 
-          <button class="saas-nav-item" id="btn-reset-database" title="Khôi phục toàn bộ database về trạng thái demo ban đầu" style="margin-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 10px;">
-            <svg class="saas-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"></path>
-            </svg>
-            <span class="saas-nav-text">Reset DB</span>
-          </button>
         </nav>
 
         <!-- Sidebar Navigation for MANAGER -->
@@ -278,7 +333,7 @@
                           <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-AI-01')" title="Xem thông tin đơn">Chi tiết</button>
                         </td>
                         <td style="padding: 12px 16px;">
-                          <span class="benchmark-tag benchmark-tag-approve" id="sprint1-status-TC-AI-01">1. Thường quy · Duyệt</span>
+                          <span class="benchmark-tag benchmark-tag-approve" id="sprint1-status-TC-AI-01">Thường quy · Duyệt</span>
                         </td>
                       </tr>
 
@@ -291,7 +346,7 @@
                           <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-EMP008-03')" title="Xem thông tin đơn">Chi tiết</button>
                         </td>
                         <td style="padding: 12px 16px;">
-                          <span class="benchmark-tag benchmark-tag-approve" id="sprint1-status-TC-EMP008-03">2. Thường quy · Duyệt</span>
+                          <span class="benchmark-tag benchmark-tag-approve" id="sprint1-status-TC-EMP008-03">Thường quy · Duyệt</span>
                         </td>
                       </tr>
 
@@ -304,33 +359,33 @@
                           <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-AI-03B')" title="Xem thông tin đơn">Chi tiết</button>
                         </td>
                         <td style="padding: 12px 16px;">
-                          <span class="benchmark-tag benchmark-tag-reject" id="sprint1-status-TC-AI-03B">3. Thường quy · Từ chối</span>
+                          <span class="benchmark-tag benchmark-tag-reject" id="sprint1-status-TC-AI-03B">Thường quy · Từ chối</span>
                         </td>
                       </tr>
 
                       <!-- Row 4 -->
-                      <tr id="sprint1-row-TC-VLM-03">
-                        <td style="padding: 12px 16px;"><b class="text-dark">Lê Văn Nam</b></td>
-                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">Nghỉ ốm</td>
-                        <td style="padding: 12px 16px;"><b class="text-dark">3 ngày</b></td>
+                      <tr id="sprint1-row-TC-EMP003-01">
+                        <td style="padding: 12px 16px;"><b class="text-dark">Trần Quốc Hưng</b></td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">Con kết hôn</td>
+                        <td style="padding: 12px 16px;"><b class="text-dark">1 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-VLM-03')" title="Xem thông tin đơn">Chi tiết</button>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-EMP003-01')" title="Xem thông tin đơn">Chi tiết</button>
                         </td>
                         <td style="padding: 12px 16px;">
-                          <span class="benchmark-tag benchmark-tag-correct" id="sprint1-status-TC-VLM-03">4. Chuyển tiếp · Lệch ảnh</span>
+                          <span class="benchmark-tag benchmark-tag-escalate" id="sprint1-status-TC-EMP003-01">Chuyển tiếp · Chế độ đặc biệt</span>
                         </td>
                       </tr>
 
                       <!-- Row 5 -->
-                      <tr id="sprint1-row-TC-MGR-03">
-                        <td style="padding: 12px 16px;"><b class="text-dark">Võ Minh Khang</b></td>
-                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">Nghỉ kết hôn</td>
-                        <td style="padding: 12px 16px;"><b class="text-dark">3 ngày</b></td>
+                      <tr id="sprint1-row-TC-MGR-02">
+                        <td style="padding: 12px 16px;"><b class="text-dark">Phan Thảo My</b></td>
+                        <td style="padding: 12px 16px; color: #334155; font-size: 0.84rem;">Phép năm</td>
+                        <td style="padding: 12px 16px;"><b class="text-dark">4 ngày</b></td>
                         <td style="padding: 12px 16px;">
-                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-MGR-03')" title="Xem thông tin đơn">Chi tiết</button>
+                          <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1 fw-semibold" onclick="openOverviewCaseDetail('TC-MGR-02')" title="Xem thông tin đơn">Chi tiết</button>
                         </td>
                         <td style="padding: 12px 16px;">
-                          <span class="benchmark-tag benchmark-tag-escalate" id="sprint1-status-TC-MGR-03">5. Chuyển tiếp · Vượt quyền</span>
+                          <span class="benchmark-tag benchmark-tag-escalate" id="sprint1-status-TC-MGR-02">Chuyển tiếp · Vượt quyền</span>
                         </td>
                       </tr>
                     </tbody>
@@ -910,6 +965,7 @@
                         <th>Thời gian nghỉ</th>
                         <th>Số ngày</th>
                         <th>Trạng thái</th>
+                        <th>Chi tiết</th>
                         <th>Quyền kiểm soát</th>
                       </tr>
                     </thead>
@@ -946,33 +1002,49 @@
 
 
           <section id="tab-mgr-employees" class="tab-pane">
-            <div class="employee-management-heading">
-              <h1>Quản lý nhân viên</h1>
-              <p>Thêm nhân viên vào phòng ban hoặc xóa khỏi danh sách chọn. Hồ sơ cũ và test case được giữ nguyên.</p>
-            </div>
             <div id="employee-management-message" class="employee-management-message" role="status" aria-live="polite"></div>
-            <div class="employee-management-layout">
-              <form id="employee-management-form" class="employee-management-panel">
-                <h2>Thêm nhân viên</h2>
-                <label for="employee-management-name">Tên nhân viên</label>
-                <input id="employee-management-name" name="name" type="text" maxlength="100" placeholder="Nhập họ và tên" required autocomplete="name">
-                <label for="employee-management-job-title">Chức danh (không bắt buộc)</label>
-                <input id="employee-management-job-title" name="job_title" type="text" maxlength="100" placeholder="Ví dụ: Frontend Engineer">
-                <label for="employee-management-department">Phòng ban</label>
-                <select id="employee-management-department" name="department" required></select>
-                <button type="submit" id="employee-management-submit" class="employee-management-add" disabled>Thêm nhân viên</button>
-                <p class="employee-management-hint">Chọn vai trò quản lý trên thanh trên cùng. Manager quản lý phòng ban của mình; CEO hoặc HR quản lý cả hai phòng ban.</p>
-              </form>
-              <div class="employee-management-panel">
-                <div class="employee-management-toolbar"><h2>Danh sách nhân viên</h2><span id="employee-management-count"></span></div>
-                <div class="employee-management-table-wrap">
-                  <table class="employee-management-table">
-                    <thead><tr><th>Nhân viên</th><th>Phòng ban</th><th>Chức danh</th><th>Thao tác</th></tr></thead>
-                    <tbody id="employee-management-rows"></tbody>
-                  </table>
-                </div>
-                <p class="employee-management-hint">Xóa sẽ ngừng hoạt động tài khoản và ẩn khỏi danh sách chọn. Cần giải quyết các đơn hoặc bàn giao đang chờ trước khi xóa. Tài khoản quản lý được giữ để duyệt đơn.</p>
+            <div class="employee-management-panel">
+              <div class="employee-management-toolbar"><h2>Danh sách nhân viên</h2></div>
+              <div class="employee-management-table-wrap">
+                <table class="employee-management-table">
+                  <thead><tr><th>Nhân viên</th><th>Phòng ban</th><th>Chức danh</th><th>Liên lạc</th><th>Thao tác</th></tr></thead>
+                  <tbody id="employee-management-rows"></tbody>
+                </table>
               </div>
+              <button type="button" id="employee-management-open" class="employee-management-open" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Thêm nhân viên mới
+              </button>
+            </div>
+
+            <!-- Popup thêm nhân viên mới -->
+            <div id="employee-management-dialog" class="employee-dialog-backdrop" hidden>
+              <form id="employee-management-form" class="employee-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-dialog-title" novalidate>
+                <div class="employee-dialog-head">
+                  <h3 id="employee-dialog-title">Thêm nhân viên mới</h3>
+                  <button type="button" class="employee-dialog-close" data-close-employee-dialog aria-label="Đóng">&times;</button>
+                </div>
+                <div class="employee-dialog-body">
+                  <label for="employee-management-name">Họ và tên <span class="employee-required">*</span></label>
+                  <input id="employee-management-name" name="name" type="text" maxlength="100" placeholder="Nhập họ và tên" autocomplete="off">
+                  <div class="employee-field-error" data-error-for="name"></div>
+
+                  <label for="employee-management-department">Phòng ban <span class="employee-required">*</span></label>
+                  <select id="employee-management-department" name="department"></select>
+                  <div class="employee-field-error" data-error-for="department"></div>
+
+                  <label for="employee-management-job-title">Chức danh</label>
+                  <input id="employee-management-job-title" name="job_title" type="text" maxlength="100" placeholder="Ví dụ: Frontend Engineer (để trống sẽ là Nhân viên)">
+
+                  <label for="employee-management-email">Gmail</label>
+                  <input id="employee-management-email" name="email" type="email" maxlength="120" placeholder="Ví dụ: ten.nhanvien@gmail.com (không bắt buộc)" autocomplete="off">
+                  <div class="employee-field-error" data-error-for="email"></div>
+                </div>
+                <div class="employee-dialog-foot">
+                  <button type="button" class="employee-dialog-cancel" data-close-employee-dialog>Hủy</button>
+                  <button type="submit" id="employee-management-submit" class="employee-management-add">Thêm</button>
+                </div>
+              </form>
             </div>
           </section>
 
@@ -1228,7 +1300,7 @@
   <script src="/static/vendor/tabler/tabler.min.js" defer></script>
 
   <!-- Application Logic -->
-  <script src="app.js?v=20261014_v83"></script>
-  <script src="employee_management.js?v=20261013"></script>
+  <script src="app.js?v=20261015_v89"></script>
+  <script src="employee_management.js?v=20261015d"></script>
 </body>
 </html>

@@ -5,28 +5,57 @@ services:
       dockerfile: deploy/Dockerfile
     ports:
       - "8000:8000"
+    depends_on:
+      ollama-model-init:
+        condition: service_completed_successfully
     environment:
-      # Ollama chạy trên host; đổi thành http://ollama:11434 nếu dùng service bên dưới
-      OLLAMA_BASE: ${OLLAMA_BASE:-http://host.docker.internal:11434}
+      OLLAMA_BASE: http://ollama:11434
       VLM_TARGET_MODEL: ${VLM_TARGET_MODEL:-qwen2.5vl:7b}
       VLM_MAX_IMAGE_DIM: ${VLM_MAX_IMAGE_DIM:-1600}
+      LEAVE_DATA_DIR: /data
       LEAVE_DB_PATH: /data/leave_app.db
       LEAVE_UPLOAD_DIR: /data/uploads
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       - app_data:/data
     restart: unless-stopped
 
-  # Tuỳ chọn: chạy Ollama trong container (cần `docker compose --profile ollama up`)
   ollama:
     image: ollama/ollama:latest
-    profiles: ["ollama"]
     ports:
       - "11434:11434"
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
     volumes:
       - ollama_models:/root/.ollama
     restart: unless-stopped
+    # NVIDIA GPU (bắt buộc cho VLM qwen2.5vl:7b; nếu không có GPU, xóa block deploy bên dưới).
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  ollama-model-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      VLM_TARGET_MODEL: ${VLM_TARGET_MODEL:-qwen2.5vl:7b}
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["ollama pull \"$${VLM_TARGET_MODEL}\""]
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: "no"
 
 volumes:
   app_data:

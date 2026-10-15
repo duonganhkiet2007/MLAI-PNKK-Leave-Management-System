@@ -11,7 +11,8 @@ root=Path(__file__).resolve().parents[2]
 for name in ('core','backend'):
     if str(root/name) not in sys.path: sys.path.insert(0,str(root/name))
 from domain import (RequestFacts, HumanFeedbackResolution, EditableFields,
-                    names_approximately_match, should_deduct_annual_balance, VerifiedProof)
+                    names_approximately_match, should_deduct_annual_balance, VerifiedProof,
+                    relationship_display_label)
 from rule_engine import LeaveRuleEngine
 from taxonomy import ErrorCode, DecisionType
 from calendar_service import CalendarService
@@ -54,6 +55,8 @@ def _vlm_output_from_json(cj, proof_type_raw=None):
             requires_followup_proof=_ds.get('requires_followup_proof'),
             admission_date=_safe_date(_ds.get('admission_date')),
             discharge_date=_safe_date(_ds.get('discharge_date')),
+            maternity_phase=_ds.get('maternity_phase') or (cj.get('proof_extra') or {}).get('maternity_phase'),
+            expected_due_date=_safe_date(_ds.get('expected_due_date')),
             patient_name_match=_ca.get('patient_name_match'),
             patient_name_match_reason=_ca.get('patient_name_match_reason'),
             reason_diagnosis_match=_ca.get('reason_diagnosis_match'),
@@ -615,6 +618,8 @@ class LeaveOrchestratorService:
             elif schema_key == 'BEREAVEMENT':
                 dec_n = getattr(pe, 'deceased_name', None) or doc_patient
                 rel_lbl = getattr(pe, 'relationship_label', None) or getattr(pe, 'relationship_to_employee', None)
+                if not rel_lbl and reason_cat_value:
+                    rel_lbl = relationship_display_label(reason_cat_value, None)
                 dod = getattr(pe, 'date_of_death', None) or dfd
                 iss = getattr(pe, 'issuer', None)
                 if dec_n: doc_parts.append(f"Người quá cố: {dec_n}")
@@ -627,6 +632,8 @@ class LeaveOrchestratorService:
             elif schema_key == 'STATUTORY':
                 sub_n = getattr(pe, 'subject_name', None) or doc_patient
                 rel_emp = getattr(pe, 'relationship_to_employee', None) or getattr(pe, 'relationship_label', None)
+                if not rel_emp and reason_cat_value:
+                    rel_emp = relationship_display_label(reason_cat_value, None)
                 ev_d = getattr(pe, 'event_date', None) or dfd
                 ev_conf = getattr(pe, 'evidence_confidence', None)
                 if sub_n: doc_parts.append(f"Thân nhân: {sub_n}")
@@ -900,8 +907,6 @@ class LeaveOrchestratorService:
             manager_suspicions.append('Có nhiều đơn phép năm rời rạc trong cùng tháng.')
         if error_code in ('TEAM_QUOTA_EXCEEDED', 'NOTICE_PERIOD_VIOLATED', 'NOTICE_PERIOD_VIOLATION'):
             manager_suspicions.append(ERROR_VI.get(error_code, 'Có sai lệch về điều kiện vận hành.'))
-        if corr_score is not None and float(corr_score) < 0.7:
-            manager_suspicions.append('Mức khớp giữa đơn và chứng từ thấp.')
         manager_suspicions = list(dict.fromkeys(manager_suspicions))
         if manager_suspicions:
             manager_risk_level = 'CAO' if tamper is True or ai_ed is True else 'TRUNG BÌNH'
@@ -1365,8 +1370,7 @@ class LeaveOrchestratorService:
                 if actor_id==req['employee_id'] or not any(st.has_role(conn,actor_id,r,req['department']) for r in ('DIRECT_MANAGER','DEPARTMENT_HEAD','HRD','CEO')):
                     raise st.AccessDenied('Không có quyền thu hồi quyết định.')
                 if req['status']!='COMPLETED' or req['decision']=='NO_LEAVE_REQUIRED': raise st.Conflict('Đơn không thể thu hồi.')
-                if not should_deduct_annual_balance(req.get('canonical_leave_type') or req['leave_type']):
-                    raise st.Conflict('Không thu hồi quyền nghỉ luật định bằng workflow Annual.')
+                # Phép năm: hoàn lại số ngày đã trừ. Loại nghỉ khác (ốm, chế độ...) không trừ quỹ phép nên chỉ gỡ lịch nghỉ.
                 if req.get('legacy_reconciliation_required'): raise st.Conflict('Hồ sơ lịch sử cần đối soát debit; không tự hoàn phép.')
                 count=st.refund(conn,req)
                 req.update(status='REJECTED',human_resolution='REVOKED',deducted_days=0,annual_balance_change=(req.get('annual_balance_change') or 0)+count)

@@ -154,71 +154,42 @@ SPRINT1_BENCHMARK_CASES = [
         "actionable_question": "Tự động xử lý hoàn toàn: Bị từ chối tự động do số ngày yêu cầu (2) vượt số dư phép năm còn lại (1)."
     },
     {
-        "id": "TC-VLM-03",
-        "scenario_name": "Bác sĩ chỉ định 1 ngày nhưng đơn xin 3 ngày (Lệch ảnh & Text)",
-        "sprint1_group": "UNCERTAIN_FACTS",
-        "sprint1_group_name": "Chưa xác định thực tế (Lệch chứng từ)",
-        "employee_id": "EMP004",
-        "employee_name": "Lê Văn Nam",
-        "department": "Engineering",
-        "leave_type": "SICK_MEDICAL",
-        "from_date": "2026-10-26",
-        "to_date": "2026-10-28",
-        "reason": "Rối loạn tiêu hóa cấp, theo dõi ngộ độc thức ăn",
-        "proof_file": "proof_emp004_sick_days_mismatch.png",
-        "proof": {
-            "proof_type": "MEDICAL_LEAVE_CERTIFICATE",
-            "proof_verification_status": "VERIFIED",
-            "issuer": "Bệnh viện Đa khoa Quốc tế Hà Nội",
-            "patient_name": "Lê Văn Nam",
-            "issue_date": "2026-10-26",
-            "recommended_from_date": "2026-10-26",
-            "recommended_to_date": "2026-10-26",
-            "signature_present": True,
-            "document_readability": "READABLE"
-        },
-        "remaining_leave_days": 10,
-        "total_team_members": 6,
-        "team_absent_count": 0,
-        "submitted_at": "2026-10-26T07:30:00+07:00",
-        "expected": {
-            "decision": "NEED_CORRECTION",
-            "target_role": "EMPLOYEE",
-            "deducted_days": 0,
-            "uncertainty_category": "UNCERTAIN_FACTS",
-            "error_code": "MEDICAL_DAYS_MISMATCH"
-        },
-        "actionable_question": "Đơn xin nghỉ 3 ngày (26/10 - 28/10) nhưng giấy chứng nhận y tế chỉ chỉ định nghỉ 1 ngày (26/10). Nhân viên cần điều chỉnh lại số ngày hoặc bổ sung thông tin để khớp với chứng từ."
-    },
-    {
-        "id": "TC-MGR-03",
-        "scenario_name": "Nghỉ kết hôn 3 ngày hưởng nguyên lương (Vượt thẩm quyền AI)",
+        "id": "TC-EMP003-01",
+        "scenario_name": "Con kết hôn 1 ngày nguyên lương theo Điều 115 BLLĐ (có giấy kết hôn)",
         "sprint1_group": "AUTHORITY_ESCALATION",
         "sprint1_group_name": "Vượt thẩm quyền AI (Chuyển Quản lý)",
-        "employee_id": "EMP009",
-        "employee_name": "Võ Minh Khang",
-        "department": "Marketing & Operations",
+        "employee_id": "EMP003",
+        "employee_name": "Trần Quốc Hưng",
+        "department": "Engineering",
         "leave_type": "SPECIAL_PAID",
-        "reason_category": "SELF_MARRIAGE",
-        "from_date": "2026-11-02",
-        "to_date": "2026-11-04",
-        "reason": "Nghỉ đám cưới bản thân (Lễ thành hôn)",
-        "proof_file": "proof_emp009_wedding_valid.png",
-        "proof": {
-            "proof_type": "MARRIAGE_CERTIFICATE",
-            "proof_verification_status": "VERIFIED",
-            "issuer": "UBND Phường Dịch Vọng Hậu",
-            "patient_name": "Võ Minh Khang",
-            "issue_date": "2026-10-31",
-            "recommended_from_date": "2026-11-02",
-            "recommended_to_date": "2026-11-04",
-            "signature_present": True,
-            "document_readability": "READABLE"
+        "reason_category": "CHILD_MARRIAGE",
+        "from_date": "2026-10-26",
+        "to_date": "2026-10-26",
+        "reason": "Nghỉ tham dự lễ thành hôn của con trai ruột (Trần Quốc Anh)",
+        "proof_file": "proof_emp003_wedding_child.png",
+        "proof": {"proof_type": "MARRIAGE_CERTIFICATE"},
+        "submitted_at": "2026-10-19T08:00:00+07:00",
+        "expected": {
+            "decision": "ESCALATE",
+            "target_role": "DIRECT_MANAGER",
+            "deducted_days": 0
         },
-        "remaining_leave_days": 10,
-        "total_team_members": 6,
-        "team_absent_count": 0,
-        "submitted_at": "2026-10-26T08:00:00+07:00",
+        "actionable_question": "Trần Quốc Hưng xin nghỉ 1 ngày dự lễ cưới con trai, kèm giấy chứng nhận kết hôn. Quản lý trực tiếp có phê duyệt 1 ngày nghỉ hưởng nguyên lương theo Điều 115 BLLĐ không?"
+    },
+    {
+        "id": "TC-MGR-02",
+        "scenario_name": "Phép năm 4 ngày có bàn giao: chuyển Quản lý Marketing duyệt",
+        "sprint1_group": "AUTHORITY_ESCALATION",
+        "sprint1_group_name": "Vượt thẩm quyền AI (Chuyển Quản lý)",
+        "employee_id": "EMP010",
+        "employee_name": "Phan Thảo My",
+        "department": "Marketing & Operations",
+        "leave_type": "ANNUAL",
+        "from_date": "2026-10-19",
+        "to_date": "2026-10-22",
+        "reason": "Nghỉ phép cá nhân",
+        "handover_person_id": "EMP008",
+        "submitted_at": "2026-10-09T08:00:00+07:00",
         "expected": {
             "decision": "ESCALATE",
             "target_role": "DIRECT_MANAGER",
@@ -226,7 +197,7 @@ SPRINT1_BENCHMARK_CASES = [
             "uncertainty_category": "AUTHORITY_ESCALATION",
             "error_code": "DURATION_OVER_AI_LIMIT"
         },
-        "actionable_question": "Nhân viên Võ Minh Khang xin nghỉ 3 ngày kết hôn kèm Giấy chứng nhận kết hôn hợp lệ. Quản lý trực tiếp có phê duyệt hưởng 100% lương 3 ngày chế độ đặc biệt theo Điều 115 BLLĐ không?"
+        "actionable_question": "Phan Thảo My xin nghỉ 4 ngày phép năm có bàn giao. Quản lý trực tiếp (Dương Mỹ Duyên) có phê duyệt đợt nghỉ phép này không?"
     }
 ]
 
@@ -288,18 +259,42 @@ def _ensure_proof_doc(case: dict):
     ptype = (case.get('proof') or {}).get('proof_type') or 'OTHER'
     row = {
         'id': pid, 'employee_id': case['employee_id'], 'storage_name': uuid_storage_name, 'original_name': uuid_storage_name,
-        'mime_type': 'image/png', 'size_bytes': file_size, 'proof_type': ptype, 'facts_json': json.dumps(case.get('proof') or {}),
+        # Không nạp sẵn thông tin chứng từ (tên, ngày chỉ định, VERIFIED...) từ kịch bản: chỉ ghi loại giấy như khi
+        # nhân viên tải lên, để VLM thật đọc ảnh và rule engine quyết định giống hệt một đơn nộp qua giao diện.
+        'mime_type': 'image/png', 'size_bytes': file_size, 'proof_type': ptype, 'facts_json': json.dumps({'proof_type': ptype}),
         # Cột cũ chỉ có ở DB tạo từ schema đời trước; DB mới không có nên chỉ ghi khi cột tồn tại.
         'storage_path': str(dest_path), 'file_real_path': str(dest_path), 'original_filename': uuid_storage_name,
         'file_size_bytes': file_size, 'uploaded_by': case['employee_id'],
-        'created_at': datetime.now().isoformat(), 'inspection_status': 'READY',
+        'created_at': datetime.now().isoformat(), 'inspection_status': 'PENDING',
     }
     with st.transaction() as conn:
         existing = {r[1] for r in conn.execute('PRAGMA table_info(proof_documents)')}
         cols = [k for k in row if k in existing]
         conn.execute(f"INSERT OR REPLACE INTO proof_documents({','.join(cols)}) VALUES({','.join('?' for _ in cols)})",
                      [row[k] for k in cols])
+    _inspect_like_upload(pid, case)
     return pid, 'image_attachment'
+
+
+def _inspect_like_upload(proof_id: str, case: dict) -> None:
+    """Đọc chứng từ đúng như khi nhân viên tải lên qua giao diện (cùng hàng đợi, cùng prompt, cùng cache VLM),
+    nhưng chạy ngay trong luồng này nên mọi dữ liệu nằm trong DB tạm của lượt Verify."""
+    from services.inspection_service import GLOBAL_INSPECTION_SERVICE as svc
+    res = svc.enqueue_proof_inspection(proof_id, case['employee_id'],
+                                       proof_type_hint=(case.get('proof') or {}).get('proof_type'),
+                                       leave_type_hint=case.get('leave_type'),
+                                       reason_category_hint=case.get('reason_category'))
+    if res.get('inspection_status') == 'READY':
+        return
+    for _ in range(3):  # lần đầu + tối đa 2 lần thử lại như worker
+        job = svc._claim_next_job()
+        if not job:
+            break
+        svc._process_single_job(job)
+        with st.readonly_connection() as conn:
+            r = conn.execute('SELECT inspection_status FROM proof_documents WHERE id=?', (proof_id,)).fetchone()
+        if r and r['inspection_status'] in ('READY', 'FAILED'):
+            break
 
 def _run_single_case(c: dict, orch: LeaveOrchestratorService = None):
     begin = time.perf_counter()
@@ -429,6 +424,17 @@ def get_benchmark_case_detail(case_id: str):
             'audit_trail': [],
             'source': 'benchmark_session_cache'
         }
+    # Kết quả Verify chỉ lưu trong bộ nhớ: sau khi server khởi động lại thì mất. Chạy lại kịch bản (trên DB tạm,
+    # kết quả tất định, chứng từ đã có cache VLM) để khung Chi tiết luôn có đủ bảng Kết quả kiểm tra.
+    matched = next((c for c in SPRINT1_BENCHMARK_CASES if c['id'] == case_id.replace('REQ-', '')), None)
+    if matched:
+        try:
+            with _isolated_benchmark_db():
+                detail = _run_single_case(matched)
+            return {'success': True, 'data': detail.get('record') or detail, 'audit_trail': [],
+                    'source': 'benchmark_rerun'}
+        except Exception as e:
+            print(f"⚠️ [VERIFY] Không chạy lại được {case_id}: {e}")
     with st.readonly_connection() as conn:
         try:
             req = st.read_request(conn, req_id)

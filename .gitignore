@@ -23,6 +23,7 @@ __pycache__/
 .env
 .env.*
 *.env
+!.env.example
 
 # ------ Môi trường ảo / conda (nếu lỡ tạo trong project) ---
 venv/
@@ -76,4 +77,8 @@ backend/uploads/vlm_cache/
 
 # ------ Benchmark run results (timestamped) -----------------
 benchmarks/results/20*/
+evaluation/benchmarks/results/20*/
+
+# ------ Docs (tài liệu tham khảo, không cần commit) ---------
+docs/
 

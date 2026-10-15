@@ -13,13 +13,53 @@ from pydantic import BaseModel, ConfigDict, Field
 from services.orchestration import LeaveOrchestratorService
 from services.inspection_service import GLOBAL_INSPECTION_SERVICE
 from metrics import GLOBAL_METRICS
-from domain import RequestFacts, ProofType, ProofExtraction, VerifiedProof, EditableFields, LeaveType, ReasonCategory, names_approximately_match, should_deduct_annual_balance, TEAM_ABSENCE_THRESHOLD
+from domain import RequestFacts, ProofType, ProofExtraction, VerifiedProof, EditableFields, LeaveType, ReasonCategory, names_approximately_match, relationship_display_label, assess_event_relationship, should_deduct_annual_balance, TEAM_ABSENCE_THRESHOLD
 import database as db
 import storage as st
 from auth import verify_token, legacy_actor_header_allowed, demo_login_enabled
 
 router=APIRouter(prefix='/api/leave',tags=['Leave Application'])
 service=LeaveOrchestratorService()
+RELATIONSHIP_PROOF_CATEGORIES = {
+    'CHILD_MARRIAGE', 'PARENT_DEATH', 'SPOUSE_PARENT_DEATH', 'SPOUSE_DEATH',
+    'CHILD_DEATH', 'OTHER_STATUTORY_BEREAVEMENT', 'GRANDPARENT_DEATH',
+    'SIBLING_DEATH', 'PARENT_MARRIAGE', 'SIBLING_MARRIAGE',
+}
+
+def build_explicit_escalation_reason(decision_code: str, decision_value: str, requested_days: int, normalized_leave_type: str, proof: dict | None, target_role_label: str, base_reason: str = '', reason_category: str | None = None) -> str:
+    """Build an unambiguous escalation summary for the human-view layer."""
+    if decision_value.upper() != 'ESCALATE':
+        return base_reason or ''
+    proof = proof or {}
+    reasons = []
+    if proof.get('signature_present') is False and not proof.get('digital_signature_present'):
+        reasons.append('chứng từ thiếu chữ ký người có thẩm quyền')
+    elif proof.get('signature_present') is False:
+        reasons.append('chứng từ thiếu chữ ký xác nhận')
+
+    rel_label = str(proof.get('relationship_label') or proof.get('relationship_to_employee') or '').strip()
+    relationship_required = str(reason_category or proof.get('reason_category') or '').upper() in RELATIONSHIP_PROOF_CATEGORIES
+    if relationship_required and (not rel_label or 'chưa xác minh' in rel_label.lower() or 'chưa rõ' in rel_label.lower()):
+        reasons.append('quan hệ trên giấy chưa xác minh rõ ràng')
+
+    if decision_code.upper() == 'PROOF_REVIEW_REQUIRED':
+        if normalized_leave_type in {'SICK_MEDICAL', 'MEDICAL_EMERGENCY'} and 'chứng từ' not in ' '.join(reasons):
+            reasons.insert(0, 'chứng từ y tế cần được đối chiếu chuyên môn')
+        if not reasons:
+            reasons.append('các thông tin chuyên môn trên chứng từ cần được xác minh thêm')
+    elif not reasons:
+        return base_reason or ''
+
+    base_reason_lower = (base_reason or '').lower()
+    reasons = [reason for reason in reasons if reason.lower() not in base_reason_lower]
+    if not reasons:
+        return base_reason or ''
+
+    detail = '; '.join(reasons)
+    if base_reason:
+        return f'{base_reason} Đồng thời, {detail} cần được xác minh trước khi duyệt.'
+    return f'Đơn cần {target_role_label} xem xét trước khi duyệt. Đồng thời, {detail} cần được xác minh trước khi duyệt.'
+
 
 def actor(authorization: Optional[str]=Header(None),token: Optional[str]=Query(None),
           x_actor_id: Optional[str]=Header(None),actor_id: Optional[str]=Query(None)):
@@ -255,9 +295,15 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             schema_key = _resolve_persona_config(leave_type_value, reason_category_value).get('schema_key')
         vlm_full = req.get('vlm_analysis_json') or {}
         doc_summary = (vlm_full.get('document_summary') or {}) if isinstance(vlm_full, dict) else {}
-        readability_raw = _s(req.get('document_readability')) or _s((vlm_full.get('flags') or {}).get('document_readability')) or _s((proof or {}).get('document_readability'))
+        readability_values = [
+            _s(req.get('document_readability')),
+            _s((vlm_full.get('flags') or {}).get('document_readability')),
+            _s((proof or {}).get('document_readability')),
+        ]
+        unreadable_values = [value for value in readability_values if value.strip().upper() in {'UNREADABLE', 'ILLEGIBLE'}]
+        readability_raw = unreadable_values[0] if unreadable_values else next((value for value in readability_values if value), '')
         is_unreadable_doc = (
-            readability_raw.strip().upper() in {'UNREADABLE', 'ILLEGIBLE'}
+            bool(unreadable_values)
             or (req.get('error_code') or '').casefold() == 'doc_illegible'
             or 'DOC_LOW_READABILITY' in (vlm_full.get('escalation_flags') or [])
             or 'DOC_BLURRED_IMAGE' in (vlm_full.get('escalation_flags') or [])
@@ -275,9 +321,26 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         if isinstance(vlm_full, dict) and vlm_full.get('document_summary') and not is_unreadable_doc:
             try:
                 from datetime import date as _date
-                from vlm_inspector import _score_correlation
+                from vlm_inspector import _resolve_reason_diagnosis_match, _score_correlation
                 doctor_range = doc_summary.get('doctor_recommended_range') or {}
-                comparison = vlm_full.get('correlation_analysis') or {}
+                comparison = dict(vlm_full.get('correlation_analysis') or {})
+                if doc_patient_name and req.get('employee_name'):
+                    if names_approximately_match(doc_patient_name, req.get('employee_name')):
+                        comparison['patient_name_match'] = 'MATCH'
+                        comparison['patient_name_match_reason'] = 'Tên trên giấy khớp với tên nhân sự theo quy tắc đối chiếu tên.'
+                    else:
+                        comparison['patient_name_match'] = 'MISMATCH'
+                        comparison['patient_name_match_reason'] = f"Tên trên giấy '{doc_patient_name}' không khớp với tên nhân sự '{req.get('employee_name')}'."
+                current_reason = str(req.get('reason') or '')
+                current_diagnosis = str(doc_summary.get('diagnosis') or doc_diagnosis or '')
+                reason_match, reason_match_reason = _resolve_reason_diagnosis_match(
+                    current_reason,
+                    current_diagnosis,
+                    comparison.get('reason_diagnosis_match'),
+                    comparison.get('reason_diagnosis_match_reason'),
+                )
+                comparison['reason_diagnosis_match'] = reason_match
+                comparison['reason_diagnosis_match_reason'] = reason_match_reason
                 requested_from = _date.fromisoformat(str(req['from_date'])) if req.get('from_date') else None
                 requested_to = _date.fromisoformat(str(req['to_date'])) if req.get('to_date') else None
                 recommended_from = _date.fromisoformat(str(doctor_range['from'])) if doctor_range.get('from') else None
@@ -289,15 +352,15 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     recommended_to=recommended_to,
                     requested_from=requested_from,
                     requested_to=requested_to,
-                    diagnosis=doc_summary.get('diagnosis'),
+                    diagnosis=current_diagnosis,
                     days_granted_by_doctor=doctor_range.get('days'),
                     requested_workdays=int(req.get('requested_working_days') or req.get('workdays') or 0),
                     leave_type=str(req.get('canonical_leave_type') or req.get('leave_type') or ''),
                     patient_name_on_doc=doc_patient_name,
                     patient_name_match=comparison.get('patient_name_match'),
                     patient_name_match_reason=comparison.get('patient_name_match_reason'),
-                    reason_diagnosis_match=comparison.get('reason_diagnosis_match'),
-                    reason_diagnosis_match_reason=comparison.get('reason_diagnosis_match_reason'),
+                    reason_diagnosis_match=reason_match,
+                    reason_diagnosis_match_reason=reason_match_reason,
                 )
                 req['correlation_score'] = refreshed_score
                 req['correlation_issues'] = refreshed_issues
@@ -366,6 +429,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             'INJURY_CERTIFICATE': 'Giấy chứng nhận chấn thương',
             'MARRIAGE_CERTIFICATE': 'Giấy chứng nhận kết hôn',
             'DEATH_CERTIFICATE': 'Giấy chứng tử',
+            'FUNERAL_DECISION': 'Giấy xác nhận tang lễ',
             'OTHER': 'Chứng từ khác',
             'NONE': 'Không có chứng từ',
         }.get(str(pt_label), str(pt_label))
@@ -378,7 +442,26 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         ]:
             if value and value.strip() and value.strip().lower() not in {'none','null','unknown','chưa đọc được','không đọc được','không xác định'}:
                 proof_segments.append(f"{label}: {value}")
-        if schema_key == 'WEDDING':
+        if schema_key == 'BEREAVEMENT':
+            if has_proof:
+                proof_segments.append('Chứng từ đính kèm: Có')
+            deceased_name = doc_summary.get('deceased_name') or (proof or {}).get('deceased_name') or doc_summary.get('patient_name') or doc_patient_name
+            relationship = doc_summary.get('relationship_label') or doc_summary.get('relationship_to_employee') or (proof or {}).get('relationship_label') or (proof or {}).get('relationship_to_employee')
+            if deceased_name:
+                proof_segments.append(f"Tên người mất: {deceased_name}")
+            if relationship:
+                proof_segments.append(f"Quan hệ ghi trên giấy: {relationship}")
+            relationship_assessment = assess_event_relationship(reason_category_value, relationship)
+            if relationship_assessment:
+                verified_relationship = relationship_display_label(reason_category_value, relationship)
+                proof_segments.append(f"Quan hệ đã đối chiếu: {verified_relationship}")
+            date_of_death = doc_summary.get('date_of_death') or (proof or {}).get('date_of_death')
+            funeral_date = doc_summary.get('funeral_date') or (proof or {}).get('funeral_date')
+            if date_of_death:
+                proof_segments.append(f"Ngày mất: {date_of_death}")
+            if funeral_date:
+                proof_segments.append(f"Ngày tang lễ: {funeral_date}")
+        elif schema_key == 'WEDDING':
             subject_name = doc_summary.get('subject_name') or doc_patient_name
             partner_name = doc_summary.get('partner_name')
             wedding_date = doc_summary.get('wedding_date')
@@ -416,6 +499,10 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         sig = req.get('has_doctor_signature')
         if schema_key == 'WEDDING':
             sig = vlm_flags.get('signature_present_on_scan')
+        elif schema_key == 'BEREAVEMENT':
+            sig = (proof or {}).get('signature_present')
+            if sig is None:
+                sig = vlm_flags.get('signature_present_on_scan')
         tamper = req.get('is_tampered')
         ai_edit = req.get('ai_edited')
         none_count = sum(1 for x in (rs,sig,tamper,ai_edit) if x is None)
@@ -443,7 +530,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 stamp_label = 'Dấu đỏ UBND/cơ quan' if schema_key == 'WEDDING' else 'Dấu đỏ'
                 dint_segments.append(f"{stamp_label}: {_yn(rs,'Có','Không thấy','Chưa đọc được')}")
             if sig is not None:
-                signature_label = 'Chữ ký người có thẩm quyền' if schema_key == 'WEDDING' else 'Chữ ký bác sĩ'
+                signature_label = 'Chữ ký người có thẩm quyền' if schema_key in {'WEDDING', 'BEREAVEMENT'} else 'Chữ ký bác sĩ'
                 dint_segments.append(f"{signature_label}: {_yn(sig,'Có','Thiếu','Chưa đọc được')}")
             readability = _s(req.get('document_readability')) or _s((vlm_full.get('flags') or {}).get('document_readability'))
             readability = {
@@ -462,16 +549,19 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         doc_pat = doc_patient_name or ''
         emp_n = req.get('employee_name') or ''
         vlm_name_match = str(((vlm_full.get('correlation_analysis') or {}).get('patient_name_match') or '')).upper()
+        wedding_category = str(reason_category_value or doc_summary.get('event_type') or '').upper()
         if not has_doc:
             p_status = "NOT_RUN"; p_pass = False; p_severity="INFO"
             p_note = "Không có chứng từ nên bỏ qua bước kiểm tra tên bệnh nhân."
         elif is_unreadable_doc:
             p_status = "FAIL"; p_pass = False; p_severity="CRITICAL"
-            p_note = "Chứng từ không đọc được. Không thể xác minh tên bệnh nhân."
-        elif schema_key == 'WEDDING' and str(reason_category_value or '').upper() == 'CHILD_MARRIAGE':
+            p_note = ("Chứng từ không đọc được. Không thể xác minh tên người mất."
+                      if schema_key == 'BEREAVEMENT' else
+                      "Chứng từ không đọc được. Không thể xác minh tên bệnh nhân.")
+        elif schema_key == 'WEDDING' and wedding_category != 'SELF_MARRIAGE':
             p_status = "NOT_RUN"; p_pass = False; p_severity="INFO"
             couple = ' & '.join(x for x in (doc_summary.get('subject_name'), doc_summary.get('partner_name')) if x)
-            p_note = f"Người kết hôn trên giấy: {couple or doc_pat or 'Chưa đọc được'} — đơn thuộc trường hợp con kết hôn nên không so tên đương sự với nhân viên nộp đơn."
+            p_note = f"Người kết hôn trên giấy: {couple or doc_pat or 'Chưa đọc được'} — không yêu cầu tên người kết hôn trùng tên nhân viên nộp đơn cho sự kiện này."
         elif schema_key == 'WEDDING' and doc_pat:
             couple_names = [doc_summary.get('subject_name') or doc_pat, doc_summary.get('partner_name')]
             match_ok = any(names_approximately_match(emp_n, name) for name in couple_names if name)
@@ -481,12 +571,22 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             p_note = f"Người kết hôn trên giấy: {' & '.join(x for x in couple_names if x)} — tên nhân viên {'có' if match_ok else 'không'} nằm trong cặp đôi."
         elif schema_key in {'BEREAVEMENT', 'STATUTORY'}:
             p_status = "NOT_RUN"; p_pass = False; p_severity="INFO"
-            p_note = f"Người thân trên giấy: {doc_pat or 'Chưa đọc được'} — không yêu cầu tên người thân trùng tên nhân viên nộp đơn."
+            if schema_key == 'BEREAVEMENT':
+                deceased_name = doc_summary.get('deceased_name') or (proof or {}).get('deceased_name') or doc_pat
+                p_note = f"Người mất trên giấy: {deceased_name or 'Chưa đọc được'} — tên người mất được ghi nhận, không đối chiếu với tên nhân viên nộp đơn."
+            else:
+                p_note = f"Người thân trên giấy: {doc_pat or 'Chưa đọc được'} — không yêu cầu tên người thân trùng tên nhân viên nộp đơn."
         elif not doc_pat:
             p_status = "WARN"; p_pass = False; p_severity="WARNING"
             p_note = "Không đọc được tên người khám trên chứng từ. Không thể xác minh đây là giấy của nhân viên này."
+        elif emp_n and names_approximately_match(doc_pat, emp_n):
+            p_status = "PASS"; p_pass = True; p_severity="SUCCESS"
+            p_note = f"Tên trên giấy khớp với nhân sự theo quy tắc đối chiếu tên: {doc_pat}."
         else:
-            if vlm_name_match == 'MATCH':
+            if emp_n and not names_approximately_match(doc_pat, emp_n):
+                p_status = "FAIL"; p_pass = False; p_severity="CRITICAL"
+                p_note = f"Tên trên giấy: {doc_pat} — Tên nhân sự: {emp_n} — (Không khớp)."
+            elif vlm_name_match == 'MATCH':
                 p_status = "PASS"; p_pass = True; p_severity="SUCCESS"
                 p_note = f"VLM xác nhận tên trên giấy khớp với nhân sự: {doc_pat}."
             elif vlm_name_match == 'MISMATCH':
@@ -505,7 +605,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     result = "(Khớp)" if match_ok else "(Không khớp)",
                 )
         add_node(5,"VLM_PATIENT",p_status, p_pass, p_note,
-                               title_vi="Đối chiếu tên trên chứng từ với nhân sự",
+                               title_vi=("Thông tin người mất trên chứng từ" if schema_key == 'BEREAVEMENT' else "Đối chiếu tên trên chứng từ với nhân sự"),
                        severity=p_severity, include=shows_proof)
         # ===== NODE 6. VLM - Date coverage (doctor recommended vs requested) =====
         vlm_sum = {}
@@ -518,6 +618,14 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         req_from = req.get('from_date') or ''
         req_to = req.get('to_date') or ''
         req_wd = int(req.get('requested_working_days') or req.get('workdays') or 0)
+        maternity_schema_data = ((llm.get('vlm_summary') or {}).get('schema_data') or {}) if isinstance(llm, dict) else {}
+        maternity_phase = doc_summary.get('maternity_phase') or maternity_schema_data.get('maternity_phase')
+        maternity_reason = str(req.get('reason') or '').casefold()
+        is_maternity_checkup = schema_key == 'MATERNITY' and (
+            str(maternity_phase or '').upper() == 'PREGNANCY_CHECKUP'
+            or 'khám thai' in maternity_reason
+            or 'kham thai' in maternity_reason
+        )
         if not has_doc:
             dc_status = "NOT_RUN"; dc_pass = False; dc_severity="INFO"
             dc_note = "Không có chứng từ nên bỏ qua bước kiểm tra ngày khớp."
@@ -527,6 +635,8 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 dc_note = "Chứng từ không đọc được. Không thể xác minh ngày cấp cứu / nhập viện."
             elif schema_key == 'WEDDING':
                 dc_note = "Chứng từ không đọc được. Không thể xác minh ngày cưới / sự kiện."
+            elif schema_key == 'BEREAVEMENT':
+                dc_note = "Chứng từ không đọc được. Không thể xác minh ngày mất / tang lễ."
             else:
                 dc_note = "Chứng từ không đọc được. Không thể xác minh khoảng ngày bác sĩ chỉ định."
         else:
@@ -581,24 +691,28 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                            'Khoảng yêu cầu vượt ngoài / không khớp với ngày cấp cứu đã ghi trên giấy')
                 )
             elif schema_key == 'BEREAVEMENT':
-                event_date = bereavement_date or doc_summary.get('funeral_date')
-                if event_date and req_from and req_to:
+                funeral_date = doc_summary.get('funeral_date') or (proof or {}).get('funeral_date')
+                date_of_death = bereavement_date or (proof or {}).get('date_of_death')
+                event_from = date_of_death or doc_summary.get('recommended_from_date') or (proof or {}).get('recommended_from_date') or funeral_date
+                event_to = funeral_date or doc_summary.get('recommended_to_date') or (proof or {}).get('recommended_to_date') or event_from
+                if event_from and event_to and req_from and req_to:
                     try:
                         from datetime import date as _d
-                        event_day = _d.fromisoformat(str(event_date))
+                        event_start = _d.fromisoformat(str(event_from))
+                        event_end = _d.fromisoformat(str(event_to))
                         requested_start = _d.fromisoformat(str(req_from))
                         requested_end = _d.fromisoformat(str(req_to))
-                        date_matches = requested_start <= event_day <= requested_end
+                        date_matches = requested_start <= event_start and event_end <= requested_end
                     except Exception:
                         date_matches = False
                     dc_status = "PASS" if date_matches else "FAIL"
                     dc_pass = date_matches
                     dc_severity = "SUCCESS" if date_matches else "CRITICAL"
                     date_result = "Ngày mất / tang lễ nằm trong khoảng xin nghỉ" if date_matches else "Ngày mất / tang lễ nằm ngoài khoảng xin nghỉ"
-                    dc_note = f"Ngày mất / tang lễ trên giấy: {event_date} · Ngày xin nghỉ: {req_from} → {req_to} · Kết quả: {date_result}."
+                    dc_note = f"Khoảng ngày mất / tang lễ trên giấy: {event_from} → {event_to} · Ngày xin nghỉ: {req_from} → {req_to} · Kết quả: {date_result}."
                 else:
                     dc_status = "WARN"; dc_pass = False; dc_severity = "WARNING"
-                    dc_note = f"Không đọc được ngày mất / tang lễ hoặc ngày xin nghỉ để đối chiếu (ngày sự kiện: {event_date or 'chưa đọc được'})."
+                    dc_note = f"Không đọc đủ ngày mất / tang lễ hoặc ngày xin nghỉ để đối chiếu (khoảng sự kiện: {event_from or 'chưa đọc được'} → {event_to or 'chưa đọc được'})."
             elif schema_key == 'STATUTORY':
                 event_date = statutory_event_date or doc_summary.get('date_of_death') or doc_summary.get('wedding_date')
                 if event_date and req_from and req_to:
@@ -619,24 +733,43 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     dc_status = "WARN"; dc_pass = False; dc_severity = "WARNING"
                     dc_note = f"Không đọc được ngày sự kiện thân nhân hoặc ngày xin nghỉ để đối chiếu (ngày sự kiện: {event_date or 'chưa đọc được'})."
             elif schema_key == 'MATERNITY':
-                event_date = maternity_due_date or dr_from
-                if event_date and req_from and req_to:
-                    try:
-                        from datetime import date as _d
-                        event_day = _d.fromisoformat(str(event_date))
-                        requested_start = _d.fromisoformat(str(req_from))
-                        requested_end = _d.fromisoformat(str(req_to))
-                        date_matches = requested_start <= event_day <= requested_end
-                    except Exception:
-                        date_matches = False
-                    dc_status = "PASS" if date_matches else "FAIL"
-                    dc_pass = date_matches
-                    dc_severity = "SUCCESS" if date_matches else "CRITICAL"
-                    date_result = "Ngày thai sản / dự sinh nằm trong khoảng xin nghỉ" if date_matches else "Ngày thai sản / dự sinh nằm ngoài khoảng xin nghỉ"
-                    dc_note = f"Ngày thai sản trên giấy: {event_date} · Ngày xin nghỉ: {req_from} → {req_to} · Kết quả: {date_result}."
+                if is_maternity_checkup:
+                    in_range = False
+                    if dr_from and dr_to and req_from and req_to:
+                        try:
+                            from datetime import date as _d
+                            doctor_start, doctor_end = _d.fromisoformat(str(dr_from)), _d.fromisoformat(str(dr_to))
+                            requested_start, requested_end = _d.fromisoformat(str(req_from)), _d.fromisoformat(str(req_to))
+                            in_range = doctor_start <= requested_start and requested_end <= doctor_end
+                        except Exception:
+                            in_range = False
+                    if not dr_from or not dr_to:
+                        dc_status = "WARN"; dc_pass = False; dc_severity = "WARNING"
+                    elif not in_range:
+                        dc_status = "FAIL"; dc_pass = False; dc_severity = "CRITICAL"
+                    else:
+                        dc_status = "PASS"; dc_pass = True; dc_severity = "SUCCESS"
+                    date_result = "Ngày nghỉ nằm trong khoảng bác sĩ chỉ định khám thai" if dc_pass else "Ngày nghỉ nằm ngoài khoảng bác sĩ chỉ định khám thai"
+                    dc_note = f"Khoảng ngày khám thai trên giấy: {dr_from or 'chưa đọc được'} → {dr_to or 'chưa đọc được'} · Ngày xin nghỉ: {req_from or 'chưa xác định'} → {req_to or 'chưa xác định'} · Kết quả: {date_result}."
                 else:
-                    dc_status = "WARN"; dc_pass = False; dc_severity = "WARNING"
-                    dc_note = f"Không đọc được ngày thai sản hoặc ngày xin nghỉ để đối chiếu (ngày thai sản: {event_date or 'chưa đọc được'})."
+                    event_date = maternity_due_date or dr_from
+                    if event_date and req_from and req_to:
+                        try:
+                            from datetime import date as _d
+                            event_day = _d.fromisoformat(str(event_date))
+                            requested_start = _d.fromisoformat(str(req_from))
+                            requested_end = _d.fromisoformat(str(req_to))
+                            date_matches = requested_start <= event_day <= requested_end
+                        except Exception:
+                            date_matches = False
+                        dc_status = "PASS" if date_matches else "FAIL"
+                        dc_pass = date_matches
+                        dc_severity = "SUCCESS" if date_matches else "CRITICAL"
+                        date_result = "Ngày thai sản / dự sinh nằm trong khoảng xin nghỉ" if date_matches else "Ngày thai sản / dự sinh nằm ngoài khoảng xin nghỉ"
+                        dc_note = f"Ngày thai sản trên giấy: {event_date} · Ngày xin nghỉ: {req_from} → {req_to} · Kết quả: {date_result}."
+                    else:
+                        dc_status = "WARN"; dc_pass = False; dc_severity = "WARNING"
+                        dc_note = f"Không đọc được ngày thai sản hoặc ngày xin nghỉ để đối chiếu (ngày thai sản: {event_date or 'chưa đọc được'})."
             elif schema_key == 'WORK_ACCIDENT':
                 event_date = accident_date or dr_from
                 if event_date and req_from and req_to:
@@ -683,38 +816,75 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                            'Khoảng yêu cầu vượt ngoài / ngày yêu cầu nhiều hơn số ngày bác sĩ cấp')
                 )
         add_node(6,"VLM_DATE_COVERAGE",dc_status, dc_pass, dc_note,
-                               title_vi=("Đối chiếu ngày cưới với ngày nghỉ" if schema_key == 'WEDDING' else "Đối chiếu thời gian nghỉ"),
+                               title_vi=("Đối chiếu ngày cưới với ngày nghỉ" if schema_key == 'WEDDING' else "Đối chiếu ngày mất / tang lễ với ngày nghỉ" if schema_key == 'BEREAVEMENT' else "Đối chiếu ngày khám thai" if is_maternity_checkup else "Đối chiếu thời gian nghỉ"),
                        severity=dc_severity, include=shows_proof)
         # ===== NODE 7. VLM - Correlation score (diagnosis ↔ reason + dates) =====
         cs = req.get('correlation_score')
         issues = req.get('correlation_issues') or []
+        correlation = (vlm_full.get('correlation_analysis') or {}) if isinstance(vlm_full, dict) else {}
+        reason_match = str(correlation.get('reason_diagnosis_match') or '').upper()
+        reason_match_reason = correlation.get('reason_diagnosis_match_reason')
+        if schema_key not in {'WEDDING', 'BEREAVEMENT', 'STATUTORY'} and doc_diagnosis:
+            from vlm_inspector import _resolve_reason_diagnosis_match
+            reason_match, reason_match_reason = _resolve_reason_diagnosis_match(
+                req.get('reason') or '', doc_diagnosis, reason_match, reason_match_reason
+            )
+            correlation = {
+                **correlation,
+                'reason_diagnosis_match': reason_match,
+                'reason_diagnosis_match_reason': reason_match_reason,
+            }
+            vlm_full = dict(vlm_full)
+            vlm_full['correlation_analysis'] = correlation
         if not has_doc:
             c_status = "NOT_RUN"; c_pass = False; c_severity="INFO"
             c_note = "Không có chứng từ nên bỏ qua bước đối chiếu nội dung."
         elif is_unreadable_doc:
             c_status = "FAIL"; c_pass = False; c_severity="CRITICAL"
             c_note = "Chứng từ không đọc được. Không thể đánh giá mức độ khớp nội dung."
-        elif schema_key in {'WEDDING', 'BEREAVEMENT', 'STATUTORY'}:
+        elif schema_key == 'BEREAVEMENT':
+            relationship = doc_summary.get('relationship_label') or doc_summary.get('relationship_to_employee') or (proof or {}).get('relationship_label') or (proof or {}).get('relationship_to_employee')
+            assessment = assess_event_relationship(reason_category_value, relationship)
+            relationship_status = assessment.get('status') if assessment else 'UNVERIFIED'
+            relationship_label = relationship_display_label(reason_category_value, relationship) or 'Chưa xác minh quan hệ'
+            deceased_name = doc_summary.get('deceased_name') or (proof or {}).get('deceased_name') or doc_patient_name or 'Chưa đọc được'
+            if relationship_status == 'VERIFIED' and dc_pass:
+                c_status = 'PASS'; c_pass = True; c_severity = 'SUCCESS'
+                c_note = f"Tên người mất: {deceased_name} · Quan hệ ghi trên giấy: {relationship} · Quan hệ đã xác minh: {relationship_label} · Nhận xét lý do: phù hợp với tang lễ."
+            elif relationship_status == 'CONFLICT':
+                c_status = 'FAIL'; c_pass = False; c_severity = 'CRITICAL'
+                c_note = f"Tên người mất: {deceased_name} · Quan hệ ghi trên giấy: {relationship} · Quan hệ dự kiến: {relationship_label} · Cần xem xét sự không khớp quan hệ."
+            else:
+                c_status = 'WARN'; c_pass = False; c_severity = 'WARNING'
+                c_note = f"Tên người mất: {deceased_name} · Quan hệ: {relationship_label} · Cần xem xét quan hệ hoặc ngày mất / tang lễ chưa đủ căn cứ đối chiếu."
+        elif schema_key in {'WEDDING', 'STATUTORY', 'MATERNITY'}:
             c_status = "NOT_RUN"; c_pass = False; c_severity="INFO"
-            c_note = "Không áp dụng đối chiếu chẩn đoán y tế cho chứng từ sự kiện gia đình."
+            c_note = (
+                "Không áp dụng đối chiếu chẩn đoán y tế cho chứng từ thai sản."
+                if schema_key == 'MATERNITY'
+                else "Không áp dụng đối chiếu chẩn đoán y tế cho chứng từ sự kiện gia đình."
+            )
         elif cs is None:
-            c_status = "WARN"; c_pass = False; c_severity="WARNING"
-            c_note = "Chưa đủ thông tin để đánh giá mức độ khớp nội dung."
+            c_status = "INFO"; c_pass = False; c_severity="INFO"
+            c_note = "Chưa đủ thông tin để tính điểm tương quan tham khảo. Điểm này không quyết định duyệt hoặc chuyển cấp."
         else:
             cf = float(cs)
-            if cf >= 0.85:
-                c_status = "PASS"; c_pass = True; c_severity = "SUCCESS"; tier = "RẤT KHỚP"
-            elif cf >= 0.7:
-                c_status = "PASS"; c_pass = True; c_severity = "SUCCESS"; tier = "KHỚP Ở MỨC CHẤP NHẬN"
-            elif cf >= 0.5:
-                c_status = "WARN"; c_pass = False; c_severity = "WARNING"; tier = "CHƯA KHỚP HOÀN TOÀN"
-            else:
-                c_status = "FAIL"; c_pass = False; c_severity = "CRITICAL"; tier = "KHÔNG KHỚP NHIỀU (nghi vấn giả)"
-            c_note = "Mức độ khớp nội dung: {sc:.2f} / 1,00 → Đánh giá: {tier}.".format(
-                sc = cf, tier = tier
-            )
+            c_status = "INFO"; c_pass = False; c_severity="INFO"
+            c_note = f"Điểm tương quan tham khảo: {cf:.2f} / 1,00. Điểm này không quyết định duyệt hoặc chuyển cấp."
+            if reason_match:
+                match_label = {
+                    'MATCH': 'Nhận xét lý do: khớp với chẩn đoán trên giấy',
+                    'PARTIAL': 'Nhận xét lý do: chỉ khớp một phần với chẩn đoán trên giấy',
+                    'MISMATCH': 'Nhận xét lý do: không khớp với chẩn đoán trên giấy',
+                    'UNCERTAIN': 'Nhận xét lý do: chưa đủ căn cứ đối chiếu với chẩn đoán trên giấy',
+                    'NOT_APPLICABLE': 'Không áp dụng đối chiếu lý do y tế',
+                }.get(reason_match, '')
+                if match_label:
+                    c_note += f" {match_label}."
+                if reason_match_reason:
+                    c_note += f" {reason_match_reason}"
         add_node(7,"VLM_CORRELATION",c_status, c_pass, c_note,
-                               title_vi=("Mức độ khớp nội dung" if schema_key not in {'WEDDING', 'BEREAVEMENT', 'STATUTORY'} else "Đối chiếu nội dung chứng từ"),
+                               title_vi=("Mức độ khớp nội dung" if schema_key not in {'WEDDING', 'BEREAVEMENT', 'STATUTORY', 'MATERNITY'} else "Đối chiếu nội dung chứng từ"),
                        severity=c_severity, include=shows_proof)
         # ===== NODE 8. PROOF VERIFICATION status =====
         pv_status_raw = proof.get('proof_verification_status') if isinstance(proof,dict) else (req.get('status') or '')
@@ -925,10 +1095,92 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                       'correlation_score','correlation_issues','days_granted_by_doctor']
         for k in raw_fields:
             vlm_fields_ext[k] = req.get(k)
+        comparison = (vlm_full.get('correlation_analysis') or {}) if isinstance(vlm_full, dict) else {}
+        vlm_fields_ext['reason_diagnosis_match'] = comparison.get('reason_diagnosis_match')
+        vlm_fields_ext['reason_diagnosis_match_reason'] = comparison.get('reason_diagnosis_match_reason')
+        decision_reason = req.get('human_readable_explanation') or (llm.get('summary_natural_vn') if isinstance(llm,dict) else None) or ''
+        decision_code = str(req.get('error_code') or '').upper()
+        decision_value = str(req.get('decision') or '').upper()
+        current_patient_name_matches = bool(
+            doc_patient_name and req.get('employee_name')
+            and names_approximately_match(doc_patient_name, req.get('employee_name'))
+        )
+        stale_name_mismatch = decision_code == 'NAME_MISMATCH' and current_patient_name_matches
+        requested_days = int(req.get('requested_working_days') or req.get('workdays') or 0)
+        normalized_leave_type = str(leave_type_value or '').upper()
+        target_role_labels = {
+            'DIRECT_MANAGER': 'Lead Team (quản lý trực tiếp)',
+            'DEPARTMENT_HEAD': 'Trưởng bộ phận',
+            'HR': 'HR',
+            'HRD': 'Giám đốc Nhân sự',
+            'CEO': 'Tổng Giám đốc',
+        }
+        target_role_label = target_role_labels.get(str(req.get('target_role') or '').upper(), 'cấp có thẩm quyền')
+        if stale_name_mismatch:
+            decision_reason = (
+                f'Tên trên chứng từ hiện khớp với nhân sự. Đơn vẫn đang chờ {target_role_label} '
+                'xử lý theo trạng thái đã ghi nhận; không còn căn cứ dùng lỗi sai tên làm lý do.'
+            )
+        duration_reason = ''
+        explicit_proof_reasons = []
+        if decision_value == 'ESCALATE':
+            if decision_code == 'DURATION_OVER_AI_LIMIT' or (
+                normalized_leave_type in {'SICK_MEDICAL', 'MEDICAL_EMERGENCY'}
+                and 1 < requested_days <= 5
+            ):
+                ai_limit = 1 if normalized_leave_type in {'SICK_MEDICAL', 'MEDICAL_EMERGENCY'} else 2
+                duration_reason = (
+                    f'Chuyển cấp do đơn nghỉ {requested_days} ngày vượt trần tự duyệt {ai_limit} ngày của AI; '
+                    f'{target_role_label} xem xét theo phân cấp.'
+                )
+            elif decision_code == 'DURATION_OVER_MANAGER_LIMIT':
+                duration_reason = (
+                    f'Chuyển cấp do đơn nghỉ {requested_days} ngày vượt thẩm quyền của Lead Team; '
+                    f'{target_role_label} xem xét theo phân cấp.'
+                )
+
+            proof_sig = req.get('proof') or {}
+            if isinstance(proof_sig, dict):
+                sig_value = proof_sig.get('signature_present')
+                digital_value = proof_sig.get('digital_signature_present')
+                if sig_value is False and not digital_value:
+                    explicit_proof_reasons.append('chứng từ thiếu chữ ký người có thẩm quyền')
+                elif sig_value is False:
+                    explicit_proof_reasons.append('chứng từ thiếu chữ ký xác nhận')
+                rel_label = str(proof_sig.get('relationship_label') or proof_sig.get('relationship_to_employee') or '').strip()
+                relationship_required = str(req.get('reason_category') or '').upper() in RELATIONSHIP_PROOF_CATEGORIES
+                if relationship_required and (not rel_label or 'chưa xác minh' in rel_label.lower() or 'chưa rõ' in rel_label.lower()):
+                    explicit_proof_reasons.append('quan hệ trên giấy chưa xác minh rõ ràng')
+            if decision_code == 'PROOF_REVIEW_REQUIRED':
+                if normalized_leave_type in {'SICK_MEDICAL', 'MEDICAL_EMERGENCY'} and not any('chứng từ' in reason.lower() for reason in explicit_proof_reasons):
+                    explicit_proof_reasons.insert(0, 'chứng từ y tế cần được đối chiếu chuyên môn')
+                if not explicit_proof_reasons and (normalized_leave_type in {'SPECIAL_PAID', 'STATUTORY_UNPAID'}):
+                    explicit_proof_reasons.append('các thông tin chuyên môn trên chứng từ cần được Lead Team xác minh thêm')
+
+        if decision_code == 'PROOF_REVIEW_REQUIRED' and explicit_proof_reasons:
+            decision_reason = build_explicit_escalation_reason(
+                decision_code,
+                decision_value,
+                requested_days,
+                normalized_leave_type,
+                req.get('proof') or {},
+                target_role_label,
+                duration_reason or decision_reason,
+                reason_category=reason_category_value,
+            )
+        elif duration_reason:
+            decision_reason = duration_reason
+            if explicit_proof_reasons:
+                decision_reason += ' Đồng thời, ' + '; '.join(explicit_proof_reasons) + ' cần được xác minh trước khi duyệt.'
+        elif decision_reason:
+            decision_reason = decision_reason
         return st.sanitize_public({'success':True,'request_id':request_id,
                 'decision':req.get('decision'),'status':req.get('status'),
                 'target_role':req.get('target_role'),
-                'error_code':req.get('error_code'),'uncertainty_category':req.get('uncertainty_category'),
+                'error_code':None if stale_name_mismatch else req.get('error_code'),'uncertainty_category':req.get('uncertainty_category'),
+                'decision_reason': decision_reason or None,
+                'reason_diagnosis_match': comparison.get('reason_diagnosis_match'),
+                'reason_diagnosis_match_reason': comparison.get('reason_diagnosis_match_reason'),
                 'human_readable_reason': req.get('human_readable_explanation') or (llm.get('summary_natural_vn') if isinstance(llm,dict) else None),
                 'actionable_question': req.get('actionable_question') or (llm.get('actionable_question') if isinstance(llm,dict) else None),
                 'proof':proof,
@@ -951,6 +1203,8 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     'days_granted_by_doctor': 'Số ngày nghỉ bác sĩ đề nghị (ngày)',
                     'correlation_score': 'Mức độ khớp nội dung giữa lý do nghỉ và giấy tờ (0-1, ≥0.7 đạt)',
                     'correlation_issues': 'Các điểm chưa khớp cụ thể (danh sách)',
+                    'reason_diagnosis_match': 'Kết quả đối chiếu lý do nghỉ với chẩn đoán trên giấy',
+                    'reason_diagnosis_match_reason': 'Giải thích đối chiếu lý do nghỉ với chẩn đoán trên giấy',
                 },
                 'llm_summary': llm or {},
                 'engine_result': req.get('result_json'),

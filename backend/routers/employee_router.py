@@ -1,5 +1,6 @@
 """Employee administration. Deactivation preserves leave history and test fixtures."""
 import json
+import re
 import uuid
 from pathlib import Path
 from datetime import datetime
@@ -23,6 +24,17 @@ class NewEmployee(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     department: Literal['Engineering', 'Marketing & Operations']
     job_title: str = Field(default='Nhân viên', min_length=1, max_length=100)
+    email: str | None = Field(default=None, max_length=120)
+
+    @field_validator('email')
+    @classmethod
+    def clean_email(cls, value):
+        value = (value or '').strip().lower()
+        if not value:
+            return None
+        if not re.fullmatch(r'[^\s@<>"`]+@[^\s@<>"`]+\.[^\s@<>"`]+', value):
+            raise ValueError('Email không đúng định dạng (ví dụ: ten@gmail.com).')
+        return value
 
     @field_validator('name', 'job_title')
     @classmethod
@@ -83,13 +95,17 @@ def add_employee(payload: NewEmployee, actor_id=Depends(actor)):
             WHERE e.status='ACTIVE' AND r.role='DIRECT_MANAGER' AND r.department_scope IN (?, '*')
             ORDER BY CASE WHEN r.department_scope=? THEN 0 ELSE 1 END, e.employee_id LIMIT 1''',
             (payload.department, payload.department)).fetchone()
+        if payload.email and conn.execute("SELECT 1 FROM employees WHERE status='ACTIVE' AND lower(email)=?",
+                                          (payload.email,)).fetchone():
+            raise st.Conflict('Email này đã được dùng cho một nhân viên khác.')
         eid = 'EMPNEW-' + uuid.uuid4().hex[:12].upper()
         today = datetime.now(st.CalendarService().timezone).date().isoformat()
         # Existing employee schema defaults to 12 annual days. No fixture/JSON is changed.
-        conn.execute('''INSERT INTO employees(employee_id,name,department,role,manager_id,
+        conn.execute('''INSERT INTO employees(employee_id,name,email,department,role,manager_id,
             remaining_leave_days,status,employment_status,hire_date,employment_start_date)
-            VALUES(?,?,?,?,?,12,'ACTIVE','REGULAR',?,?)''',
-            (eid, payload.name, payload.department, payload.job_title, manager['employee_id'] if manager else None, today, today))
+            VALUES(?,?,?,?,?,?,12,'ACTIVE','REGULAR',?,?)''',
+            (eid, payload.name, payload.email, payload.department, payload.job_title,
+             manager['employee_id'] if manager else None, today, today))
         st.audit(conn, 'EMPLOYEE-' + eid, 'EMPLOYEE_CREATED',
                  json.dumps({'actor_id': actor_id, 'department': payload.department}, ensure_ascii=False))
         row = conn.execute('SELECT * FROM employees WHERE employee_id=?', (eid,)).fetchone()
@@ -128,7 +144,9 @@ def deactivate_employee(employee_id: str, actor_id=Depends(actor)):
             raise st.Conflict('Không xóa tài khoản quản lý hoặc người duyệt đơn ở màn hình này.')
         pending = conn.execute('SELECT 1 FROM leave_requests WHERE employee_id=? AND status IN (' +
             ','.join('?' for _ in OPEN_STATES) + ') LIMIT 1', (employee_id, *OPEN_STATES)).fetchone()
-        handover = conn.execute("SELECT 1 FROM leave_requests WHERE handover_person_id=? AND status='PENDING_HANDOVER' LIMIT 1", (employee_id,)).fetchone()
+        # Người được chỉ định nhận bàn giao ở bất kỳ đơn nào chưa xong (kể cả đơn còn chờ duyệt) cũng phải giữ lại.
+        handover = conn.execute('SELECT 1 FROM leave_requests WHERE handover_person_id=? AND status IN (' +
+            ','.join('?' for _ in OPEN_STATES) + ') LIMIT 1', (employee_id, *OPEN_STATES)).fetchone()
         jobs = conn.execute("SELECT 1 FROM proof_inspection_jobs WHERE employee_id=? AND status IN ('PENDING','PROCESSING') LIMIT 1", (employee_id,)).fetchone()
         if pending or handover or jobs:
             raise st.Conflict('Nhân viên còn đơn nghỉ, bàn giao hoặc chứng từ đang xử lý. Vui lòng giải quyết trước khi xóa.')

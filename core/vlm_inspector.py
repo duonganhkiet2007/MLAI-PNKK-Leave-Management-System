@@ -28,7 +28,7 @@ for _p in [str(_BACKEND_DIR), str(_CORE_DIR)]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from domain import ProofExtraction, ProofType
+from domain import ProofExtraction, ProofType, relationship_display_label, names_approximately_match
 from ai.ai_stack import (
     OLLAMA_BASE as VLM_OLLAMA_BASE,
     VLM_TARGET_MODEL,
@@ -204,12 +204,12 @@ PERSONA_CONFIGS = {
         "persona": "Chuyên viên hồ sơ thai sản BHXH (Maternity Leave Officer)",
         "schema_key": "MATERNITY",
         "decision_tree": "maternity_phase -> mother_name -> expected_or_birth_date -> doctor_period -> issuer -> bhxh_code",
-        "allowed_proof_types": "MATERNITY_CERTIFICATE, HOSPITAL_DISCHARGE, LAB_RESULT, OTHER",
-        "schema_prompt": """  1. proof_type: "MATERNITY_CERTIFICATE" | "HOSPITAL_DISCHARGE" | "LAB_RESULT" | "OTHER"
+        "allowed_proof_types": "MATERNITY_CERTIFICATE, MEDICAL_LEAVE_CERTIFICATE, HOSPITAL_DISCHARGE, LAB_RESULT, OTHER",
+        "schema_prompt": """  1. proof_type: "MATERNITY_CERTIFICATE" | "MEDICAL_LEAVE_CERTIFICATE" | "HOSPITAL_DISCHARGE" | "LAB_RESULT" | "OTHER"
   2. subject_name_raw: string | null     // Tên chép đúng từng ký tự
   3. subject_name: string | null         // Tên thai phụ / người mẹ
   4. doc_patient_name: string | null     // Giống subject_name
-  5. maternity_phase: "PRENATAL" | "BIRTH" | "POSTNATAL" | "CHILD_CARE" | null
+    5. maternity_phase: "PREGNANCY_CHECKUP" | "PRENATAL" | "BIRTH" | "POSTNATAL" | "CHILD_CARE" | null // PREGNANCY_CHECKUP chỉ dùng cho lần khám thai
   6. expected_due_date: YYYY-MM-DD | null// Ngày dự sinh
   7. recommended_from_date: YYYY-MM-DD | null
   8. recommended_to_date: YYYY-MM-DD | null
@@ -290,6 +290,31 @@ PERSONA_CONFIGS = {
   22. fields_detected: list[string]""",
     },
 }
+
+
+def _enforce_name_match_verdict(
+    patient_name: Optional[str],
+    employee_name: Optional[str],
+    current_verdict: Optional[str],
+    current_reason: Optional[str],
+) -> tuple[str, Optional[str]]:
+    """Guard against stale cached VLM 'MATCH' results when the document name and employee name are objectively different."""
+    patient_name = str(patient_name or '').strip()
+    employee_name = str(employee_name or '').strip()
+    if not patient_name or not employee_name:
+        verdict = str(current_verdict or '').strip().upper() if current_verdict else "UNCERTAIN"
+        verdict = verdict if verdict in {"MATCH", "MISMATCH", "UNCERTAIN", "NOT_APPLICABLE"} else "UNCERTAIN"
+        return verdict, current_reason
+
+    if names_approximately_match(patient_name, employee_name):
+        return "MATCH", (
+            f'Tên trên giấy "{patient_name}" khớp với tên nhân sự "{employee_name}" theo quy tắc đối chiếu tên.'
+        )
+
+    default_reason = (
+        f'Tên trên giấy "{patient_name}" không khớp với tên nhân sự "{employee_name}" theo tiêu chí chặt của hệ thống.'
+    )
+    return "MISMATCH", default_reason
 
 VLM_SYSTEM_PROMPT = """Bạn là chuyên gia kiểm định chứng từ nghỉ phép (VLM-Officer).
 Nhiệm vụ: đọc ảnh chứng từ đính kèm và trả về JSON thuần túy theo đúng schema.
@@ -658,7 +683,7 @@ _NON_MEDICAL_LEAVE_TYPES = frozenset({
     'SPECIAL_PAID', 'STATUTORY_UNPAID', 'UNPAID_OTHER', 'ANNUAL', 'MATERNITY', 'WORK_ACCIDENT'
 })
 _MEDICAL_KWS = (
-    "cúm", "sốt", "đau", "ho", "khó thở", "viêm", "phổi", "nhiễm", "xuất viện",
+    "cúm", "sốt", "ho", "khó thở", "viêm", "phổi", "nhiễm", "xuất viện",
     "ngộ độc", "gãy", "trật", "hô hấp", "cảm", "sổ mũi", "nghẹt mũi", "họng",
     "đau đầu", "mệt mỏi", "amidan", "đơn thuốc", "nằm viện"
 )
@@ -667,7 +692,15 @@ _MEDICAL_CONCEPT_GROUPS = (
     {'phổi', 'viêm phổi', 'pneumonia'},
     {'cúm', 'cúm a', 'influenza'},
     {'gãy', 'fracture', 'xương'},
+    {'sỏi', 'sỏi thận', 'sỏi niệu quản', 'tán sỏi', 'nephrolithiasis', 'kidney stone', 'ureteral stone'},
 )
+_MEDICAL_SITE_GROUPS = {
+    'bụng': ('bụng', 'hố chậu', 'ruột thừa', 'dạ dày', 'đại tràng', 'ruột non'),
+    'chân': ('chân', 'đùi', 'đầu gối', 'cẳng chân', 'bàn chân', 'mắt cá', 'bắp chân'),
+    'tay': ('cánh tay', 'cẳng tay', 'cổ tay', 'bàn tay', 'ngón tay'),
+    'đầu': ('sọ', 'đau đầu', 'migraine', 'đau nửa đầu', 'vùng đầu'),
+    'ngực': ('ngực', 'phổi', 'lồng ngực'),
+}
 
 
 def _same_medical_concept(reason: str, diagnosis: str) -> bool:
@@ -678,6 +711,33 @@ def _same_medical_concept(reason: str, diagnosis: str) -> bool:
         and any(term in diagnosis_text for term in group)
         for group in _MEDICAL_CONCEPT_GROUPS
     )
+
+
+def _resolve_reason_diagnosis_match(
+    reason: str,
+    diagnosis: str,
+    verdict: Optional[str],
+    evidence: Optional[str],
+) -> tuple[Optional[str], Optional[str]]:
+    """Override a positive/uncertain verdict when the stated body sites clearly conflict."""
+    reason_text = (reason or '').casefold()
+    diagnosis_text = (diagnosis or '').casefold()
+    if not reason_text or not diagnosis_text:
+        return 'UNCERTAIN', 'Chứng từ chưa có đủ thông tin để đối chiếu lý do nghỉ với chẩn đoán y tế.'
+    reason_sites = {site for site, terms in _MEDICAL_SITE_GROUPS.items() if any(term in reason_text for term in terms)}
+    diagnosis_sites = {site for site, terms in _MEDICAL_SITE_GROUPS.items() if any(term in diagnosis_text for term in terms)}
+    if reason_sites and diagnosis_sites and reason_sites.isdisjoint(diagnosis_sites):
+        reason_site = ', '.join(sorted(reason_sites))
+        diagnosis_site = ', '.join(sorted(diagnosis_sites))
+        return (
+            'MISMATCH',
+            f"Lý do nghỉ nêu vị trí {reason_site} ('{reason}') nhưng chẩn đoán ghi vị trí {diagnosis_site} ('{diagnosis}'); hai vị trí không tương ứng.",
+        )
+    if evidence and re.search(r"ngữ cảnh là\s*['\"]{2}|không có lý do nghỉ trong ngữ cảnh|context\s*(?:is|=)\s*['\"]{2}", evidence, re.IGNORECASE):
+        if _same_medical_concept(reason, diagnosis):
+            return 'MATCH', f"Lý do nghỉ ('{reason}') và chẩn đoán ('{diagnosis}') cùng đề cập đến sỏi tiết niệu."
+        return 'UNCERTAIN', 'Nhận xét đối chiếu cũ không có lý do nghỉ trong ngữ cảnh; chưa đủ căn cứ kết luận không khớp.'
+    return verdict, evidence
 
 
 def _score_correlation(
@@ -705,12 +765,16 @@ def _score_correlation(
     if leave_type.upper() in {'SPECIAL_PAID', 'STATUTORY_UNPAID'}:
         return None, [], days_granted_by_doctor
 
-    score = 0.60
+    score = 1.0
     issues: list[str] = []
     is_medical = leave_type.upper() not in _NON_MEDICAL_LEAVE_TYPES
+    if is_medical:
+        reason_diagnosis_match, reason_diagnosis_match_reason = _resolve_reason_diagnosis_match(
+            reason, diagnosis or '', reason_diagnosis_match, reason_diagnosis_match_reason
+        )
 
     if patient_name_match == 'MATCH':
-        score += 0.08
+        pass
     elif patient_name_match == 'MISMATCH':
         score -= 0.22
         detail = f" ({patient_name_match_reason})" if patient_name_match_reason else ""
@@ -726,15 +790,13 @@ def _score_correlation(
         if norm_doc != norm_emp:
             score -= 0.22
             issues.append(f"Tên trên giấy ('{patient_name_on_doc}') không trùng với tên nhân sự ('{employee_name}').")
-        else:
-            score += 0.08
 
     # Chỉ check từ khóa y tế khi là loại nghỉ bệnh (SICK_MEDICAL, MEDICAL_EMERGENCY)
     if is_medical:
         if reason_diagnosis_match == 'MATCH':
-            score += 0.12
+            pass
         elif reason_diagnosis_match == 'PARTIAL':
-            score += 0.04
+            score -= 0.10
         elif reason_diagnosis_match == 'MISMATCH':
             score -= 0.20
             detail = f" ({reason_diagnosis_match_reason})" if reason_diagnosis_match_reason else ""
@@ -748,8 +810,6 @@ def _score_correlation(
             if overlap == 0 and not _same_medical_concept(reason, diagnosis):
                 score -= 0.20
                 issues.append("Chẩn đoán trên giấy không trùng khớp mô tả lý do nghỉ.")
-            else:
-                score += min(0.12, 0.04 * max(overlap, 1))
         elif not diagnosis:
             score -= 0.10
             issues.append("VLM không đọc được chẩn đoán lâm sàng trên chứng từ.")
@@ -757,7 +817,7 @@ def _score_correlation(
         # Loại nghỉ sự kiện gia đình / không lương: không penalize vì thiếu "chẩn đoán"
         # Nếu VLM đọc được event_reason / tên người liên quan → điểm thưởng nhỏ
         if diagnosis:
-            score += 0.05  # bonus: VLM đọc được nội dung sự kiện
+            pass
 
     # date coverage: khoảng ngày xin nghỉ phải nằm trong khoảng ngày chứng từ cho phép
     date_label = "bác sĩ chỉ định" if is_medical else "ghi trong chứng từ"
@@ -769,13 +829,13 @@ def _score_correlation(
                 f"{date_label} ({recommended_from} → {recommended_to})."
             )
         else:
-            score += 0.12
+            pass
     else:
         # Với giấy sự kiện gia đình hoặc cấp cứu: nếu không đọc được ngày thì không penalize nặng
         if is_medical:
             if leave_type.upper() == 'MEDICAL_EMERGENCY':
                 # Cấp cứu nhập viện khẩn: chưa xác định ngày ra viện (open-ended), không phạt
-                score += 0.05
+                pass
             else:
                 score -= 0.10
                 issues.append(f"VLM không đọc được khoảng ngày {date_label}.")
@@ -786,7 +846,6 @@ def _score_correlation(
         if requested_workdays and recommended_from and recommended_to:
             try:
                 days_granted_by_doctor = (recommended_to - recommended_from).days + 1
-                score += 0.03
             except Exception:
                 days_granted_by_doctor = None
     if days_granted_by_doctor is not None and requested_workdays:
@@ -798,7 +857,7 @@ def _score_correlation(
                 f"{days_label} ({days_granted_by_doctor} ngày)."
             )
         else:
-            score += 0.08
+            pass
 
     score = round(max(0.0, min(1.0, score)), 3)
     return score, issues, days_granted_by_doctor
@@ -902,6 +961,13 @@ def _build_proof_extraction(
     if sig is None and profile.get("has_doctor_signature") is not None:
         sig = bool(profile.get("has_doctor_signature"))
 
+    relationship_event = _gf("event_type") or _gf("reason_category")
+    raw_relationship = _gf("relationship_to_employee") or _gf("relationship_label") or _gf("relationship")
+    if relationship_event is not None:
+        derived_relationship = relationship_display_label(relationship_event, raw_relationship)
+    else:
+        derived_relationship = raw_relationship
+
     try:
         p = ProofExtraction(
             proof_type=pt,
@@ -932,8 +998,8 @@ def _build_proof_extraction(
             event_type=_gf("event_type") if not is_unreadable else None,
             date_of_death=_as_date(_gf("date_of_death"), None) if not is_unreadable else None,
             funeral_date=_as_date(_gf("funeral_date"), None) if not is_unreadable else None,
-            relationship_label=_gf("relationship_label") if not is_unreadable else None,
-            relationship_to_employee=_gf("relationship_to_employee") if not is_unreadable else None,
+            relationship_label=(derived_relationship if not is_unreadable else None),
+            relationship_to_employee=(derived_relationship if not is_unreadable else None),
             evidence_confidence=_gf("evidence_confidence") if not is_unreadable else None,
             needs_manager_review=_gf("needs_manager_review") if not is_unreadable else None,
             maternity_phase=_gf("maternity_phase") if not is_unreadable else None,
@@ -1095,6 +1161,15 @@ def inspect_document_with_vlm(
     proof_extraction = _build_proof_extraction(
         profile_raw, leave_type, employee_name, requested_from, requested_to, workdays
     )
+    if str(leave_type).upper() in {'SICK_MEDICAL', 'MEDICAL_EMERGENCY'}:
+        proof_extraction.reason_diagnosis_match, proof_extraction.reason_diagnosis_match_reason = (
+            _resolve_reason_diagnosis_match(
+                reason or '',
+                profile_raw.get('doc_diagnosis') or '',
+                proof_extraction.reason_diagnosis_match,
+                proof_extraction.reason_diagnosis_match_reason,
+            )
+        )
     dfd = proof_extraction.recommended_from_date
     dtd = proof_extraction.recommended_to_date
 
@@ -1166,6 +1241,8 @@ def inspect_document_with_vlm(
             "discharge_date": proof_extraction.discharge_date.isoformat() if proof_extraction.discharge_date else None,
             "deceased_name": proof_extraction.deceased_name,
             "subject_name": proof_extraction.subject_name,
+            "maternity_phase": proof_extraction.maternity_phase,
+            "expected_due_date": proof_extraction.expected_due_date.isoformat() if proof_extraction.expected_due_date else None,
             "partner_name": proof_extraction.partner_name,
             "event_type": proof_extraction.event_type,
             "relationship": proof_extraction.relationship_to_employee or proof_extraction.relationship_label,
@@ -1428,9 +1505,9 @@ def _run_matching_call(
         "    - UNCERTAIN: Thiếu dữ liệu, không đọc được tên hoặc không đủ cơ sở kết luận.\n"
         "    - NOT_APPLICABLE: Loại nghỉ không yêu cầu tên bệnh nhân.\n"
         "  reason_diagnosis_match: MATCH | PARTIAL | MISMATCH | UNCERTAIN | NOT_APPLICABLE\n"
-        "    - MATCH: Lý do xin nghỉ tương đồng hoặc có liên quan lâm sàng với chẩn đoán (ví dụ: mệt mỏi/cảm sốt khớp viêm họng/viêm phế quản).\n"
+        "    - MATCH: Có tương đồng lâm sàng cụ thể; không được coi là khớp chỉ vì cùng từ chung như 'đau'.\n"
         "    - PARTIAL: Chẩn đoán chỉ liên quan một phần đến lý do xin nghỉ.\n"
-        "    - MISMATCH: Có căn cứ rõ ràng là mâu thuẫn lý do.\n"
+        "    - MISMATCH: Có căn cứ rõ ràng là mâu thuẫn lý do hoặc khác vị trí cơ thể (ví dụ đau chân vs đau bụng/viêm ruột thừa).\n"
         "    - UNCERTAIN: Thiếu chẩn đoán hoặc không đủ cơ sở kết luận.\n"
         "    - NOT_APPLICABLE: Loại nghỉ không yêu cầu chẩn đoán y tế.\n"
     )
@@ -1537,6 +1614,20 @@ def _try_ollama_extract(
     if file_hash:
         cached_result = _read_vlm_cache(file_hash, leave_type, reason_category or "", employee_name or "", reason)
         if cached_result is not None:
+            cached_patient_name = cached_result.get('doc_patient_name')
+            if cached_patient_name and employee_name:
+                match, match_reason = _enforce_name_match_verdict(
+                    cached_patient_name,
+                    employee_name,
+                    cached_result.get('patient_name_match'),
+                    cached_result.get('patient_name_match_reason'),
+                )
+                cached_result['patient_name_match'] = match
+                cached_result['patient_name_match_reason'] = match_reason
+                proof_extra = cached_result.get('proof_extra')
+                if isinstance(proof_extra, dict):
+                    proof_extra['patient_name_match'] = match
+                    proof_extra['patient_name_match_reason'] = match_reason
             cached_result["_from_cache"] = True
             return cached_result, None
 
@@ -1647,9 +1738,9 @@ def _try_ollama_extract(
             '  - patient_name_match: {"evidence": "<tối đa 2 câu>", "verdict": "MATCH" | "MISMATCH" | "UNCERTAIN" | "NOT_APPLICABLE"}\n'
             '  - reason_diagnosis_match: {"evidence": "<tối đa 2 câu>", "verdict": "MATCH" | "PARTIAL" | "MISMATCH" | "UNCERTAIN" | "NOT_APPLICABLE"}\n'
             "  RUBRIC:\n"
-            "    MATCH: Khớp danh tính hoặc lý do lâm sàng liên quan (cảm sốt khớp viêm họng/phế quản, chấp nhận sai khác dấu, thứ tự tên, lỗi OCR nhỏ).\n"
+            "    MATCH: Khớp danh tính hoặc lý do lâm sàng cụ thể (cảm sốt với viêm họng/phế quản); không coi cùng từ chung như 'đau' là đủ khớp.\n"
             "    PARTIAL: Chẩn đoán chỉ liên quan một phần đến lý do xin nghỉ.\n"
-            "    MISMATCH: Có căn cứ rõ ràng là khác người hoặc mâu thuẫn lý do.\n"
+            "    MISMATCH: Có căn cứ rõ ràng là khác người hoặc khác vị trí cơ thể (đau chân với đau bụng/viêm ruột thừa).\n"
             "    UNCERTAIN: Thiếu dữ liệu hoặc không đủ cơ sở kết luận.\n"
             "    NOT_APPLICABLE: Không yêu cầu bệnh nhân hoặc chẩn đoán y tế.\n"
             "  QUY TẮC: Viết 'evidence' trước (so sánh giá trị trên giấy với ngữ cảnh), sau đó mới điền 'verdict'.\n"
@@ -1920,6 +2011,14 @@ def _try_ollama_extract(
             if name_match not in {'MATCH', 'MISMATCH', 'UNCERTAIN', 'NOT_APPLICABLE'}:
                 name_match = None
 
+            if normalized_patient_name and employee_name:
+                name_match, name_match_reason = _enforce_name_match_verdict(
+                    normalized_patient_name,
+                    employee_name,
+                    name_match,
+                    name_match_reason,
+                )
+
             raw_dm = comparison.get('reason_diagnosis_match')
             if isinstance(raw_dm, dict):
                 diagnosis_match = str(raw_dm.get('verdict') or raw_dm.get('match') or '').strip().upper()
@@ -1934,6 +2033,14 @@ def _try_ollama_extract(
                 name_match = 'UNCERTAIN'
             if not diag and diagnosis_match in {'MATCH', 'PARTIAL', 'MISMATCH'}:
                 diagnosis_match = 'UNCERTAIN'
+
+            if normalized_patient_name and employee_name:
+                name_match, name_match_reason = _enforce_name_match_verdict(
+                    normalized_patient_name,
+                    employee_name,
+                    name_match,
+                    name_match_reason,
+                )
 
     normalized: Dict[str, Any] = {
         "doc_patient_name": normalized_patient_name,

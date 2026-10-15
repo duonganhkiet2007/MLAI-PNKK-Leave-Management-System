@@ -103,6 +103,68 @@ class ReasonCategory(str, Enum):
     SIBLING_MARRIAGE = 'SIBLING_MARRIAGE'
 
 
+_EVENT_RELATIONSHIPS = {
+    'CHILD_MARRIAGE': ('Con của nhân viên', {'con', 'con trai', 'con gái', 'con cua nhan vien', 'child', 'son', 'daughter'}),
+    'PARENT_DEATH': ('Cha/mẹ của nhân viên', {'cha', 'mẹ', 'bố', 'ba', 'cha ruột', 'mẹ ruột', 'bố ruột', 'ba ruột', 'cha đẻ', 'mẹ đẻ', 'cha/mẹ', 'cha hoặc mẹ', 'parent', 'father', 'mother'}),
+    'SPOUSE_PARENT_DEATH': ('Cha/mẹ vợ hoặc chồng', {'cha vợ', 'mẹ vợ', 'bố vợ', 'mẹ vợ', 'cha chồng', 'mẹ chồng', 'bố chồng', 'mẹ chồng', 'parent in law'}),
+    'SPOUSE_DEATH': ('Vợ/chồng của nhân viên', {'vợ', 'chồng', 'vợ/chồng', 'spouse', 'wife', 'husband'}),
+    'CHILD_DEATH': ('Con của nhân viên', {'con', 'con trai', 'con gái', 'con cua nhan vien', 'child', 'son', 'daughter'}),
+    'GRANDPARENT_DEATH': ('Ông/bà của nhân viên', {'ông', 'bà', 'ông nội', 'bà nội', 'ông ngoại', 'bà ngoại', 'grandparent'}),
+    'SIBLING_DEATH': ('Anh/chị/em ruột của nhân viên', {'anh', 'chị', 'em', 'anh trai', 'chị gái', 'em trai', 'em gái', 'anh/chị/em ruột', 'sibling', 'brother', 'sister'}),
+    'PARENT_MARRIAGE': ('Cha/mẹ của nhân viên', {'cha', 'mẹ', 'bố', 'ba', 'cha ruột', 'mẹ ruột', 'bố ruột', 'ba ruột', 'cha đẻ', 'mẹ đẻ', 'cha/mẹ', 'cha hoặc mẹ', 'parent', 'father', 'mother'}),
+    'SIBLING_MARRIAGE': ('Anh/chị/em ruột của nhân viên', {'anh', 'chị', 'em', 'anh trai', 'chị gái', 'em trai', 'em gái', 'anh/chị/em ruột', 'sibling', 'brother', 'sister'}),
+}
+
+
+def assess_event_relationship(reason_category, document_relationship: str | None) -> dict | None:
+    """Compare the relationship declared for a family event with what the proof states."""
+    category = getattr(reason_category, 'value', reason_category)
+    config = _EVENT_RELATIONSHIPS.get(str(category or '').upper())
+    if not config:
+        return None
+
+    label, aliases = config
+    relation = str(document_relationship or '').strip()
+    if not relation:
+        status = 'UNVERIFIED'
+    else:
+        cleaned = re.sub(r'\s*\((?:Đã xác minh|Xác minh|Chưa xác minh|Mâu thuẫn|Conflict|Verified|Unverified)\)\s*', '', relation, flags=re.IGNORECASE)
+        normalized = re.sub(r'\s+', ' ', ''.join(
+            char for char in unicodedata.normalize('NFD', cleaned.casefold())
+            if unicodedata.category(char) != 'Mn'
+        )).strip()
+        normalized_aliases = {
+            re.sub(r'\s+', ' ', ''.join(
+                char for char in unicodedata.normalize('NFD', alias.casefold())
+                if unicodedata.category(char) != 'Mn'
+            )).strip()
+            for alias in aliases
+        }
+        status = 'VERIFIED' if normalized in normalized_aliases else 'CONFLICT'
+
+    return {
+        'declared_relationship': label,
+        'document_relationship': relation or None,
+        'status': status,
+    }
+
+
+def relationship_display_label(reason_category, document_relationship: str | None) -> str:
+    """Render a stable display label with an explicit verification status for relationship-based leave."""
+    assessment = assess_event_relationship(reason_category, document_relationship)
+    if not assessment:
+        relation = str(document_relationship or '').strip()
+        return relation or ''
+
+    label = assessment['declared_relationship']
+    status = assessment['status']
+    if status == 'VERIFIED':
+        return f'{label} (Đã xác minh)'
+    if status == 'CONFLICT':
+        return f'{label} (Mâu thuẫn)'
+    return f'{label} (Chưa xác minh)'
+
+
 def _name_tokens(value: str) -> list[str]:
     value = unicodedata.normalize('NFD', str(value or '').casefold())
     value = ''.join(char for char in value if unicodedata.category(char) != 'Mn')

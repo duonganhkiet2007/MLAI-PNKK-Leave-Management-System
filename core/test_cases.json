@@ -860,7 +860,7 @@
     },
     "expected": {
       "decision": "ESCALATE",
-      "target_role": "HR",
+      "target_role": "CEO",
       "requested_working_days": 2,
       "deducted_days": 0,
       "annual_balance_change": 0,

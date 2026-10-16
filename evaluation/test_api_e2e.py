@@ -280,7 +280,7 @@ def test_upload_hr_verification_medical_workflow(client,isolated_db):
     assert client.post('/api/leave/proofs/'+pid+'/verify',headers={'X-Actor-ID':'HR'},json=verify).status_code==409
 
 
-def test_three_day_medical_escalation_explains_duration_and_proof_review(client,isolated_db,service):
+def test_three_day_medical_escalation_reason_focuses_on_duration(client,isolated_db,service):
     proof={
         **PROOF,
         'proof_verification_status':'UNVERIFIED',
@@ -336,7 +336,8 @@ def test_three_day_medical_escalation_explains_duration_and_proof_review(client,
     data=analysis.json()
     assert '3 ngày' in data['decision_reason']
     assert 'trần tự duyệt 1 ngày' in data['decision_reason']
-    assert 'chứng từ y tế' in data['decision_reason'].lower()
+    # Lý do chỉ nêu trọng tâm là vượt trần; không lặp lại nội dung đối chiếu chứng từ.
+    assert 'chứng từ' not in data['decision_reason'].lower()
     assert data['reason_diagnosis_match']=='MISMATCH'
     assert 'không khớp' in data['reason_diagnosis_match_reason'].lower()
 

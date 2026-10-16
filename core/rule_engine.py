@@ -128,6 +128,9 @@ def _family_event_auto_eligible(request, proof, dates):
         return False
     if proof.document_readability != 'READABLE':
         return False
+    # Chữ ký / dấu đỏ chưa xác minh được (None) thì không tự duyệt — chuyển người duyệt đối chiếu.
+    if proof.signature_present is None or proof.has_red_stamp is None:
+        return False
     try:
         requested_start = date.fromisoformat(request.from_date)
         requested_end = date.fromisoformat(request.to_date)
@@ -333,8 +336,14 @@ class LeaveRuleEngine:
                 )
                 if not short_medical_valid and not self_marriage_auto_eligible and not family_event_verified:
                     proof_issues = []
-                    if getattr(p, 'signature_present', None) is False and not getattr(p, 'digital_signature_present', None):
+                    _sig_present = getattr(p, 'signature_present', None)
+                    _dig_sig = getattr(p, 'digital_signature_present', None)
+                    if _sig_present is False and not _dig_sig:
                         proof_issues.append('chứng từ thiếu chữ ký người có thẩm quyền')
+                    elif _sig_present is None and not _dig_sig:
+                        proof_issues.append('chưa xác minh được chữ ký trên chứng từ')
+                    if q.leave_type in {'SPECIAL_PAID', 'STATUTORY_UNPAID'} and getattr(p, 'has_red_stamp', None) is None:
+                        proof_issues.append('chưa xác minh được dấu đỏ trên chứng từ')
                     if q.leave_type in {'SPECIAL_PAID', 'STATUTORY_UNPAID'}:
                         rel_label = getattr(p, 'relationship_label', None) or getattr(p, 'relationship_to_employee', None) or ''
                         if not rel_label or 'chưa xác minh' in rel_label.lower() or 'chưa rõ' in rel_label.lower():

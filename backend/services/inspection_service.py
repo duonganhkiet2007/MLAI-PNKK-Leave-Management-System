@@ -218,7 +218,12 @@ class ProofInspectionService:
         reason_category_str = _enum_hint(reason_category_hint, ReasonCategory) or ""
         cached_result = None
         if file_hash:
-            cached_result = _read_vlm_cache(file_hash, leave_type_str, reason_category_str)
+            if _read_vlm_cache(file_hash, leave_type_str, reason_category_str) and file_path.is_file():
+                # Bản lưu sẵn là bản đọc thô của VLM inspector (không mang nhãn "đọc thật"); ghi thẳng bản thô thì lúc
+                # xét đơn nó bị coi như dữ liệu giả lập và các trường VLM không đọc được bị điền bằng dữ liệu của đơn.
+                # Dựng kết quả qua đúng hàm worker dùng: inspector tự lấy bản lưu sẵn (không gọi GPU), cùng định dạng.
+                vlm_out = self._inspect_file(str(file_path), leave_type_str, reason_category_str or None)
+                cached_result = None if vlm_out.vlm_error else vlm_out.vlm_analysis_json
             if not cached_result:
                 # Also check if another proof row in DB with identical sha256 is READY
                 with st.readonly_connection() as conn:
@@ -229,6 +234,8 @@ class ProofInspectionService:
                     for matched in matches:
                         try:
                             candidate = json.loads(matched["vlm_analysis_json"])
+                            if "proof_extra" in candidate and "document_summary" not in candidate:
+                                continue  # bản lưu sẵn thô từng bị ghi thẳng vào DB (thiếu nhãn đọc thật): không tái sử dụng
                             context = candidate.get("_inspection_context") or {}
                             context_matches = (
                                 context.get("leave_type") == leave_type_str
@@ -332,6 +339,24 @@ class ProofInspectionService:
             logger.error(f"Error claiming job: {e}")
             return None
 
+    @staticmethod
+    def _inspect_file(file_path: str, leave_type: str, reason_category: Optional[str]) -> VLMInspectionOutput:
+        """Đọc chứng từ qua VLM inspector. Dùng chung cho worker và nhánh có bản lưu sẵn để hai đường cho cùng
+        một kết quả (inspector tự lấy bản lưu sẵn nếu có và gắn nhãn VLM_CACHE_HIT)."""
+        vlm_out: VLMInspectionOutput = inspect_document_with_vlm(
+            leave_type=leave_type,
+            employee_name=None,
+            reason="",
+            attachment_path_or_type=file_path,
+            allow_mock_fallback=False,
+            reason_category=reason_category,
+        )
+        vlm_out.vlm_analysis_json["_inspection_context"] = {
+            "leave_type": leave_type,
+            "reason_category": reason_category,
+        }
+        return vlm_out
+
     def _process_single_job(self, job: Dict[str, Any]) -> None:
         """Runs the expensive VLM inference outside any database transaction."""
         proof_id = job["proof_id"]
@@ -368,22 +393,11 @@ class ProofInspectionService:
 
         try:
             # 1. Inspect outside DB transaction
-            vlm_out: VLMInspectionOutput = inspect_document_with_vlm(
-                leave_type=leave_type,
-                employee_name=None,
-                reason="",
-                attachment_path_or_type=file_path,
-                allow_mock_fallback=False,
-                reason_category=reason_category,
-            )
+            vlm_out = self._inspect_file(file_path, leave_type, reason_category)
             vlm_sec = time.perf_counter() - t0
             GLOBAL_METRICS.record_vlm_duration(vlm_sec)
 
             vlm_dict = vlm_out.vlm_analysis_json
-            vlm_dict["_inspection_context"] = {
-                "leave_type": leave_type,
-                "reason_category": reason_category,
-            }
             if vlm_out.vlm_error:
                 # Handled VLM failure (timeout, network, unreadable)
                 self._apply_inspection_failure(
@@ -419,7 +433,9 @@ class ProofInspectionService:
         drange = doc_sum.get("doctor_recommended_range") or {}
         rec_from = drange.get("from")
         rec_to = drange.get("to")
-        sig = flags.get("has_doctor_signature") or flags.get("signature_present_on_scan")
+        sig = flags.get("has_doctor_signature")
+        if sig is None:
+            sig = flags.get("signature_present_on_scan")
         dig_sig = flags.get("digital_signature_present")
 
         with st.transaction() as conn:
@@ -440,6 +456,34 @@ class ProofInspectionService:
                     )
                 return
 
+            # Ghi thêm dữ liệu VLM đọc được (ngày mất/tang lễ, ngày tai nạn, quan hệ...) vào hồ sơ chứng từ
+            # để màn hình và HR đọc lại vẫn thấy, không chỉ nằm trong vlm_analysis_json.
+            facts_row = conn.execute(
+                "SELECT facts_json FROM proof_documents WHERE id=?", (proof_id,)
+            ).fetchone()
+            try:
+                facts = json.loads(facts_row["facts_json"]) if facts_row and facts_row["facts_json"] else {}
+            except (TypeError, ValueError):
+                facts = {}
+            for key, value in (
+                ("patient_name", p_name),
+                ("issuer", issuer),
+                ("issue_date", issue_d),
+                ("recommended_from_date", rec_from),
+                ("recommended_to_date", rec_to),
+                ("days_granted_by_doctor", doc_sum.get("days_granted_by_doctor")),
+                ("deceased_name", doc_sum.get("deceased_name")),
+                ("subject_name", doc_sum.get("subject_name")),
+                ("date_of_death", doc_sum.get("date_of_death")),
+                ("funeral_date", doc_sum.get("funeral_date")),
+                ("injury_date", doc_sum.get("injury_date")),
+                ("event_date", doc_sum.get("event_date")),
+                ("relationship_label", doc_sum.get("relationship_label")),
+                ("relationship_to_employee", doc_sum.get("relationship_to_employee")),
+            ):
+                if value not in (None, "") and not facts.get(key):
+                    facts[key] = value
+
             conn.execute(
                 """UPDATE proof_documents SET
                    inspection_status='READY',
@@ -453,7 +497,8 @@ class ProofInspectionService:
                    recommended_from_date=COALESCE(?, recommended_from_date),
                    recommended_to_date=COALESCE(?, recommended_to_date),
                    signature_present=COALESCE(?, signature_present),
-                   digital_signature_present=COALESCE(?, digital_signature_present)
+                   digital_signature_present=COALESCE(?, digital_signature_present),
+                   facts_json=?
                    WHERE id=?""",
                 (
                     json.dumps(vlm_data, ensure_ascii=False),
@@ -466,6 +511,7 @@ class ProofInspectionService:
                     rec_to,
                     1 if sig is True else (0 if sig is False else None),
                     1 if dig_sig is True else (0 if dig_sig is False else None),
+                    json.dumps(facts, ensure_ascii=False),
                     proof_id,
                 ),
             )

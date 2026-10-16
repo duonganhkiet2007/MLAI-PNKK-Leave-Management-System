@@ -255,6 +255,7 @@ class ProofExtraction(BaseModel):
     wedding_date: date | None = None
     date_of_death: date | None = None
     funeral_date: date | None = None
+    event_date: date | None = None
     relationship_label: str | None = None
     relationship_to_employee: str | None = None
     evidence_confidence: str | None = None

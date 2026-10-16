@@ -197,9 +197,10 @@ def test_empty_current_reason_cannot_be_classified_as_mismatch():
         "Chẩn đoán không khớp lý do nghỉ.",
     )
 
-    assert verdict == "UNCERTAIN"
-    assert evidence == "Chứng từ chưa có đủ thông tin để đối chiếu lý do nghỉ với chẩn đoán y tế."
-    assert "bạn" not in evidence.casefold()
+    # Bước tiền kiểm chưa biết lý do nghỉ: không được chốt kết luận nào (kể cả MISMATCH),
+    # để khi có lý do thật hệ thống tính lại thay vì giữ câu "chưa đủ căn cứ" mãi mãi.
+    assert verdict is None
+    assert evidence is None
 
 
 def test_parser_backward_compatibility(monkeypatch, tmp_path):

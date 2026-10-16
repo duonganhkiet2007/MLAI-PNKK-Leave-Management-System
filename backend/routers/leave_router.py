@@ -32,22 +32,23 @@ def build_explicit_escalation_reason(decision_code: str, decision_value: str, re
         return base_reason or ''
     proof = proof or {}
     reasons = []
-    if proof.get('signature_present') is False and not proof.get('digital_signature_present'):
+    _sig_present = proof.get('signature_present')
+    if _sig_present is False and not proof.get('digital_signature_present'):
         reasons.append('chứng từ thiếu chữ ký người có thẩm quyền')
-    elif proof.get('signature_present') is False:
+    elif _sig_present is False:
         reasons.append('chứng từ thiếu chữ ký xác nhận')
+    elif 'signature_present' in proof and _sig_present is None and not proof.get('digital_signature_present'):
+        reasons.append('chưa xác minh được chữ ký trên chứng từ')
 
     rel_label = str(proof.get('relationship_label') or proof.get('relationship_to_employee') or '').strip()
     relationship_required = str(reason_category or proof.get('reason_category') or '').upper() in RELATIONSHIP_PROOF_CATEGORIES
     if relationship_required and (not rel_label or 'chưa xác minh' in rel_label.lower() or 'chưa rõ' in rel_label.lower()):
         reasons.append('quan hệ trên giấy chưa xác minh rõ ràng')
 
-    if decision_code.upper() == 'PROOF_REVIEW_REQUIRED':
-        if normalized_leave_type in {'SICK_MEDICAL', 'MEDICAL_EMERGENCY'} and 'chứng từ' not in ' '.join(reasons):
-            reasons.insert(0, 'chứng từ y tế cần được đối chiếu chuyên môn')
-        if not reasons:
-            reasons.append('các thông tin chuyên môn trên chứng từ cần được xác minh thêm')
-    elif not reasons:
+    # Chỉ nêu khiếm khuyết chứng từ cụ thể (thiếu chữ ký, chưa xác minh quan hệ...).
+    # Không có khiếm khuyết nào thì giữ nguyên lý do gốc, tránh thêm câu chung chung
+    # trùng với nội dung đã nêu ở phần kết luận.
+    if not reasons:
         return base_reason or ''
 
     base_reason_lower = (base_reason or '').lower()
@@ -57,8 +58,8 @@ def build_explicit_escalation_reason(decision_code: str, decision_value: str, re
 
     detail = '; '.join(reasons)
     if base_reason:
-        return f'{base_reason} Đồng thời, {detail} cần được xác minh trước khi duyệt.'
-    return f'Đơn cần {target_role_label} xem xét trước khi duyệt. Đồng thời, {detail} cần được xác minh trước khi duyệt.'
+        return f'{base_reason} Đồng thời, {detail}.'
+    return f'Đơn cần {target_role_label} xem xét trước khi duyệt. Đồng thời, {detail}.'
 
 
 def actor(authorization: Optional[str]=Header(None),token: Optional[str]=Query(None),
@@ -526,12 +527,10 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
             else:
                 dint_status = "PASS"; dint_pass = True; dint_severity = "SUCCESS"
             dint_segments = []
-            if rs is not None:
-                stamp_label = 'Dấu đỏ UBND/cơ quan' if schema_key == 'WEDDING' else 'Dấu đỏ'
-                dint_segments.append(f"{stamp_label}: {_yn(rs,'Có','Không thấy','Chưa đọc được')}")
-            if sig is not None:
-                signature_label = 'Chữ ký người có thẩm quyền' if schema_key in {'WEDDING', 'BEREAVEMENT'} else 'Chữ ký bác sĩ'
-                dint_segments.append(f"{signature_label}: {_yn(sig,'Có','Thiếu','Chưa đọc được')}")
+            stamp_label = 'Dấu đỏ UBND/cơ quan' if schema_key == 'WEDDING' else 'Dấu đỏ'
+            dint_segments.append(f"{stamp_label}: {_yn(rs,'Có','Không thấy','Chưa đọc được')}")
+            signature_label = 'Chữ ký người có thẩm quyền' if schema_key in {'WEDDING', 'BEREAVEMENT'} else 'Chữ ký bác sĩ'
+            dint_segments.append(f"{signature_label}: {_yn(sig,'Có','Thiếu','Chưa đọc được')}")
             readability = _s(req.get('document_readability')) or _s((vlm_full.get('flags') or {}).get('document_readability'))
             readability = {
                 'READABLE': 'Đọc được',
@@ -684,12 +683,21 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     dc_status = "FAIL"; dc_pass = False; dc_severity = "CRITICAL"
                 else:
                     dc_status = "PASS"; dc_pass = True; dc_severity = "SUCCESS"
-                dc_note = "Yêu cầu: {rf} → {rt} ({rw} ngày làm việc) · Ngày cấp cứu / nhập viện: {df} → {dt} — Kết quả: {res}.".format(
-                    rf = req_from or 'Chưa xác định', rt = req_to or 'Chưa xác định', rw = req_wd,
-                    df = dr_from or 'Chưa đọc được', dt = dr_to or 'Chưa đọc được',
-                    res = ('Khoảng yêu cầu nằm trong khoảng cấp cứu / nhập viện' if dc_pass else
-                           'Khoảng yêu cầu vượt ngoài / không khớp với ngày cấp cứu đã ghi trên giấy')
-                )
+                if missing_range:
+                    raw_from = doc_summary.get('recommended_from_date_raw')
+                    raw_to = doc_summary.get('recommended_to_date_raw') or raw_from
+                    if raw_from:
+                        shown = raw_from if raw_from == raw_to else f"{raw_from} → {raw_to}"
+                        dc_note = f"Ngày cấp cứu / nhập viện trên giấy: {shown}; chưa khớp số ngày bác sĩ ghi — cần người duyệt kiểm tra."
+                    else:
+                        dc_note = "Chứng từ chưa ghi rõ ngày cấp cứu / nhập viện; chưa đối chiếu được."
+                else:
+                    dc_note = "Yêu cầu: {rf} → {rt} ({rw} ngày làm việc) · Ngày cấp cứu / nhập viện: {df} → {dt} — Kết quả: {res}.".format(
+                        rf = req_from or 'Chưa xác định', rt = req_to or 'Chưa xác định', rw = req_wd,
+                        df = dr_from, dt = dr_to,
+                        res = ('Khoảng yêu cầu nằm trong khoảng cấp cứu / nhập viện' if dc_pass else
+                               'Khoảng yêu cầu vượt ngoài khoảng cấp cứu / nhập viện đã ghi trên giấy')
+                    )
             elif schema_key == 'BEREAVEMENT':
                 funeral_date = doc_summary.get('funeral_date') or (proof or {}).get('funeral_date')
                 date_of_death = bereavement_date or (proof or {}).get('date_of_death')
@@ -712,7 +720,11 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     dc_note = f"Khoảng ngày mất / tang lễ trên giấy: {event_from} → {event_to} · Ngày xin nghỉ: {req_from} → {req_to} · Kết quả: {date_result}."
                 else:
                     dc_status = "WARN"; dc_pass = False; dc_severity = "WARNING"
-                    dc_note = f"Không đọc đủ ngày mất / tang lễ hoặc ngày xin nghỉ để đối chiếu (khoảng sự kiện: {event_from or 'chưa đọc được'} → {event_to or 'chưa đọc được'})."
+                    # Câu ngắn: nêu đúng phần còn thiếu thay vì lặp "chưa đọc được → chưa đọc được".
+                    if event_from:
+                        dc_note = f"Ngày mất / tang lễ trên giấy: {event_from}; thiếu ngày xin nghỉ để đối chiếu."
+                    else:
+                        dc_note = "Chứng từ chưa ghi rõ ngày mất / tang lễ; chưa đối chiếu được."
             elif schema_key == 'STATUTORY':
                 event_date = statutory_event_date or doc_summary.get('date_of_death') or doc_summary.get('wedding_date')
                 if event_date and req_from and req_to:
@@ -808,13 +820,25 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     dc_status = "FAIL"; dc_pass = False; dc_severity = "CRITICAL"
                 else:
                     dc_status = "PASS"; dc_pass = True; dc_severity = "SUCCESS"
-                dc_note = "Yêu cầu: {rf} → {rt} ({rw} ngày làm việc) · Bác sĩ chỉ định: {df} → {dt} ({dd} ngày nghỉ) — Kết quả: {res}.".format(
-                    rf = req_from or 'Chưa xác định', rt = req_to or 'Chưa xác định', rw = req_wd,
-                    df = dr_from or 'Chưa đọc được', dt = dr_to or 'Chưa đọc được',
-                    dd = str(dr_days) if dr_days is not None else 'Chưa đọc được',
-                    res = ('Khoảng yêu cầu nằm trong khoảng bác sĩ chỉ định' if dc_pass else
-                           'Khoảng yêu cầu vượt ngoài / ngày yêu cầu nhiều hơn số ngày bác sĩ cấp')
-                )
+                if missing_range:
+                    # VLM có thể đã đọc được ngày trên giấy nhưng khoảng không khớp số ngày bác sĩ ghi:
+                    # vẫn hiện ngày đọc được thay vì báo "chưa đọc được", kèm cảnh báo lệch.
+                    raw_from = doc_summary.get('recommended_from_date_raw')
+                    raw_to = doc_summary.get('recommended_to_date_raw') or raw_from
+                    if raw_from:
+                        shown = raw_from if raw_from == raw_to else f"{raw_from} → {raw_to}"
+                        dc_note = (f"Bác sĩ chỉ định trên giấy: {shown}; "
+                                   f"chưa khớp số ngày bác sĩ ghi ({dr_days if dr_days is not None else 'chưa rõ'}) — cần người duyệt kiểm tra.")
+                    else:
+                        dc_note = "Chứng từ chưa ghi rõ khoảng ngày bác sĩ chỉ định; chưa đối chiếu được."
+                else:
+                    dc_note = "Yêu cầu: {rf} → {rt} ({rw} ngày làm việc) · Bác sĩ chỉ định: {df} → {dt} ({dd} ngày nghỉ) — Kết quả: {res}.".format(
+                        rf = req_from or 'Chưa xác định', rt = req_to or 'Chưa xác định', rw = req_wd,
+                        df = dr_from, dt = dr_to,
+                        dd = str(dr_days) if dr_days is not None else 'Chưa đọc được',
+                        res = ('Khoảng yêu cầu nằm trong khoảng bác sĩ chỉ định' if dc_pass else
+                               'Khoảng yêu cầu vượt ngoài khoảng bác sĩ chỉ định')
+                    )
         add_node(6,"VLM_DATE_COVERAGE",dc_status, dc_pass, dc_note,
                                title_vi=("Đối chiếu ngày cưới với ngày nghỉ" if schema_key == 'WEDDING' else "Đối chiếu ngày mất / tang lễ với ngày nghỉ" if schema_key == 'BEREAVEMENT' else "Đối chiếu ngày khám thai" if is_maternity_checkup else "Đối chiếu thời gian nghỉ"),
                        severity=dc_severity, include=shows_proof)
@@ -877,7 +901,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                     'PARTIAL': 'Nhận xét lý do: chỉ khớp một phần với chẩn đoán trên giấy',
                     'MISMATCH': 'Nhận xét lý do: không khớp với chẩn đoán trên giấy',
                     'UNCERTAIN': 'Nhận xét lý do: chưa đủ căn cứ đối chiếu với chẩn đoán trên giấy',
-                    'NOT_APPLICABLE': 'Không áp dụng đối chiếu lý do y tế',
+                    'NOT_APPLICABLE': 'Nhận xét lý do: không phát hiện mâu thuẫn với chẩn đoán trên giấy',
                 }.get(reason_match, '')
                 if match_label:
                     c_note += f" {match_label}."
@@ -1151,11 +1175,6 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
                 relationship_required = str(req.get('reason_category') or '').upper() in RELATIONSHIP_PROOF_CATEGORIES
                 if relationship_required and (not rel_label or 'chưa xác minh' in rel_label.lower() or 'chưa rõ' in rel_label.lower()):
                     explicit_proof_reasons.append('quan hệ trên giấy chưa xác minh rõ ràng')
-            if decision_code == 'PROOF_REVIEW_REQUIRED':
-                if normalized_leave_type in {'SICK_MEDICAL', 'MEDICAL_EMERGENCY'} and not any('chứng từ' in reason.lower() for reason in explicit_proof_reasons):
-                    explicit_proof_reasons.insert(0, 'chứng từ y tế cần được đối chiếu chuyên môn')
-                if not explicit_proof_reasons and (normalized_leave_type in {'SPECIAL_PAID', 'STATUTORY_UNPAID'}):
-                    explicit_proof_reasons.append('các thông tin chuyên môn trên chứng từ cần được Lead Team xác minh thêm')
 
         if decision_code == 'PROOF_REVIEW_REQUIRED' and explicit_proof_reasons:
             decision_reason = build_explicit_escalation_reason(
@@ -1171,7 +1190,7 @@ def get_request_analysis(request_id,actor_id=Depends(actor)):
         elif duration_reason:
             decision_reason = duration_reason
             if explicit_proof_reasons:
-                decision_reason += ' Đồng thời, ' + '; '.join(explicit_proof_reasons) + ' cần được xác minh trước khi duyệt.'
+                decision_reason += ' Đồng thời, ' + '; '.join(explicit_proof_reasons) + '.'
         elif decision_reason:
             decision_reason = decision_reason
         return st.sanitize_public({'success':True,'request_id':request_id,

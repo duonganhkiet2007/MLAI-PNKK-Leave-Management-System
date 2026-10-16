@@ -16,7 +16,7 @@ from domain import (RequestFacts, HumanFeedbackResolution, EditableFields,
 from rule_engine import LeaveRuleEngine
 from taxonomy import ErrorCode, DecisionType
 from calendar_service import CalendarService
-from vlm_inspector import inspect_document_with_vlm, VLMInspectionOutput, _resolve_persona_config, PERSONA_CONFIGS
+from vlm_inspector import inspect_document_with_vlm, VLMInspectionOutput, _resolve_persona_config, PERSONA_CONFIGS, _enforce_name_match_verdict
 from ai.ai_stack import VLM_TARGET_MODEL
 import storage as st
 import json
@@ -25,6 +25,8 @@ from datetime import date
 STATES={'AUTO_APPROVE':'COMPLETED','NO_LEAVE_REQUIRED':'COMPLETED','AUTO_REJECT':'REJECTED',
         'NEED_CORRECTION':'WAITING_EMPLOYEE','ESCALATE':'PENDING_ESCALATION',
         'PENDING_HANDOVER':'PENDING_HANDOVER'}
+# Loại nghỉ mà người được khám / ghi tên trên chứng từ phải là chính nhân viên làm đơn
+SELF_SUBJECT_LEAVE_TYPES={'SICK_MEDICAL','MEDICAL_EMERGENCY','WORK_ACCIDENT','MATERNITY'}
 
 
 def _vlm_output_from_json(cj, proof_type_raw=None):
@@ -47,7 +49,7 @@ def _vlm_output_from_json(cj, proof_type_raw=None):
             issue_date=_safe_date(_ds.get('issue_date')),
             recommended_from_date=_safe_date(_dr.get('from')),
             recommended_to_date=_safe_date(_dr.get('to')),
-            signature_present=_fl.get('signature_present_on_scan') or _fl.get('has_doctor_signature'),
+            signature_present=(_fl.get('signature_present_on_scan') if _fl.get('signature_present_on_scan') is not None else _fl.get('has_doctor_signature')),
             digital_signature_present=_fl.get('digital_signature_present'),
             document_readability=_fl.get('document_readability') or 'READABLE',
             fields_detected=list(cj.get('raw_fields_detected') or []),
@@ -66,6 +68,12 @@ def _vlm_output_from_json(cj, proof_type_raw=None):
             partner_name=_ds.get('partner_name'),
             event_type=_ds.get('event_type'),
             wedding_date=_safe_date(_ds.get('wedding_date')),
+            date_of_death=_safe_date(_ds.get('date_of_death')),
+            funeral_date=_safe_date(_ds.get('funeral_date')),
+            event_date=_safe_date(_ds.get('event_date')),
+            injury_date=_safe_date(_ds.get('injury_date')),
+            relationship_label=_ds.get('relationship_label') or _ds.get('relationship'),
+            relationship_to_employee=_ds.get('relationship_to_employee') or _ds.get('relationship'),
             has_red_stamp=_fl.get('has_red_stamp'),
             has_doctor_signature=_fl.get('has_doctor_signature'),
             is_tampered=_fl.get('is_tampered'),
@@ -394,8 +402,22 @@ class LeaveOrchestratorService:
                     # Re-score correlation with exact calculated workdays (skip if document is UNREADABLE)
                     is_unreadable = getattr(vlm_out.proof_extraction, 'document_readability', '') in ('UNREADABLE', 'ILLEGIBLE')
                     if wd and vlm_out.proof_extraction and not is_unreadable:
-                        from vlm_inspector import _score_correlation
+                        from vlm_inspector import (
+                            _resolve_reason_diagnosis_match,
+                            _score_correlation,
+                            is_provisional_correlation_issue,
+                        )
                         pe = vlm_out.proof_extraction
+                        # Bước tiền kiểm chạy khi chưa biết lý do nghỉ nên kết luận đối chiếu ở đó chỉ là tạm thời:
+                        # tính lại với lý do thật rồi ghi đè, thay vì chỉ cộng thêm và giữ mãi câu cũ.
+                        resolved_match, resolved_reason = _resolve_reason_diagnosis_match(
+                            str(getattr(facts, 'reason', '')),
+                            vlm_out.doc_diagnosis or '',
+                            pe.reason_diagnosis_match,
+                            pe.reason_diagnosis_match_reason,
+                        )
+                        pe.reason_diagnosis_match = resolved_match
+                        pe.reason_diagnosis_match_reason = resolved_reason
                         new_score, new_additional_issues, new_doctor_days = _score_correlation(
                             employee_name=getattr(ctx,'employee_name',''),
                             reason=str(getattr(facts,'reason','')),
@@ -408,21 +430,37 @@ class LeaveOrchestratorService:
                             patient_name_on_doc=pe.patient_name,
                             patient_name_match=pe.patient_name_match,
                             patient_name_match_reason=pe.patient_name_match_reason,
-                            reason_diagnosis_match=pe.reason_diagnosis_match,
-                            reason_diagnosis_match_reason=pe.reason_diagnosis_match_reason,
+                            reason_diagnosis_match=resolved_match,
+                            reason_diagnosis_match_reason=resolved_reason,
                         )
                         if new_score is not None:
                             vlm_dict = dict(vlm_out.vlm_analysis_json or {})
-                            merged = list(dict.fromkeys((vlm_out.correlation_issues or []) + list(new_additional_issues)))
+                            kept_issues = [
+                                issue for issue in (vlm_out.correlation_issues or [])
+                                if not is_provisional_correlation_issue(issue)
+                            ]
+                            merged = list(dict.fromkeys(kept_issues + list(new_additional_issues)))
                             vlm_out.correlation_score = new_score
                             vlm_out.correlation_issues = merged
                             if new_doctor_days is not None:
                                 vlm_out.days_granted_by_doctor = new_doctor_days
                             ca = vlm_dict.get('correlation_analysis', {}); ca['score'] = new_score; ca['issues'] = merged; ca['requested_workdays'] = wd
+                            ca['reason_diagnosis_match'] = resolved_match; ca['reason_diagnosis_match_reason'] = resolved_reason
                             vlm_dict['correlation_analysis'] = ca
                             dr = vlm_dict.get('document_summary',{}); dr['doctor_recommended_range'] = dict(dr.get('doctor_recommended_range',{}) or {}); dr['doctor_recommended_range']['days'] = new_doctor_days
                             vlm_out.vlm_analysis_json = vlm_dict
                 except Exception: pass
+
+        # VLM đọc ảnh lúc chưa biết tên nhân viên nên kết luận "khớp tên" của VLM không có giá trị: với chứng từ mà
+        # người khám là chính nhân viên, code tự đối chiếu tên trên giấy với tên nhân sự trước khi chạy bộ quy tắc.
+        leave_type_value = getattr(ctx.leave_type, 'value', ctx.leave_type)
+        if leave_type_value in SELF_SUBJECT_LEAVE_TYPES and ctx.proof is not None and ctx.proof.patient_name and ctx.employee_name:
+            name_match, name_match_reason = _enforce_name_match_verdict(
+                ctx.proof.patient_name, ctx.employee_name, ctx.proof.patient_name_match, ctx.proof.patient_name_match_reason)
+            ctx.proof.patient_name_match, ctx.proof.patient_name_match_reason = name_match, name_match_reason
+            if vlm_out is not None and isinstance(vlm_out.vlm_analysis_json, dict):
+                ca = vlm_out.vlm_analysis_json.setdefault('correlation_analysis', {})
+                ca['patient_name_match'], ca['patient_name_match_reason'] = name_match, name_match_reason
 
         t_rule_0 = time.perf_counter()
         result=LeaveRuleEngine.evaluate(ctx,self.calendar)

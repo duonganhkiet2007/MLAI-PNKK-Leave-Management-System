@@ -1458,10 +1458,10 @@ const STAFF_TEST_CASES = [
       total_team_members: 6
     },
     expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      error_code: "PROOF_REVIEW_REQUIRED",
-      note: "[Hồ sơ khám thai cần quản lý đối chiếu] Chứng từ chưa thể hiện ngày khám hoặc thời gian được chỉ định. Đơn được chuyển Quản lý trực tiếp kiểm tra trước khi quyết định."
+      decision: "AUTO_APPROVE",
+      target_role: null,
+      error_code: null,
+      note: "[Khám thai một ngày hợp lệ] Thông tin nhân sự, chứng từ và ngày khám đã khớp. Đơn được tự động duyệt; không trừ phép năm."
     }
   },
   {
@@ -1578,8 +1578,8 @@ const STAFF_TEST_CASES = [
     expected: {
       decision: "ESCALATE",
       target_role: "DIRECT_MANAGER",
-      error_code: "PROOF_REVIEW_REQUIRED",
-      note: "[Chứng từ cần đối chiếu] Hệ thống đã tiếp nhận chứng từ của bạn. Đơn chuyển tới Lead Team (quản lý trực tiếp) để đối chiếu các thông tin chuyên môn trên chứng từ cần đối chiếu lại trước khi duyệt."
+      error_code: "NAME_MISMATCH",
+      note: "[Họ tên trên chứng từ không khớp] Tên trên giấy y tế (Võ Hoàng Long) khác với nhân viên làm đơn (Võ Minh Khang). Hồ sơ chuyển HR xác minh trước khi quyết định."
     }
   },
   {
@@ -2114,8 +2114,8 @@ const TESTCASE_SPRINT1_METADATA = {
     actionableQuestion: "Giấy chứng nhận nghỉ việc thiếu chữ ký của bác sĩ điều trị. Nhân viên vui lòng liên hệ cơ sở y tế để bổ sung chữ ký hợp lệ trước khi gửi lại."
   },
   "TC-EMP008-01": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    group: "ROUTINE",
+    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
     shortPrefix: "Vượt thẩm quyền (Cấp CEO)",
     primary: "Khám thai định kỳ",
     duration: "1 ngày làm việc",
@@ -4543,7 +4543,7 @@ function initStaffForm() {
         dropTitle.innerHTML = `Bấm để tải <strong style="color:#b91c1c;">giấy khám / giấy tờ xác nhận</strong> hoặc kéo thả vào đây`;
       }
       if (dropSub) {
-        dropSub.innerText = `Chấp nhận PDF, PNG, JPG (AI Engine sẽ đọc và đối soát)`;
+        dropSub.innerText = `Chấp nhận PNG, JPG (AI Engine sẽ đọc và đối soát)`;
       }
     } else {
       if (label) {
@@ -4560,7 +4560,7 @@ function initStaffForm() {
         dropTitle.innerHTML = `Bấm để tải tệp lên hoặc kéo thả vào đây (nếu có)`;
       }
       if (dropSub) {
-        dropSub.innerText = `PDF, PNG, JPG (tối đa 10MB)`;
+        dropSub.innerText = `PNG, JPG (tối đa 10MB)`;
       }
     }
   };
@@ -4768,107 +4768,190 @@ function initFileUploadDropzone() {
   }
 }
 
-/* ── THANH TIẾN TRÌNH: % theo thời lượng phase thật, không cộng % bừa ──
- * Form nộp đơn: VLM (nếu có file) → Rule Engine → template. Không gọi LLM.
- * qwen2.5vl:7b ảnh A4 1280px GPU ~8–18s → lấy mốc 12s.
- * Upload ~1s; Rule+template+save <0.5s (chìm trong thời gian VLM nếu có file).
+/* ── THANH TIẾN TRÌNH: % bám theo THỜI LƯỢNG DỰ TÍNH của từng loại đơn ──
+ * Mỗi đơn rơi vào một trong ba nhóm thời lượng dự tính:
+ *   1. Không chứng từ          → ~0.5s  (chỉ đối soát chính sách + lưu).
+ *   2. Chứng từ CÓ bản lưu sẵn → ~1s    (server trả READY ngay, không gọi GPU).
+ *   3. Chứng từ cần chạy VLM   → ~10–30s (GPU đọc ảnh; ước lượng lấy p50 từ /api/meta/metrics).
+ * Thanh % bò theo đường cong bão hoà: tới ~90% quanh mốc dự tính rồi chậm dần tới 95%;
+ * chỉ nhảy 100% khi server thực sự trả kết quả — không cộng % bừa.
  */
+const _PROGRESS_NO_FILE_MS = 500;
+const _PROGRESS_UPLOAD_MS = 800;
+const _PROGRESS_RULE_MS = 600;
+const _PROGRESS_DEFAULT_VLM_MS = 15000;
+
 let _progressInterval = null;
 let _progressHasFile = false;
+let _progressState = null;
 
 let _submitProgressStartedAt = 0;
+let _vlmDurationEstimateMs = _PROGRESS_DEFAULT_VLM_MS;
+let _vlmEstimateFetched = false;
+
+/* Ước lượng thời lượng VLM từ số liệu thật (/api/meta/metrics, p50). Lỗi → giữ mặc định 15s. */
+function _fetchVlmDurationEstimate() {
+  if (_vlmEstimateFetched) return;
+  _vlmEstimateFetched = true;
+  apiFetch(`${API_BASE}/api/meta/metrics`)
+    .then(r => (r.ok ? r.json() : null))
+    .then(j => {
+      const stats = j && j.data && j.data.vlm_inference_duration;
+      const ms = stats && stats.count > 0 ? (stats.p50_ms || stats.avg_ms || 0) : 0;
+      if (!ms) return;
+      _vlmDurationEstimateMs = Math.min(45000, Math.max(6000, Math.round(ms)));
+      const st = _progressState;
+      if (st && st.phases[st.idx] && st.phases[st.idx].id === "INSPECT") {
+        st.phases[st.idx].est = _vlmDurationEstimateMs;
+      }
+    })
+    .catch(() => {});
+}
+
+/* Đường cong bão hoà: u=0.33 → 63%, u=1 → 95%, u≥2 → ~99%. */
+function _progressEase(u) {
+  return 1 - Math.exp(-3 * Math.min(Math.max(u, 0), 4));
+}
+
+/* Nhãn khoảng bước cho phase: [3] → "3", [3,4,5] → "3–5". */
+function _phaseStepRange(steps) {
+  if (!steps || !steps.length) return "";
+  return steps.length === 1 ? String(steps[0]) : `${steps[0]}–${steps[steps.length - 1]}`;
+}
+
+/* Mỗi phase có thời lượng dự tính (est) và % ngân sách (budget); tổng budget ≤ 95. */
+function _progressPhases(hasFile) {
+  if (!hasFile) {
+    return [
+      { id: "RECV", steps: [1], est: _PROGRESS_NO_FILE_MS * 0.4, budget: 20, label: "Tiếp nhận dữ liệu đơn" },
+      { id: "RULE", steps: [3], est: _PROGRESS_NO_FILE_MS * 0.4, budget: 55, label: "AI Engine đối soát chính sách" },
+      { id: "SAVE", steps: [4, 5], est: _PROGRESS_NO_FILE_MS * 0.5, budget: 20, label: "Tổng hợp & lưu hồ sơ" },
+    ];
+  }
+  return [
+    { id: "UPLOAD", steps: [1], est: _PROGRESS_UPLOAD_MS, budget: 10, label: "Tải chứng từ lên máy chủ" },
+    { id: "INSPECT", steps: [2], est: _vlmDurationEstimateMs, budget: 78, label: "AI Engine đọc & đối soát chứng từ", auto: false },
+    { id: "RULE", steps: [3, 4, 5], est: _PROGRESS_RULE_MS, budget: 7, label: "Đối soát chính sách & lưu hồ sơ" },
+  ];
+}
+
+function _installSubmitPhases(hasFile, startId = null) {
+  const st = _progressState;
+  if (!st) return;
+  _progressHasFile = !!hasFile;
+  st.phases = _progressPhases(!!hasFile);
+  st.idx = 0;
+  st.phaseStart = performance.now();
+  if (startId) {
+    const t = st.phases.findIndex(p => p.id === startId);
+    if (t >= 0) st.idx = t;
+  }
+}
 
 function showSubmitProgress(hasFile = false) {
-  _progressHasFile = !!hasFile;
   _submitProgressStartedAt = performance.now();
   const modal = document.getElementById("modal-submit-progress");
   if (!modal) return;
   modal.style.display = "block";
 
+  _fetchVlmDurationEstimate();
+  _progressState = { phases: [], idx: 0, phaseStart: performance.now(), floor: 0 };
+  _installSubmitPhases(!!hasFile);
+
   const bar = document.getElementById("submit-progress-bar");
   const pLabel = document.getElementById("progress-percent-label");
   const sLabel = document.getElementById("progress-step-label");
   const sub = document.getElementById("progress-modal-sub");
+  if (bar) {
+    bar.style.width = "0%";
+    bar.style.background = "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)";
+  }
+  if (pLabel) pLabel.innerText = "0%";
+  if (sLabel) sLabel.innerText = `Bước 1: ${_progressState.phases[0].label}...`;
   if (sub) {
-    sub.textContent = hasFile
+    sub.textContent = _progressHasFile
       ? "⏱ Đang thẩm định: 0.0s · AI Engine đọc chứng từ & đối soát chính sách"
       : "⏱ Đang xử lý: 0.0s · AI Engine đối soát chính sách";
   }
-  if (bar) bar.style.background = "linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899)";
 
   _setStepState(1, "processing", "Đang xử lý");
-  _setStepState(2, hasFile ? "waiting" : "done", hasFile ? "Chờ" : "Bỏ qua (không chứng từ)");
+  _setStepState(2, _progressHasFile ? "waiting" : "done", _progressHasFile ? "Chờ" : "Bỏ qua (không chứng từ)");
   _setStepState(3, "waiting", "Chờ");
   _setStepState(4, "waiting", "Chờ");
   _setStepState(5, "waiting", "Chờ");
 
-  const UPLOAD_MS = 600;
-  const VLM_MS = 4000;
-  const RECV_MS = 150;
-  const RULE_MS = 200;
-
-  const paint = (pct, label) => {
-    const display = Math.max(0, Math.min(96, Math.round(pct)));
-    if (bar) {
-      bar.style.width = `${display}%`;
-      bar.setAttribute("aria-valuenow", String(display));
-    }
-    if (pLabel) pLabel.innerText = `${display}%`;
-    if (sLabel) sLabel.innerText = label;
-  };
-
-  const tick = () => {
-    const elapsed = performance.now() - _submitProgressStartedAt;
-    const elapsedSec = (elapsed / 1000).toFixed(1);
-    const dots = ".".repeat((Math.floor(elapsed / 400) % 4) + 1);
-
-    if (sub) {
-      sub.textContent = hasFile
-        ? `⏱ Thời gian xử lý: ${elapsedSec}s · AI Engine đang thẩm định chứng từ`
-        : `⏱ Thời gian xử lý: ${elapsedSec}s · AI Engine đang đối soát chính sách`;
-    }
-
-    if (hasFile) {
-      if (elapsed < UPLOAD_MS) {
-        _setStepState(1, "processing", "Đang tải lên");
-        paint((elapsed / UPLOAD_MS) * 15, "Bước 1: Tải chứng từ lên máy chủ...");
-        return;
-      }
-      _setStepState(1, "done", "Xong ✓");
-      _setStepState(2, "processing", `${elapsedSec}s`);
-      const vlmElapsed = elapsed - UPLOAD_MS;
-      let pct;
-      if (vlmElapsed < VLM_MS) {
-        pct = 15 + (vlmElapsed / VLM_MS) * 70;
-      } else {
-        pct = 85 + 10 * (1 - Math.exp(-(vlmElapsed - VLM_MS) / 5000));
-      }
-      paint(pct, `Bước 2: AI Engine đang đọc & đối soát (${elapsedSec}s)${dots}`);
-      return;
-    }
-
-    _setStepState(2, "done", "Bỏ qua (không chứng từ)");
-    if (elapsed < RECV_MS) {
-      _setStepState(1, "processing", "Đang tiếp nhận");
-      paint((elapsed / RECV_MS) * 25, "Bước 1: Tiếp nhận dữ liệu đơn...");
-      return;
-    }
-    _setStepState(1, "done", "Xong ✓");
-    if (elapsed < RECV_MS + RULE_MS) {
-      _setStepState(3, "processing", "Đang đối soát");
-      paint(25 + ((elapsed - RECV_MS) / RULE_MS) * 50, "Bước 3: AI Engine đối soát chính sách...");
-      return;
-    }
-    _setStepState(3, "done", "Xong ✓");
-    _setStepState(4, "processing", "Đang ghi nhận");
-    _setStepState(5, "processing", "Đang lưu");
-    const extra = elapsed - RECV_MS - RULE_MS;
-    paint(75 + 21 * (1 - Math.exp(-extra / 400)), `Bước 4–5: Tổng hợp & lưu hồ sơ (${elapsedSec}s)${dots}`);
-  };
-
   clearInterval(_progressInterval);
-  tick();
-  _progressInterval = setInterval(tick, 100);
+  tickProgress();
+  _progressInterval = setInterval(tickProgress, 100);
+}
+
+/* Nhảy sớm sang phase theo id: khi upload xong mà server báo chứng từ đã có bản lưu sẵn
+ * (READY) thì vào thẳng bước đối soát thay vì chờ hết ước lượng VLM. */
+function advanceSubmitPhase(id) {
+  const st = _progressState;
+  if (!st) return;
+  const target = st.phases.findIndex((p, i) => i >= st.idx && p.id === id);
+  if (target < 0 || target === st.idx) return;
+  st.idx = target;
+  st.phaseStart = performance.now();
+  tickProgress();
+}
+
+function _applyPhaseSteps(st) {
+  const cur = st.phases[st.idx];
+  if (!cur) return;
+  const doneSteps = new Set();
+  for (let i = 0; i < st.idx; i++) st.phases[i].steps.forEach(s => doneSteps.add(s));
+  for (let s = 1; s <= 5; s++) {
+    if (cur.steps.includes(s)) _setStepState(s, "processing", "Đang xử lý");
+    else if (doneSteps.has(s)) _setStepState(s, "done", "Xong ✓");
+    else if (s === 2 && !_progressHasFile) _setStepState(s, "done", "Bỏ qua (không chứng từ)");
+    else _setStepState(s, "waiting", "Chờ");
+  }
+}
+
+function tickProgress() {
+  const st = _progressState;
+  if (!st || !st.phases.length) return;
+  const now = performance.now();
+
+  // Tự chuyển phase khi vượt thời lượng dự tính (không đợi tín hiệu từ server).
+  // Phase gắn auto:false (đọc chứng từ bằng VLM) chỉ kết thúc khi server trả kết quả,
+  // tránh báo nhầm đã sang bước đối soát chính sách trong lúc GPU còn chạy.
+  let guard = 0;
+  while (st.idx < st.phases.length - 1 && st.phases[st.idx].auto !== false
+         && (now - st.phaseStart) > st.phases[st.idx].est && guard++ < 5) {
+    st.idx += 1;
+    st.phaseStart = now;
+  }
+
+  const cur = st.phases[st.idx];
+  let completed = 0;
+  for (let i = 0; i < st.idx; i++) completed += st.phases[i].budget;
+  const pct = completed + cur.budget * _progressEase((now - st.phaseStart) / Math.max(1, cur.est));
+  st.floor = Math.max(st.floor, pct);
+  const display = Math.max(0, Math.min(95, Math.round(st.floor)));
+
+  const elapsed = now - _submitProgressStartedAt;
+  const elapsedSec = (elapsed / 1000).toFixed(1);
+  const dots = ".".repeat((Math.floor(elapsed / 400) % 4) + 1);
+
+  const bar = document.getElementById("submit-progress-bar");
+  const pLabel = document.getElementById("progress-percent-label");
+  const sLabel = document.getElementById("progress-step-label");
+  const sub = document.getElementById("progress-modal-sub");
+  if (bar) {
+    bar.style.width = `${display}%`;
+    bar.setAttribute("aria-valuenow", String(display));
+  }
+  if (pLabel) pLabel.innerText = `${display}%`;
+  if (sLabel) sLabel.innerText = `Bước ${_phaseStepRange(cur.steps)}: ${cur.label}${dots}`;
+  if (sub) {
+    sub.textContent = _progressHasFile
+      ? `⏱ Thời gian xử lý: ${elapsedSec}s · AI Engine đang thẩm định chứng từ`
+      : `⏱ Thời gian xử lý: ${elapsedSec}s · AI Engine đang đối soát chính sách`;
+  }
+  _applyPhaseSteps(st);
 }
 
 function finishSubmitProgress(success = true, callback, serverMs = null) {
@@ -5032,10 +5115,15 @@ async function handleStandardFormSubmit() {
       }
       currentProofId=result.data.proof_id;
       currentProofContext = { leaveType, reasonCategory };
+      // Server kiểm định xong ngay (READY = trùng bản lưu sẵn, không gọi GPU) → nhảy thẳng bước đối soát.
+      if (result.data && result.data.inspection_status === 'READY') advanceSubmitPhase('RULE');
     } catch(err) {
       finishSubmitProgress(false, () => showToast('Lỗi tải file: ' + err.message, 'error'));
       return;
     }
+  } else if (currentProofId) {
+    // Dùng lại chứng từ đã kiểm định trước đó → cũng thuộc nhóm "có bản lưu sẵn".
+    advanceSubmitPhase('RULE');
   }
   const payload={
     employee_id: currentEmployeeId,
@@ -5077,7 +5165,7 @@ async function submitLeaveToBackend(payload, hasFile = false) {
     if (res.status === 202 || (result.data && result.data.status === 'PROCESSING')) {
       const requestId = result.data.id;
       let attempts = 0;
-      const maxAttempts = 35; // tối đa 35s
+      const maxAttempts = 90; // tối đa 90s (VLM đọc 1 chứng từ ~25–35s, có thể phải xếp hàng sau đơn khác)
       while (attempts < maxAttempts) {
         await new Promise(r => setTimeout(r, 1000));
         attempts++;
@@ -6109,8 +6197,8 @@ function renderBenchmarkDetailModal(req) {
           </div>
         </div>
         <div class="harness-vlm-flags">
-          ${_vlmFlags.has_red_stamp !== undefined ? (_vlmFlags.has_red_stamp ? _badgeTag('✓ Có dấu đỏ', '#dcfce7', '#166534') : _badgeTag('✕ Thiếu dấu đỏ', '#fee2e2', '#991b1b')) : ''}
-          ${_vlmFlags.has_doctor_signature !== undefined ? (_vlmFlags.has_doctor_signature ? _badgeTag('✓ Có chữ ký', '#dcfce7', '#166534') : _badgeTag('✕ Thiếu chữ ký', '#fee2e2', '#991b1b')) : ''}
+          ${(() => { const v = _vlmFlags.has_red_stamp ?? _vlmFlags.has_hospital_stamp; return v === true ? _badgeTag('✓ Có dấu đỏ', '#dcfce7', '#166534') : v === false ? _badgeTag('✕ Thiếu dấu đỏ', '#fee2e2', '#991b1b') : _badgeTag('? Chưa rõ dấu đỏ', '#f1f5f9', '#475569'); })()}
+          ${(() => { const v = _vlmFlags.has_doctor_signature ?? _vlmFlags.signature_present_on_scan; return v === true ? _badgeTag('✓ Có chữ ký', '#dcfce7', '#166534') : v === false ? _badgeTag('✕ Thiếu chữ ký', '#fee2e2', '#991b1b') : _badgeTag('? Chưa rõ chữ ký', '#f1f5f9', '#475569'); })()}
           ${_vlmFlags.document_readability ? _badgeTag(`Độ rõ: ${_vlmFlags.document_readability}`, '#f1f5f9', '#475569') : ''}
         </div>
       </div>
@@ -6764,6 +6852,80 @@ async function openRequestDetailModal(requestId) {
   const _patientReviewStatus = String(_patientReviewNode?.status || '').toUpperCase();
   const _integrityReviewNote = String(_rawChecklistNodes.find(function(node) { return node.stage === 'VLM_INTEGRITY'; })?.note || '');
 
+  // Kết luận phải liệt kê MỌI tiêu chí đang có vấn đề (không lọc bỏ mục nào), xếp mục nặng trước.
+  const _issueGroupOfStage = function(stage) {
+    // "Chứng từ" và "Trạng thái xử lý" cùng nói về việc chứng từ cần xác minh -> gộp một mục.
+    if (stage === 'PROOF' || stage === 'PROOF_VERIFICATION') return 'PROOF';
+    return stage;
+  };
+  const _addIssueBullet = function(stage, text, group) {
+    const normalizedText = String(text || '').trim();
+    if (!normalizedText) return;
+    const key = String(group || stage || '');
+    if (_issueBullets.some(function(item) { return item.group === key; })) return;
+    _issueBullets.push({ stage: stage, text: normalizedText, group: key });
+  };
+  const _severityRank = { CRITICAL: 0, WARNING: 1, INFO: 2 };
+  const _problemNodes = _reviewNodes.slice().sort(function(a, b) {
+    const rankA = _severityRank[String(a.severity || '').toUpperCase()] ?? 3;
+    const rankB = _severityRank[String(b.severity || '').toUpperCase()] ?? 3;
+    return rankA - rankB;
+  });
+  const _problemIssueText = {
+    VALIDATION: 'Thông tin đơn nghỉ chưa đầy đủ hoặc không hợp lệ.',
+    BALANCE: 'Số ngày xin nghỉ vượt số dư phép hiện tại.',
+    PROOF: _isBereavement ? 'Chứng từ sự kiện gia đình chưa đủ điều kiện xác minh.' : 'Chứng từ chưa đủ điều kiện để xác minh.',
+    PROOF_VERIFICATION: 'Chứng từ cần được xác minh thêm.',
+    VLM_PATIENT: _isBereavement ? 'Tên người mất trên giấy cần được xem xét.' : 'Tên trên chứng từ không khớp với thông tin nhân sự.',
+    VLM_CORRELATION: _isBereavement
+      ? 'Quan hệ hoặc thông tin sự kiện trên chứng từ cần được xem xét.'
+      : 'Nội dung chứng từ chưa khớp với lý do xin nghỉ.',
+    VLM_DATE_COVERAGE: _isBereavement
+      ? 'Ngày mất hoặc tang lễ chưa khớp với khoảng ngày xin nghỉ.'
+      : 'Thời gian xin nghỉ không khớp với chỉ định trên chứng từ.',
+    NOTICE: 'Thời hạn báo trước chưa đáp ứng quy định.',
+    TEAM_QUOTA: 'Tỷ lệ nhân sự nghỉ đồng thời vượt ngưỡng 30%; quản lý cần xem xét trước khi duyệt.'
+  };
+  const _issueTextForStage = function(stage, node) {
+    if (stage === 'PROOF') {
+      if (['FAIL', 'REJECTED'].includes(_patientReviewStatus)) {
+        return _isBereavement ? 'Tên người mất trên giấy cần được xem xét.' : 'Tên trên chứng từ không khớp với thông tin nhân sự.';
+      }
+      if (/chữ ký[^•]*(?:thiếu|không có|không thấy)/i.test(_integrityReviewNote)) {
+        return 'Thiếu chữ ký của người có thẩm quyền.';
+      }
+      return _problemIssueText.PROOF;
+    }
+    if (stage === 'VLM_CORRELATION' && _medicalCorrelationApplies) {
+      if (_reasonNote) return _reasonNote;
+      if (_reasonVerdict === 'MISMATCH') return 'Lý do nghỉ không khớp với chẩn đoán y tế.';
+      if (_reasonVerdict === 'PARTIAL') return 'Lý do nghỉ chỉ khớp một phần với chẩn đoán y tế.';
+    }
+    const mapped = _problemIssueText[stage];
+    if (mapped) return mapped;
+    return localizeResponseText(String(node?.note || '').trim());
+  };
+  // Cảnh báo chứng từ chỉ mang tính tạm thời khi VLM chưa đủ căn cứ đối chiếu tên lúc tiền kiểm.
+  const _proofWarningIsProvisional = function(node) {
+    if (String(node?.status || '').toUpperCase() !== 'WARN') return false;
+    if (['FAIL', 'REJECTED'].includes(_patientReviewStatus)) return false;
+    return /chưa đủ căn cứ xác nhận tên trên giấy/i.test(String(node?.note || ''));
+  };
+  const _collectProblemBullets = function() {
+    _problemNodes.forEach(function(node) {
+      const stage = String(node.stage || '');
+      // "Trạng thái xử lý" là trạng thái của đơn, chỉ nêu khi đơn thực sự không đạt.
+      if (stage === 'PROOF_VERIFICATION' && !['FAIL', 'REJECTED'].includes(String(node.status || '').toUpperCase())) return;
+      // Bỏ cảnh báo chứng từ tạm thời để không lặp lại lý do chuyển cấp.
+      if (stage === 'PROOF' && _proofWarningIsProvisional(node)) return;
+      _addIssueBullet(
+        _stageTitleMap[stage] || node.title_vi || stage,
+        _issueTextForStage(stage, node),
+        _issueGroupOfStage(stage),
+      );
+    });
+  };
+
   if (_unreadableDoc) {
     _conclusion = 'Không đọc được chứng từ';
     _issueSentence = _isBereavement
@@ -6781,66 +6943,32 @@ async function openRequestDetailModal(requestId) {
     _conclusion = 'Không phát sinh phép';
   } else if (_decision === 'ESCALATE') {
     _conclusion = 'Cần xem xét';
-    const addIssueBullet = function(stage, text) {
-      const normalizedText = String(text || '').trim();
-      if (normalizedText && !_issueBullets.some(function(item) { return item.text === normalizedText; })) {
-        _issueBullets.push({ stage: stage, text: normalizedText });
-      }
-    };
-    const errorCode = String(req.error_code || '').toUpperCase();
-    if (errorCode === 'DURATION_OVER_AI_LIMIT') {
-      addIssueBullet('Thời lượng nghỉ', 'Số ngày nghỉ vượt trần tự duyệt của AI.');
-    } else if (errorCode === 'DURATION_OVER_MANAGER_LIMIT') {
-      addIssueBullet('Thẩm quyền', 'Số ngày nghỉ vượt thẩm quyền của Lead Team.');
+    // Lý do chuyển cấp luôn đứng đầu danh sách, không bị thay thế khi đã có mục phụ.
+    const primaryReason = localizeResponseText(String(_primaryDecisionReason || '').trim());
+    const genericReason = /đơn cần .* xem xét theo quy định|chuyển cấp có thẩm quyền xem xét|^chuyển cấp để/i.test(primaryReason);
+    if (primaryReason && !genericReason) {
+      _addIssueBullet('Lý do chuyển cấp', primaryReason);
     }
-
-    if (/chữ ký[^•]*(?:thiếu|không có|không thấy)/i.test(_integrityReviewNote)) {
-      addIssueBullet('Chữ ký', 'Thiếu chữ ký của người có thẩm quyền.');
+    const errorCode = String(req.error_code || '').toUpperCase();
+    // Không lặp lại thời lượng/thẩm quyền khi lý do chuyển cấp đã nêu.
+    const _reasonCoversDuration = /vượt trần|vượt thẩm quyền/i.test(primaryReason);
+    if (errorCode === 'DURATION_OVER_AI_LIMIT' && !_reasonCoversDuration) {
+      _addIssueBullet('Thời lượng nghỉ', 'Số ngày nghỉ vượt trần tự duyệt của AI.');
+    } else if (errorCode === 'DURATION_OVER_MANAGER_LIMIT' && !_reasonCoversDuration) {
+      _addIssueBullet('Thẩm quyền', 'Số ngày nghỉ vượt thẩm quyền của Lead Team.');
     }
     if (['FAIL', 'REJECTED'].includes(_patientReviewStatus)) {
-      addIssueBullet(_isBereavement ? 'Tên người mất' : 'Tên bệnh nhân', _isBereavement
+      _addIssueBullet(_isBereavement ? 'Tên người mất' : 'Tên bệnh nhân', _isBereavement
         ? 'Tên người mất trên giấy cần được xem xét.'
-        : 'Tên trên chứng từ không khớp với thông tin nhân sự.');
+        : 'Tên trên chứng từ không khớp với thông tin nhân sự.', 'PROOF');
     }
-    if (/quan hệ trên giấy[^.;]*(?:chưa xác minh|chưa rõ)/i.test(_primaryDecisionReason)) {
-      addIssueBullet('Quan hệ', 'Quan hệ trên giấy chưa được xác minh.');
-    }
-    if (_medicalCorrelationApplies && _reasonVerdict === 'MISMATCH') {
-      addIssueBullet('Lý do nghỉ', 'Lý do nghỉ không khớp với chẩn đoán y tế.');
-    } else if (_medicalCorrelationApplies && _reasonVerdict === 'PARTIAL') {
-      addIssueBullet('Lý do nghỉ', 'Lý do nghỉ chỉ khớp một phần với chẩn đoán y tế.');
-    } else if (_medicalCorrelationApplies && _reasonVerdict === 'UNCERTAIN') {
-      addIssueBullet('Lý do nghỉ', 'Chứng từ chưa có đủ thông tin để đối chiếu lý do nghỉ với chẩn đoán y tế.');
-    }
-
-    const otherIssueText = {
-      VALIDATION: 'Thông tin đơn nghỉ chưa đầy đủ hoặc không hợp lệ.',
-      BALANCE: 'Số ngày xin nghỉ vượt số dư phép hiện tại.',
-      VLM_PATIENT: 'Tên trên chứng từ không khớp với thông tin nhân sự.',
-      VLM_DATE_COVERAGE: _isBereavement
-        ? 'Ngày mất hoặc tang lễ chưa khớp với khoảng ngày xin nghỉ.'
-        : 'Thời gian xin nghỉ không khớp với chỉ định trên chứng từ.',
-      NOTICE: 'Thời hạn báo trước chưa đáp ứng quy định.',
-      TEAM_QUOTA: 'Tỷ lệ nghỉ trong phòng ban vượt ngưỡng cho phép.'
-    };
-    _reviewNodes.forEach(function(node) {
-      const stage = String(node.stage || '');
-      if (!['FAIL', 'REJECTED', 'WARN', 'WAITING'].includes(String(node.status || '').toUpperCase())) return;
-      if (['PROOF', 'PROOF_VERIFICATION', 'VLM_INTEGRITY', 'VLM_PATIENT', 'VLM_CORRELATION'].includes(stage)) return;
-      if (otherIssueText[stage]) addIssueBullet(_stageTitleMap[stage] || stage, otherIssueText[stage]);
-    });
+    _collectProblemBullets();
     if (!_issueBullets.length) {
       if (_patientReviewStatus === 'PASS' && /không khớp|khác với|lỗi sai tên/i.test(_primaryDecisionReason)) {
-        addIssueBullet('Cần đánh giá lại', 'Tên trên giấy hiện khớp với nhân sự nhưng quyết định chuyển cấp cũ vẫn còn hiệu lực. Cần chạy lại đánh giá để cập nhật trạng thái đơn.');
+        _addIssueBullet('Cần đánh giá lại', 'Tên trên giấy hiện khớp với nhân sự nhưng quyết định chuyển cấp cũ vẫn còn hiệu lực. Cần chạy lại đánh giá để cập nhật trạng thái đơn.');
       } else {
-        const primaryReason = localizeResponseText(String(_primaryDecisionReason || '').trim());
-        const genericReason = /đơn cần .* xem xét theo quy định|chuyển cấp có thẩm quyền xem xét/i.test(primaryReason);
-        if (primaryReason && !genericReason) {
-          addIssueBullet('Lý do chuyển cấp', primaryReason);
-        } else {
-          const role = localizeResponseText(req.target_role || 'cấp có thẩm quyền');
-          addIssueBullet('Cần đánh giá lại', `Đơn đang chờ ${role} nhưng dữ liệu chưa nêu rõ lý do chuyển cấp.`);
-        }
+        const role = localizeResponseText(req.target_role || 'cấp có thẩm quyền');
+        _issueSentence = `Đơn được chuyển tới ${role} để xem xét theo quy định.`;
       }
     }
   } else if (_failedNode || isRejected || _decision === 'AUTO_REJECT') {
@@ -6883,22 +7011,16 @@ async function openRequestDetailModal(requestId) {
     }
   } else if (_warningNode || req.status === 'WAITING_EMPLOYEE' || _decision === 'NEED_CORRECTION' || _decision === 'ESCALATE') {
     _conclusion = 'Cần xem xét';
-    const warningStage = String(_warningNode?.stage || '');
-    const warningReason = warningStage === 'VLM_CORRELATION'
-      ? (_medicalCorrelationApplies
-        ? (_reasonNote || 'Chứng từ chưa có đủ thông tin để đối chiếu lý do nghỉ với chẩn đoán y tế.')
-        : localizeResponseText(_primaryDecisionReason || 'Cần đối chiếu chứng từ theo loại sự kiện nghỉ.'))
-      : warningStage === 'TEAM_QUOTA'
-        ? 'Tỷ lệ nhân sự nghỉ đồng thời vượt ngưỡng 30%; quản lý cần xem xét trước khi duyệt.'
-        : warningStage === 'VLM_PATIENT' && ['FAIL', 'REJECTED'].includes(_patientReviewStatus)
-          ? 'Tên trên chứng từ không khớp với thông tin nhân sự.'
-          : warningStage === 'VLM_INTEGRITY' && /chữ ký[^•]*(?:thiếu|không có|không thấy)/i.test(_integrityReviewNote)
-            ? 'Chứng từ thiếu chữ ký của người có thẩm quyền.'
-            : localizeResponseText(_primaryDecisionReason || cleanReason || _warningNode?.note || 'Dữ liệu chưa ghi rõ vấn đề cần xem xét.');
-    const genericWarning = /hồ sơ cần được kiểm tra|đang được chuyển cấp có thẩm quyền xem xét|đơn cần .* xem xét theo quy định/i.test(warningReason);
-    _issueSentence = genericWarning
-      ? 'Dữ liệu chưa nêu rõ vấn đề cần xem xét; cần chạy lại đánh giá để xác định lý do.'
-      : warningReason;
+    // Lý do chính của quyết định đứng đầu, sau đó liệt kê toàn bộ tiêu chí chưa đạt.
+    const warningReason = localizeResponseText(String(_primaryDecisionReason || '').trim());
+    const genericWarning = /hồ sơ cần được kiểm tra|đang được chuyển cấp có thẩm quyền xem xét|đơn cần .* xem xét theo quy định|^chuyển cấp để/i.test(warningReason);
+    if (warningReason && !genericWarning) {
+      _addIssueBullet('Lý do chính', warningReason);
+    }
+    _collectProblemBullets();
+    if (!_issueBullets.length) {
+      _issueSentence = 'Hồ sơ cần cấp có thẩm quyền kiểm tra trước khi duyệt.';
+    }
   }
 
   const _neutralizeConclusionAddress = value => String(value || '').replace(/bạn/gi, match =>
@@ -6921,7 +7043,8 @@ async function openRequestDetailModal(requestId) {
     + (_issueBullets.length > 0
         ? _issueListHtml
         : (_issueSentence ? '<p class="rd-verdict-text rd-verdict-detail">' + escapeHtml(_neutralizeConclusionAddress(_issueSentence)) + '</p>' : ''))
-      + (_reasonNote && _decision !== 'ESCALATE' ? '<p class="rd-verdict-text rd-verdict-detail"><strong>Lưu ý:</strong> ' + escapeHtml(_neutralizeConclusionAddress(localizeResponseText(_reasonNote))) + '</p>' : '')
+      + (_reasonNote && _conclusion !== 'Hợp lệ' && _issueBullets.length === 0
+          ? '<p class="rd-verdict-text rd-verdict-detail"><strong>Lưu ý:</strong> ' + escapeHtml(_neutralizeConclusionAddress(localizeResponseText(_reasonNote))) + '</p>' : '')
     + (req.status === 'PENDING_HANDOVER'
         ? '<p class="rd-verdict-text mt-2"><strong>Bước tiếp theo:</strong> Đơn đã được duyệt, đang chờ <strong>'
           + escapeHtml(req.handover_person_name || 'người nhận bàn giao') + '</strong> xác nhận nhận bàn giao. Sau khi xác nhận, đơn hoàn tất và trừ phép; nếu từ chối, đơn quay về để nhân viên chọn người khác.</p>'
@@ -7135,8 +7258,8 @@ async function openRequestDetailModal(requestId) {
       _addProofLine(_verifiedRelationship ? 'Quan hệ đã xác minh' : 'Kết quả đối chiếu quan hệ', _verifiedRelationship || _reviewRelationship || _relationshipFallback);
     }
     const _hasRedStamp = _vlmFlags.has_red_stamp ?? req.proof?.has_red_stamp;
-    _addProofLine('Dấu đỏ', _hasRedStamp === true ? 'Có' : _hasRedStamp === false ? 'Không có' : '');
-    _addProofLine(_isWedding || _isBereavement ? 'Chữ ký người có thẩm quyền' : 'Chữ ký bác sĩ', _signature === true ? 'Có' : _signature === false ? 'Không có' : '');
+    _addProofLine('Dấu đỏ', _hasRedStamp === true ? 'Có' : _hasRedStamp === false ? 'Không có' : 'Chưa đọc được');
+    _addProofLine(_isWedding || _isBereavement ? 'Chữ ký người có thẩm quyền' : 'Chữ ký bác sĩ', _signature === true ? 'Có' : _signature === false ? 'Không có' : 'Chưa đọc được');
     _addProofLine('Độ rõ tài liệu', _readability);
     _addProofLine('Ghi chú đọc chứng từ', _vlmErr ? localizeResponseText(_vlmErr) : '');
     _addProofLine(_dateMeta.label, _recommended.from && _recommended.to

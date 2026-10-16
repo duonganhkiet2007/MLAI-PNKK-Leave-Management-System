@@ -37,6 +37,7 @@ from ai.ai_stack import (
     OLLAMA_KEEP_ALIVE,
     has_model,
     ollama_generate,
+    ollama_ps,
     ollama_tags,
 )
 from vlm_normalizer import (
@@ -53,6 +54,8 @@ VLM_ENABLE_RUBRIC = os.getenv("VLM_ENABLE_RUBRIC", "1").strip().casefold() in ("
 VLM_ENABLE_EVIDENCE_COT = os.getenv("VLM_ENABLE_EVIDENCE_COT", "1").strip().casefold() in ("1", "true", "yes", "on")
 VLM_ENABLE_RAW_FIELDS = os.getenv("VLM_ENABLE_RAW_FIELDS", "1").strip().casefold() in ("1", "true", "yes", "on")
 VLM_ENABLE_TWO_CALL = os.getenv("VLM_ENABLE_TWO_CALL", "1").strip().casefold() in ("1", "true", "yes", "on")
+# Đối chứng tất định bằng OpenCV cho dấu mộc đỏ / nét mực chữ ký (xem evidence_*_cv).
+VLM_ENABLE_CV_INK_CHECK = os.getenv("VLM_ENABLE_CV_INK_CHECK", "1").strip().casefold() in ("1", "true", "yes", "on")
 
 PERSONA_CONFIGS = {
     "SICK_MEDICAL": {
@@ -81,7 +84,10 @@ PERSONA_CONFIGS = {
   19. ai_edited: bool | null
   20. correlation_issues: list[string]
   21. escalation_reasons: list[string]
-  22. fields_detected: list[string]""",
+  22. fields_detected: list[string]
+  23. recommended_from_date_raw: string | null // Ngày bắt đầu nghỉ chép NGUYÊN VĂN (vd "12/03/2026" hoặc "ngày 12 tháng 3 năm 2026")
+  24. recommended_to_date_raw: string | null   // Ngày kết thúc nghỉ chép NGUYÊN VĂN
+  25. days_granted_raw: string | null          // Số ngày nghỉ chép nguyên văn (vd "07 ngày")""",
     },
     "EMERGENCY": {
         "persona": "Điều phối viên hồ sơ cấp cứu (Emergency Admission Coordinator)",
@@ -290,6 +296,92 @@ PERSONA_CONFIGS = {
   22. fields_detected: list[string]""",
     },
 }
+
+
+# TẮT: hỏi dấu mộc / chữ ký theo 3 trạng thái kèm rubric làm qwen2.5vl:7b trả "CO" cho cả giấy có dấu mà thiếu
+# chữ ký bác sĩ (ca bẫy TC-EMP007-02 bị tự duyệt); giữ kiểu bool gốc thì model đọc đúng. Dấu mộc được đối chứng
+# bằng OpenCV (evidence_red_stamp_cv), _coerce_tri_state vẫn nhận cả bool lẫn chuỗi CO/KHONG/KHONG_RO.
+_TRI_STATE_TYPES: set = set()
+_TRI_STATE_TYPE_TEXT = '"CO" | "KHONG" | "KHONG_RO"'
+
+
+def _patch_tri_state_schema(schema_prompt: str) -> str:
+    """Chuẩn hóa các trường trong _TRI_STATE_TYPES của schema persona sang 3 trạng thái
+    CO / KHONG / KHONG_RO thay cho ``bool`` (hiện tắt, xem ghi chú tại _TRI_STATE_TYPES).
+
+    Lý do: kiểu ``bool`` buộc model phải đoán "có/không" ngay cả khi ảnh mờ hoặc
+    không nhìn rõ con dấu, dẫn tới kết luận sai. Ba trạng thái cho phép model nói
+    thẳng "không rõ" để hệ thống chuyển xác minh thủ công thay vì đoán bừa.
+    """
+    out = []
+    for line in schema_prompt.split("\n"):
+        m = re.match(r"^(\s*\d+\.\s*)([a-z_]+)(\s*:\s*)(.*)$", line)
+        if m and m.group(2) in _TRI_STATE_TYPES:
+            prefix, name, sep, rest = m.groups()
+            cidx = rest.find("//")
+            comment = (" " + rest[cidx:].rstrip()) if cidx >= 0 else ""
+            out.append(f"{prefix}{name}{sep}{_TRI_STATE_TYPE_TEXT}{comment}")
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
+for _cfg in PERSONA_CONFIGS.values():
+    _cfg["schema_prompt"] = _patch_tri_state_schema(_cfg["schema_prompt"])
+
+
+# ---- P0: rubric dùng chung cho mọi persona ------------------------------------
+_DATE_RAW_RUBRIC = (
+    "RUBRIC NGÀY THÁNG (BẮT BUỘC):\n"
+    "  - Với mọi mốc ngày nghỉ (recommended_from_date, recommended_to_date, admission_date, "
+    "discharge_date, valid_from, valid_to) PHẢI trả kèm trường cùng tên có hậu tố _raw "
+    '(ví dụ recommended_from_date_raw) chép NGUYÊN VĂN như in trên giấy '
+    '(ví dụ "12/03/2026", "ngày 12 tháng 3 năm 2026").\n'
+    "  - Trường ngày chuẩn dùng ISO YYYY-MM-DD. Nếu chưa đọc chắc ngày nhưng thấy chữ số trên "
+    "giấy, để trường ngày = null nhưng trường *_raw VẪN phải chép nguyên văn.\n"
+)
+
+
+def _coerce_tri_state(value: Any) -> Optional[bool]:
+    """Chuẩn hóa trường dấu mộc/chữ ký về True (CO) / False (KHONG) / None (KHONG_RO).
+
+    Chấp nhận cả bool cũ lẫn chuỗi 3 trạng thái mới. Mọi giá trị không nhận diện được
+    được coi là "không rõ" (None) — hướng an toàn, không tự động từ chối đơn.
+    """
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    s = str(value).strip().upper()
+    for accented, plain in (("Ó", "O"), ("Ô", "O"), ("Ọ", "O"), ("Õ", "O"),
+                            ("Ỗ", "O"), ("Ỏ", "O"), ("Ố", "O")):
+        s = s.replace(accented, plain)
+    s = re.sub(r"[\s_\-]+", "", s)
+    if s in {"CO", "YES", "TRUE", "PRESENT", "T", "Y", "1"}:
+        return True
+    if s in {"KHONG", "NO", "FALSE", "ABSENT", "F", "N", "0"}:
+        return False
+    return None
+
+
+def _model_runtime_info(model_name: str) -> Dict[str, Any]:
+    """Thông tin runtime của model đang nạp trên Ollama (phục vụ minh bạch GPU/quantization)."""
+    info: Dict[str, Any] = {"model": model_name}
+    try:
+        for m in ollama_ps():
+            name = str(m.get("name") or m.get("model") or "")
+            if name == model_name or name.startswith(model_name):
+                details = m.get("details") or {}
+                info.update({
+                    "size_vram": m.get("size_vram"),
+                    "size": m.get("size"),
+                    "quantization": details.get("quantization_level"),
+                    "parameter_size": details.get("parameter_size"),
+                })
+                break
+    except Exception:
+        pass
+    return info
 
 
 def _enforce_name_match_verdict(
@@ -713,17 +805,47 @@ def _same_medical_concept(reason: str, diagnosis: str) -> bool:
     )
 
 
+def _reason_is_generic(reason_text: str) -> bool:
+    """Lý do nghỉ không nêu triệu chứng hay vị trí cụ thể ("nghỉ ốm", "nghỉ ốm theo dõi").
+
+    Những lý do này không đủ chi tiết để đối chiếu với chẩn đoán, nhưng cũng không hề
+    mâu thuẫn với chẩn đoán: chúng phải được ghi nhận là "không mâu thuẫn", không phải
+    "chưa đủ căn cứ" — nếu không, mọi đơn nghỉ ốm ghi lý do chung chung đều bị gắn cảnh báo.
+    """
+    if any(kw in reason_text for kw in _MEDICAL_KWS):
+        return False
+    if any(term in reason_text for terms in _MEDICAL_SITE_GROUPS.values() for term in terms):
+        return False
+    if any(term in reason_text for group in _MEDICAL_CONCEPT_GROUPS for term in group):
+        return False
+    return True
+
+
 def _resolve_reason_diagnosis_match(
     reason: str,
     diagnosis: str,
     verdict: Optional[str],
     evidence: Optional[str],
 ) -> tuple[Optional[str], Optional[str]]:
-    """Override a positive/uncertain verdict when the stated body sites clearly conflict."""
+    """Chốt kết luận đối chiếu lý do nghỉ với chẩn đoán trên giấy, và chỉ kết luận khi có đủ hai vế.
+
+    Bước tiền kiểm chứng từ chạy trước khi biết lý do nghỉ của nhân viên
+    (xem inspection_service._inspect_file) nên tại đó luôn trả (None, None). Trước đây hàm
+    trả "UNCERTAIN - chứng từ chưa có đủ thông tin", câu này bị ghi vào hồ sơ và không bao giờ
+    được tính lại, khiến đơn đủ dữ liệu vẫn hiện nhận xét "chưa đủ căn cứ".
+    """
     reason_text = (reason or '').casefold()
     diagnosis_text = (diagnosis or '').casefold()
     if not reason_text or not diagnosis_text:
-        return 'UNCERTAIN', 'Chứng từ chưa có đủ thông tin để đối chiếu lý do nghỉ với chẩn đoán y tế.'
+        return None, None
+    if _reason_is_generic(reason_text) and str(verdict or '').upper() not in {'MATCH', 'PARTIAL', 'MISMATCH'}:
+        # Lý do chung chung không đối chiếu được từng chi tiết, nhưng cũng không mâu thuẫn với chẩn đoán.
+        # Kết luận cụ thể do VLM nêu (MATCH/PARTIAL/MISMATCH) vẫn được giữ nguyên.
+        return (
+            'NOT_APPLICABLE',
+            f"Lý do nghỉ ('{reason}') không nêu triệu chứng hay vị trí cụ thể nên không đối chiếu chi tiết được; "
+            f"không phát hiện mâu thuẫn với chẩn đoán ('{diagnosis}').",
+        )
     reason_sites = {site for site, terms in _MEDICAL_SITE_GROUPS.items() if any(term in reason_text for term in terms)}
     diagnosis_sites = {site for site, terms in _MEDICAL_SITE_GROUPS.items() if any(term in diagnosis_text for term in terms)}
     if reason_sites and diagnosis_sites and reason_sites.isdisjoint(diagnosis_sites):
@@ -831,8 +953,12 @@ def _score_correlation(
         else:
             pass
     else:
-        # Với giấy sự kiện gia đình hoặc cấp cứu: nếu không đọc được ngày thì không penalize nặng
-        if is_medical:
+        # Chỉ kết luận khi đã biết cả khoảng ngày xin nghỉ lẫn khoảng ngày ghi trên chứng từ.
+        # Bước tiền kiểm chạy khi chưa biết ngày xin nghỉ nên không được gắn oan
+        # "VLM không đọc được khoảng ngày" rồi giữ lại vĩnh viễn.
+        has_requested = bool(requested_from and requested_to)
+        has_recommended = bool(recommended_from and recommended_to)
+        if is_medical and has_requested and not has_recommended:
             if leave_type.upper() == 'MEDICAL_EMERGENCY':
                 # Cấp cứu nhập viện khẩn: chưa xác định ngày ra viện (open-ended), không phạt
                 pass
@@ -861,6 +987,25 @@ def _score_correlation(
 
     score = round(max(0.0, min(1.0, score)), 3)
     return score, issues, days_granted_by_doctor
+
+
+# Cảnh báo tương quan sinh ra khi bước tiền kiểm chưa biết lý do nghỉ hoặc khoảng ngày xin nghỉ.
+# Khi re-score với dữ liệu đầy đủ, chúng phải được thay thế chứ không được giữ lại song song.
+_PROVISIONAL_CORRELATION_ISSUES = frozenset({
+    "VLM chưa đủ căn cứ đối chiếu lý do nghỉ với chẩn đoán.",
+    "VLM không đọc được chẩn đoán lâm sàng trên chứng từ.",
+})
+_PROVISIONAL_CORRELATION_ISSUE_PREFIXES = ("VLM không đọc được khoảng ngày ",)
+
+
+def is_provisional_correlation_issue(text: Any) -> bool:
+    """True nếu cảnh báo tương quan chỉ là kết luận tạm thời do thiếu dữ liệu ở bước tiền kiểm."""
+    normalized = str(text or '').strip()
+    if not normalized:
+        return False
+    return normalized in _PROVISIONAL_CORRELATION_ISSUES or normalized.startswith(
+        _PROVISIONAL_CORRELATION_ISSUE_PREFIXES
+    )
 
 
 def _normalize_proof_type(val: Any) -> ProofType:
@@ -901,6 +1046,37 @@ def _normalize_proof_type(val: Any) -> ProofType:
     return ProofType.OTHER
 
 
+def _to_iso_date(value: Any) -> Any:
+    """VLM có lúc trả ngày đúng dạng in trên giấy ("23/10/2026", "ngày 05 tháng 11 năm 2026") thay vì YYYY-MM-DD.
+    Đưa về YYYY-MM-DD; không nhận ra là ngày thì giữ nguyên giá trị."""
+    if not isinstance(value, str) or not value.strip():
+        return value
+    iso, _ = normalize_vietnamese_date(value)
+    return iso or value
+
+
+def _trusted_leave_range(rec_fr: Any, rec_to: Any, days_granted: Any) -> tuple:
+    """Chỉ tin khoảng nghỉ VLM đọc được khi khớp số ngày bác sĩ cho trên giấy.
+    VLM hay chép một ngày đơn lẻ (giờ nhập viện, "kể từ ngày ...") vào cả hai ô từ/đến: khoảng như vậy không được
+    dùng để tự duyệt hay bắt sửa đơn mà bỏ đi để người duyệt kiểm tra. Trả về (từ, đến, ghi chú hoặc None)."""
+    try:
+        start, end = date.fromisoformat(str(rec_fr)), date.fromisoformat(str(rec_to))
+    except (TypeError, ValueError):
+        return rec_fr, rec_to, None
+    span = (end - start).days + 1
+    try:
+        days = int(days_granted) if days_granted is not None else None
+    except (TypeError, ValueError):
+        days = None
+    if days is None:
+        if span == 1:
+            return None, None, "Khoảng nghỉ 1 ngày trên chứng từ không kèm số ngày bác sĩ cho; cần người duyệt kiểm tra."
+        return rec_fr, rec_to, None
+    if days != span:
+        return None, None, f"Khoảng nghỉ đọc được ({span} ngày) không khớp số ngày bác sĩ cho ({days} ngày); cần người duyệt kiểm tra."
+    return rec_fr, rec_to, None
+
+
 def _build_proof_extraction(
     profile: Dict[str, Any],
     leave_type: str,
@@ -925,7 +1101,7 @@ def _build_proof_extraction(
     def _as_date(v, default):
         if not v: return default
         if isinstance(v, date): return v
-        try: return date.fromisoformat(str(v))
+        try: return date.fromisoformat(str(_to_iso_date(str(v))))
         except Exception: return default
 
     readability = _gf("document_readability") or "UNKNOWN"
@@ -998,6 +1174,7 @@ def _build_proof_extraction(
             event_type=_gf("event_type") if not is_unreadable else None,
             date_of_death=_as_date(_gf("date_of_death"), None) if not is_unreadable else None,
             funeral_date=_as_date(_gf("funeral_date"), None) if not is_unreadable else None,
+            event_date=_as_date(_gf("event_date"), None) if not is_unreadable else None,
             relationship_label=(derived_relationship if not is_unreadable else None),
             relationship_to_employee=(derived_relationship if not is_unreadable else None),
             evidence_confidence=_gf("evidence_confidence") if not is_unreadable else None,
@@ -1105,7 +1282,7 @@ def inspect_document_with_vlm(
             elif real_result.get("_from_cache"):
                 mode_used = "VLM_CACHE_HIT"
             else:
-                mode_used = "OLLAMA_REAL_QWEN25_VL_3B"
+                mode_used = f"OLLAMA_REAL:{VLM_TARGET_MODEL}"
         else:
             vlm_error = error_detail or f"VLM ({VLM_TARGET_MODEL}) không thể xử lý chứng từ này."
             if fallback_allowed:
@@ -1219,6 +1396,10 @@ def inspect_document_with_vlm(
         final_issue_d = proof_extraction.issue_date.isoformat() if proof_extraction.issue_date else None
         final_score = score
 
+    # Ngày VLM đọc được trước khi kiểm tra khớp số ngày bác sĩ cho: giữ lại để giao diện vẫn hiển thị
+    # được ngày trên giấy khi khoảng nghỉ bị loại khỏi quyết định tự động.
+    _raw_extra: Dict[str, Any] = profile_raw.get("proof_extra") or {}
+
     vlm_json: Dict[str, Any] = {
         "inspector_persona": profile_raw.get("persona_role_used"),
         "target_model": VLM_TARGET_MODEL,
@@ -1247,6 +1428,16 @@ def inspect_document_with_vlm(
             "event_type": proof_extraction.event_type,
             "relationship": proof_extraction.relationship_to_employee or proof_extraction.relationship_label,
             "wedding_date": proof_extraction.wedding_date.isoformat() if proof_extraction.wedding_date else None,
+            "recommended_from_date": final_dfd,
+            "recommended_to_date": final_dtd,
+            "recommended_from_date_raw": None if is_doc_unreadable else _raw_extra.get("recommended_from_date_raw"),
+            "recommended_to_date_raw": None if is_doc_unreadable else _raw_extra.get("recommended_to_date_raw"),
+            "date_of_death": proof_extraction.date_of_death.isoformat() if proof_extraction.date_of_death else None,
+            "funeral_date": proof_extraction.funeral_date.isoformat() if proof_extraction.funeral_date else None,
+            "injury_date": proof_extraction.injury_date.isoformat() if proof_extraction.injury_date else None,
+            "event_date": proof_extraction.event_date.isoformat() if proof_extraction.event_date else None,
+            "relationship_label": proof_extraction.relationship_label,
+            "relationship_to_employee": proof_extraction.relationship_to_employee,
         },
         "flags": {
             "has_red_stamp": profile_raw.get("has_red_stamp"),
@@ -1351,10 +1542,156 @@ def detect_image_blur(path: Optional[str], threshold: float = 50.0) -> tuple[boo
         return False, 999.0
 
 
+# -----------------------------------------------------------------------------
+# Cổng đối chứng mực in TẤT ĐỊNH (Deterministic ink evidence - OpenCV)
+# -----------------------------------------------------------------------------
+# qwen2.5vl hay "đoán" là giấy có dấu mộc đỏ / có chữ ký kể cả khi vùng đó trắng.
+# Hai hàm dưới đây đọc trực tiếp kênh màu của ảnh để làm bằng chứng đối chứng:
+#   * evidence_red_stamp_cv(): tìm CẤU TRÚC VÒNG KHÉP KÍN (đường bao ngoài có lỗ ở
+#     giữa), gần vuông và cỡ tương đương con dấu thật. Nhờ vậy loại được logo chữ
+#     thập đỏ (khối đặc, không có lỗ) và chữ tiêu đề đỏ (dẹt, dài).
+# Trả về {"verdict": True | False | None, ...}; None = "không kết luận được",
+# khi đó giữ nguyên phán đoán của VLM và để người thật xác minh.
+
+_CV_INK_CACHE: Dict[tuple, Dict[str, Any]] = {}
+
+
+def _cv_normalize(img, longest: int = 1000):
+    """Chuẩn hóa cạnh dài về `longest` px để các ngưỡng kích thước độc lập độ phân giải."""
+    import cv2
+    h, w = img.shape[:2]
+    cur = max(h, w)
+    if cur <= 0:
+        return img
+    scale = float(longest) / cur
+    if 0.95 <= scale <= 1.05:
+        return img
+    interp = cv2.INTER_AREA if scale < 1 else cv2.INTER_CUBIC
+    return cv2.resize(img, (max(1, int(round(w * scale))), max(1, int(round(h * scale)))), interpolation=interp)
+
+
+def _load_cv_image(path: Optional[str]):
+    """Đọc ảnh -> BGR (đã chuẩn hóa cạnh dài 1000px). None nếu không đọc được."""
+    if not path or not os.path.isfile(path):
+        return None
+    try:
+        import cv2
+        import numpy as np
+        img = None
+        try:
+            img = cv2.imdecode(np.fromfile(path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        except Exception:
+            img = None
+        if img is None:
+            img = cv2.imread(path)
+        if img is None:
+            return None
+        return _cv_normalize(img)
+    except Exception:
+        return None
+
+
+def _red_ink_mask(bgr):
+    """Mặt nạ mực đỏ (2 dải hue quanh 0° và 180°), có morphology đóng để nối nét đứt."""
+    import cv2
+    import numpy as np
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, np.array([0, 70, 60], np.uint8), np.array([10, 255, 255], np.uint8))
+    mask |= cv2.inRange(hsv, np.array([168, 70, 60], np.uint8), np.array([179, 255, 255], np.uint8))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    return cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+
+
+def evidence_red_stamp_cv(path: Optional[str]) -> Dict[str, Any]:
+    """Đối chứng tất định: ảnh có con dấu mộc đỏ hay không.
+
+    Trả {"verdict": True|False|None, "candidates": int, "red_ratio": float, "reason": str, ...}
+    """
+    cache_key = ("stamp", str(path))
+    if cache_key in _CV_INK_CACHE:
+        return _CV_INK_CACHE[cache_key]
+    result: Dict[str, Any] = {
+        "verdict": None,
+        "candidates": 0,
+        "red_ratio": 0.0,
+        "reason": "không đọc được ảnh để phân tích màu",
+    }
+    img = _load_cv_image(path)
+    if img is not None:
+        try:
+            import cv2
+            import numpy as np
+            mask = _red_ink_mask(img)
+            h, w = mask.shape[:2]
+            red_ratio = float(np.count_nonzero(mask)) / float(h * w)
+            contours, hierarchy = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+            found = []
+            if hierarchy is not None:
+                hierarchy = hierarchy[0]
+                for i, c in enumerate(contours):
+                    if hierarchy[i][3] != -1:
+                        continue  # chỉ xét đường bao ngoài
+                    area = abs(cv2.contourArea(c))
+                    if area < 0.0005 * h * w:
+                        continue
+                    x, y, bw, bh = cv2.boundingRect(c)
+                    if bw <= 0 or bh <= 0:
+                        continue
+                    aspect = bw / float(bh)
+                    if not (0.6 <= aspect <= 1.7):
+                        continue
+                    if not (0.04 * w <= bw <= 0.5 * w):
+                        continue
+                    per = cv2.arcLength(c, True)
+                    circ = (4.0 * 3.141592653589793 * area / (per * per)) if per > 0 else 0.0
+                    if circ < 0.55:
+                        continue
+                    ink = float(np.count_nonzero(mask[y:y + bh, x:x + bw])) / float(bw * bh)
+                    # Vòng mộc: mực trải quanh ĐỦ 4 cạnh khung bao...
+                    bt = max(2, int(round(min(bw, bh) * 0.06)))
+                    strips = (
+                        mask[y:y + bt, x:x + bw],
+                        mask[y + bh - bt:y + bh, x:x + bw],
+                        mask[y:y + bh, x:x + bt],
+                        mask[y:y + bh, x + bw - bt:x + bw],
+                    )
+                    if any(int(np.count_nonzero(s)) < bt for s in strips):
+                        continue
+                    # ...nhưng LÕI giữa khung phải chủ yếu trống (loại khối đặc như logo chữ thập).
+                    core = mask[y + bh // 4:y + bh // 4 + bh // 2, x + bw // 4:x + bw // 4 + bw // 2]
+                    core_ink = (float(np.count_nonzero(core)) / float(core.size)) if core.size else 1.0
+                    if core_ink > 0.45:
+                        continue
+                    found.append({
+                        "box": [int(x), int(y), int(bw), int(bh)],
+                        "circularity": round(circ, 3),
+                        "ink_ratio": round(ink, 3),
+                        "core_ink": round(core_ink, 3),
+                    })
+            found.sort(key=lambda d: d["circularity"], reverse=True)
+            result["candidates"] = len(found)
+            result["red_ratio"] = round(red_ratio, 5)
+            if found:
+                result["best"] = found[0]
+                result["verdict"] = True
+                result["reason"] = "phát hiện cấu trúc vòng mộc đỏ (đường bao khép kín, gần vuông)"
+            else:
+                result["verdict"] = False
+                result["reason"] = (
+                    "ảnh gần như không có mực đỏ -> không có dấu mộc"
+                    if red_ratio < 0.0008
+                    else "có mực đỏ nhưng không có cấu trúc vòng mộc (chỉ là chữ/logo đỏ)"
+                )
+        except Exception as exc:
+            result["reason"] = f"lỗi phân tích OpenCV: {exc}"
+    _CV_INK_CACHE[cache_key] = result
+    return result
+
+
 def prepare_image_for_vlm(path: str, max_dim: int = VLM_MAX_IMAGE_DIM) -> str:
-    """Tự động resize ảnh (tối đa max_dim px, mặc định 1600px) trước khi gửi VLM.
+    """Tự động resize ảnh (tối đa max_dim px, mặc định theo VLM_MAX_IMAGE_DIM) trước khi gửi VLM.
     - Căn chỉnh kích thước là bội số của 28 (chuẩn patch token của Qwen-VL).
-    - Giới hạn chiều dài nhất không vượt quá 1600px để giữ nguyên độ nét OCR chứng từ mà không gây OOM.
+    - Giới hạn chiều dài nhất không vượt quá max_dim để giữ độ nét OCR chứng từ mà không gây OOM.
     - Tự động chuyển hệ màu sang RGB nếu là RGBA hoặc P.
     - Nén JPEG chất lượng cao (quality=85) và mã hóa base64.
     """
@@ -1413,8 +1750,25 @@ def _get_vlm_cache_dir() -> Path:
     return cache_dir
 
 
+_VLM_CACHE_VERSION: Optional[str] = None
+
+
+def _vlm_cache_version() -> str:
+    """Phiên bản bộ lưu sẵn: đổi model, kích thước ảnh hoặc sửa code đọc / chuẩn hóa chứng từ (file này và
+    vlm_normalizer.py) thì khóa đổi theo, bản đọc cũ tự bị bỏ qua thay vì bị tái sử dụng mãi."""
+    global _VLM_CACHE_VERSION
+    if _VLM_CACHE_VERSION is None:
+        import hashlib
+        digest = hashlib.sha256(f"{VLM_TARGET_MODEL}|{VLM_MAX_IMAGE_DIM}".encode("utf-8"))
+        for source in (Path(__file__), Path(__file__).with_name("vlm_normalizer.py")):
+            if source.is_file():
+                digest.update(source.read_bytes())
+        _VLM_CACHE_VERSION = digest.hexdigest()[:12]
+    return _VLM_CACHE_VERSION
+
+
 def _vlm_context_hash(leave_type: str = "", reason_category: str = "", employee_name: str = "", reason: str = "") -> str:
-    context = json.dumps([leave_type or '', reason_category or '', employee_name or '', reason or ''], ensure_ascii=False, separators=(',', ':'))
+    context = json.dumps([_vlm_cache_version(), leave_type or '', reason_category or '', employee_name or '', reason or ''], ensure_ascii=False, separators=(',', ':'))
     import hashlib
     return hashlib.sha256(context.encode("utf-8")).hexdigest()[:16]
 
@@ -1547,7 +1901,7 @@ def _run_matching_call(
         "format": "json",
         "keep_alive": OLLAMA_KEEP_ALIVE,
         "options": {
-            "num_predict": 192,
+            "num_predict": 512,
             "temperature": 0.0,
         },
         "prompt": prompt,
@@ -1730,6 +2084,7 @@ def _try_ollama_extract(
             f"  - Tuân thủ thứ tự DECISION TREE: {persona_cfg['decision_tree']}\n"
             "  - Các trường *_raw: Chép chính xác từng ký tự như in trên ảnh, không sửa lỗi chính tả hay suy diễn.\n"
             "  - NẾU ẢNH BỊ MỜ KHÔNG ĐỌC RÕ: document_readability BẮT BUỘC là 'UNREADABLE' và mọi trường dữ liệu text/ngày tháng PHẢI là null. TUYỆT ĐỐI KHÔNG TỰ BỊA.\n"
+            f"\n{_DATE_RAW_RUBRIC}"
         )
     else:
         # Single-call mode (Phase 1-3, Rubric + Evidence CoT)
@@ -1764,6 +2119,7 @@ def _try_ollama_extract(
             f"  - Tuân thủ thứ tự DECISION TREE: {persona_cfg['decision_tree']}\n"
             "  - Các trường *_raw: Chép chính xác từng ký tự như in trên ảnh, không sửa lỗi chính tả hay suy diễn.\n"
             "  - NẾU ẢNH BỊ MỜ KHÔNG ĐỌC RÕ: document_readability BẮT BUỘC là 'UNREADABLE' và mọi trường dữ liệu text/ngày tháng PHẢI là null. TUYỆT ĐỐI KHÔNG TỰ BỊA.\n"
+            f"\n{_DATE_RAW_RUBRIC}"
         )
 
     payload = {
@@ -1774,7 +2130,7 @@ def _try_ollama_extract(
         "keep_alive": OLLAMA_KEEP_ALIVE,
         "options": {
             "num_ctx": int(os.getenv("VLM_NUM_CTX", "8192")),
-            "num_predict": 512,
+            "num_predict": 1024,
             "temperature": 0.0,
         },
         "prompt": prompt_content,
@@ -1834,6 +2190,26 @@ def _try_ollama_extract(
     issue_d_raw = parsed.get("issue_date_raw")
     issuer_raw = parsed.get("issuer_raw")
 
+    # Dấu mộc / chữ ký: 3 trạng thái CO / KHONG / KHONG_RO (None = không rõ -> cần xác minh thủ công)
+    _stamp_raw = parsed.get("has_red_stamp")
+    if _stamp_raw is None:
+        _stamp_raw = parsed.get("has_hospital_stamp")
+    if _stamp_raw is None:
+        _stamp_raw = parsed.get("has_stamp")
+    has_red_stamp_val = _coerce_tri_state(_stamp_raw)
+
+    _sig_raw = parsed.get("has_doctor_signature")
+    if _sig_raw is None:
+        _sig_raw = parsed.get("signature_present")
+    has_signature_val = _coerce_tri_state(_sig_raw)
+
+    signature_present_val = _coerce_tri_state(parsed.get("signature_present"))
+    if signature_present_val is None and has_signature_val is not None:
+        signature_present_val = has_signature_val
+
+    # Đối chứng tất định bằng OpenCV (P1.1) - chỉ chạy khi ảnh đọc được, xem khối else bên dưới.
+    stamp_cv_evidence: Optional[Dict[str, Any]] = None
+
     # Nếu tài liệu UNREADABLE: triệt tiêu mọi trường văn bản/ngày tháng bị ảo giác
     if doc_readability == "UNREADABLE":
         p_name = None
@@ -1843,6 +2219,8 @@ def _try_ollama_extract(
         issue_d = None
         rec_fr = None
         rec_to = None
+        rec_fr_display = None
+        rec_to_display = None
         adm_date = None
         disch_date = None
         is_open_ended = None
@@ -1854,6 +2232,7 @@ def _try_ollama_extract(
         wed_date = None
         d_death = None
         fun_date = None
+        ev_date = None
         rel_label = None
         rel_emp = None
         evid_conf = None
@@ -1878,6 +2257,12 @@ def _try_ollama_extract(
         diag_raw = None
         issue_d_raw = None
         issuer_raw = None
+        has_red_stamp_val = None
+        has_signature_val = None
+        signature_present_val = None
+        rec_fr_raw = None
+        rec_to_raw = None
+        days_granted_raw = None
     else:
         p_name = (
             parsed.get("doc_patient_name")
@@ -1906,11 +2291,16 @@ def _try_ollama_extract(
             or parsed.get("recommended_leave_days")
             or parsed.get("days_recommended")
         )
+        days_granted_raw = parsed.get("days_granted_raw")
+        if days_granted is None and days_granted_raw:
+            _mnum = re.search(r"\d+", str(days_granted_raw))
+            if _mnum:
+                days_granted = int(_mnum.group())
         issuer_val = parsed.get("issuer") or issuer_raw
         if issuer_val and str(issuer_val).strip().lower() in ("bệnh viện đa khoa a", "benh vien da khoa a", "bệnh viện a"):
             issuer_val = None
 
-        issue_d = parsed.get("issue_date")
+        issue_d = _to_iso_date(parsed.get("issue_date"))
         # Code-level date normalization (Phase 3)
         if VLM_ENABLE_RAW_FIELDS and issue_d_raw:
             norm_d, _is_amb = normalize_vietnamese_date(issue_d_raw)
@@ -1921,34 +2311,64 @@ def _try_ollama_extract(
                 if date_warn:
                     parsed.setdefault("correlation_issues", []).append(date_warn)
 
-        rec_fr = parsed.get("recommended_from_date") or parsed.get("admission_date") or parsed.get("valid_from")
-        rec_to = parsed.get("recommended_to_date") or parsed.get("discharge_date") or parsed.get("valid_to")
+        rec_fr = _to_iso_date(parsed.get("recommended_from_date") or parsed.get("admission_date") or parsed.get("valid_from"))
+        rec_to = _to_iso_date(parsed.get("recommended_to_date") or parsed.get("discharge_date") or parsed.get("valid_to"))
+
+        # Ngày bắt đầu/kết thúc nghỉ: chuẩn hóa từ trường *_raw và đối chiếu chéo (P0)
+        rec_fr_raw = parsed.get("recommended_from_date_raw") or parsed.get("admission_date_raw")
+        rec_to_raw = parsed.get("recommended_to_date_raw") or parsed.get("discharge_date_raw")
+        if VLM_ENABLE_RAW_FIELDS and rec_fr_raw:
+            _nfr, _ = normalize_vietnamese_date(rec_fr_raw)
+            if _nfr:
+                if not rec_fr:
+                    rec_fr = _nfr
+                _w = check_date_consistency(rec_fr_raw, rec_fr)
+                if _w:
+                    parsed.setdefault("correlation_issues", []).append(f"Ngày bắt đầu nghỉ: {_w}")
+        if VLM_ENABLE_RAW_FIELDS and rec_to_raw:
+            _nto, _ = normalize_vietnamese_date(rec_to_raw)
+            if _nto:
+                if not rec_to:
+                    rec_to = _nto
+                _w = check_date_consistency(rec_to_raw, rec_to)
+                if _w:
+                    parsed.setdefault("correlation_issues", []).append(f"Ngày kết thúc nghỉ: {_w}")
+
+        # Giữ ngày đọc được TRƯỚC khi kiểm tra khớp số ngày: dùng làm dự phòng hiển thị khi VLM không
+        # trả về trường *_raw, để giấy có ngày thì giao diện không báo "chưa đọc được".
+        rec_fr_display, rec_to_display = rec_fr, rec_to
+
+        # Khoảng nghỉ chỉ được dùng khi khớp số ngày bác sĩ cho (xem _trusted_leave_range)
+        rec_fr, rec_to, _range_issue = _trusted_leave_range(rec_fr, rec_to, days_granted)
+        if _range_issue:
+            parsed.setdefault("correlation_issues", []).append(_range_issue)
 
         # Extended fields parse
-        adm_date = parsed.get("admission_date")
-        disch_date = parsed.get("discharge_date")
+        adm_date = _to_iso_date(parsed.get("admission_date"))
+        disch_date = _to_iso_date(parsed.get("discharge_date"))
         is_open_ended = bool(parsed["is_open_ended"]) if parsed.get("is_open_ended") is not None else None
         requires_followup = bool(parsed["requires_followup_proof"]) if parsed.get("requires_followup_proof") is not None else None
         dec_name = parsed.get("deceased_name") or parsed.get("deceased_name_raw")
         sub_name = parsed.get("subject_name") or parsed.get("subject_name_raw")
         part_name = parsed.get("partner_name")
         event_type_val = parsed.get("event_type")
-        wed_date = parsed.get("wedding_date")
-        d_death = parsed.get("date_of_death")
-        fun_date = parsed.get("funeral_date")
+        wed_date = _to_iso_date(parsed.get("wedding_date"))
+        d_death = _to_iso_date(parsed.get("date_of_death"))
+        fun_date = _to_iso_date(parsed.get("funeral_date"))
+        ev_date = _to_iso_date(parsed.get("event_date"))
         rel_label = parsed.get("relationship_label")
         rel_emp = parsed.get("relationship_to_employee")
         evid_conf = parsed.get("evidence_confidence")
         needs_mgr = bool(parsed["needs_manager_review"]) if parsed.get("needs_manager_review") is not None else None
         mat_phase = parsed.get("maternity_phase")
-        due_date = parsed.get("expected_due_date")
+        due_date = _to_iso_date(parsed.get("expected_due_date"))
         bhxh_cd = parsed.get("bhxh_code")
         inj_desc = parsed.get("injury_description") or diag_raw
         is_wp_rel = bool(parsed["is_workplace_related"]) if parsed.get("is_workplace_related") is not None else None
-        inj_date = parsed.get("injury_date")
+        inj_date = _to_iso_date(parsed.get("injury_date"))
         doc_purp = parsed.get("document_purpose")
-        val_fr = parsed.get("valid_from")
-        val_to = parsed.get("valid_to")
+        val_fr = _to_iso_date(parsed.get("valid_from"))
+        val_to = _to_iso_date(parsed.get("valid_to"))
 
         # Đặc thù EMERGENCY: Tự động phát hiện ca cấp cứu chưa xác định ngày ra viện
         if str(leave_type).upper() == "MEDICAL_EMERGENCY":
@@ -2042,6 +2462,40 @@ def _try_ollama_extract(
                     name_match_reason,
                 )
 
+        # --- P1.1: Đối chứng tất định dấu mộc đỏ bằng OpenCV -------------------
+        # VLM hay "đoán" có/không có mộc. Ảnh được đối chứng độc lập bằng màu:
+        #   - CV thấy vòng mộc mà VLM không xác nhận  -> nâng lên True.
+        #   - VLM khẳng định có mộc nhưng CV không thấy -> hạ về None (cần xác minh).
+        if VLM_ENABLE_CV_INK_CHECK and path:
+            try:
+                stamp_cv_evidence = evidence_red_stamp_cv(path)
+            except Exception as _cv_exc:  # phòng thủ: không để lỗi CV làm hỏng pipeline
+                stamp_cv_evidence = {"verdict": None, "reason": f"lỗi phân tích OpenCV: {_cv_exc}"}
+            _cv_verdict = (stamp_cv_evidence or {}).get("verdict")
+            if _cv_verdict is True and has_red_stamp_val is not True:
+                has_red_stamp_val = True
+                parsed.setdefault("correlation_issues", []).append(
+                    "Đối chứng ảnh: phát hiện cấu trúc dấu mộc đỏ (VLM chưa xác nhận)."
+                )
+            elif _cv_verdict is False and has_red_stamp_val is True:
+                has_red_stamp_val = None
+                parsed.setdefault("correlation_issues", []).append(
+                    "Đối chứng ảnh: VLM khẳng định có dấu mộc nhưng không thấy cấu trúc "
+                    "mộc đỏ trên ảnh -> cần xác minh thủ công."
+                )
+                esc_reasons = list(dict.fromkeys(list(esc_reasons) + ["RED_STAMP_CV_CONFLICT"]))
+                # VLM đã "thấy" một con dấu không có thật trên ảnh này: kết luận "có chữ ký" của nó trên cùng ảnh
+                # cũng không đáng tin -> để "không rõ" cho người duyệt kiểm tra, không dùng để tự duyệt.
+                if has_signature_val is True or signature_present_val is True:
+                    has_signature_val = None
+                    signature_present_val = None
+                    parsed.setdefault("correlation_issues", []).append(
+                        "Đối chứng ảnh: kết luận có chữ ký của VLM không được dùng vì VLM nhận nhầm dấu mộc "
+                        "trên cùng ảnh -> cần xác minh chữ ký thủ công."
+                    )
+
+    runtime_info = _model_runtime_info(matched_model)
+
     normalized: Dict[str, Any] = {
         "doc_patient_name": normalized_patient_name,
         "doc_diagnosis": diag,
@@ -2049,20 +2503,13 @@ def _try_ollama_extract(
         "diagnosis_raw": diag_raw,
         "issue_date_raw": issue_d_raw,
         "issuer_raw": issuer_raw,
-        "has_red_stamp": (
-            parsed.get("has_red_stamp")
-            if isinstance(parsed.get("has_red_stamp"), bool)
-            else (
-                parsed.get("has_hospital_stamp")
-                if isinstance(parsed.get("has_hospital_stamp"), bool)
-                else (parsed.get("has_stamp") if isinstance(parsed.get("has_stamp"), bool) else None)
-            )
-        ),
-        "has_doctor_signature": (
-            parsed.get("has_doctor_signature")
-            if isinstance(parsed.get("has_doctor_signature"), bool)
-            else (parsed.get("signature_present") if isinstance(parsed.get("signature_present"), bool) else None)
-        ),
+        "recommended_from_date_raw": rec_fr_raw,
+        "recommended_to_date_raw": rec_to_raw,
+        "has_red_stamp": has_red_stamp_val,
+        "has_doctor_signature": has_signature_val,
+        "signature_present": signature_present_val,
+        "model_runtime": runtime_info,
+        "red_stamp_cv": stamp_cv_evidence,
         "is_tampered": parsed.get("is_tampered"),
         "ai_edited": parsed.get("ai_edited"),
         "days_granted_by_doctor": days_granted,
@@ -2083,11 +2530,7 @@ def _try_ollama_extract(
             "issue_date": issue_d,
             "recommended_from_date": rec_fr,
             "recommended_to_date": rec_to,
-            "signature_present": (
-                parsed.get("signature_present")
-                if isinstance(parsed.get("signature_present"), bool)
-                else parsed.get("has_doctor_signature")
-            ),
+            "signature_present": signature_present_val,
             "digital_signature_present": (
                 parsed.get("digital_signature_present")
                 if isinstance(parsed.get("digital_signature_present"), bool)
@@ -2121,6 +2564,7 @@ def _try_ollama_extract(
             "wedding_date": wed_date,
             "date_of_death": d_death,
             "funeral_date": fun_date,
+            "event_date": ev_date,
             "relationship_label": rel_label,
             "relationship_to_employee": rel_emp,
             "evidence_confidence": evid_conf,
@@ -2131,10 +2575,15 @@ def _try_ollama_extract(
             "injury_description": inj_desc,
             "is_workplace_related": is_wp_rel,
             "injury_date": inj_date,
-            "has_red_stamp": parsed.get("has_red_stamp"),
-            "has_doctor_signature": parsed.get("has_doctor_signature"),
-            "has_hospital_stamp": parsed.get("has_hospital_stamp"),
-            "has_bhxh_stamp": parsed.get("has_bhxh_stamp"),
+            "has_red_stamp": has_red_stamp_val,
+            "has_doctor_signature": has_signature_val,
+            "has_hospital_stamp": _coerce_tri_state(parsed.get("has_hospital_stamp")),
+            "has_bhxh_stamp": _coerce_tri_state(parsed.get("has_bhxh_stamp")),
+            "recommended_from_date_raw": rec_fr_raw or rec_fr_display,
+            "recommended_to_date_raw": rec_to_raw or rec_to_display,
+            "days_granted_raw": days_granted_raw,
+            "model_runtime": runtime_info,
+            "red_stamp_cv": stamp_cv_evidence,
             "document_purpose": doc_purp,
             "valid_from": val_fr,
             "valid_to": val_to,
@@ -2145,6 +2594,8 @@ def _try_ollama_extract(
     print(f"\n==================== [VLM DECISION TREE AUDIT] ====================")
     print(f"🎭 PERSONA: {persona_cfg['persona']} ({persona_cfg['schema_key']})")
     print(f"🌲 DECISION TREE: {persona_cfg['decision_tree']}")
+    print(f"🖥️  MODEL RUNTIME: {json.dumps(runtime_info, ensure_ascii=False)}")
+    print(f"📥 RAW VLM JSON: {json.dumps(parsed, ensure_ascii=False)}")
     audit_extracted = {k: v for k, v in normalized["proof_extra"].items() if v is not None}
     print(f"📋 EXTRACTED DATA: {json.dumps(audit_extracted, ensure_ascii=False, indent=2)}")
     print(f"===================================================================\n")

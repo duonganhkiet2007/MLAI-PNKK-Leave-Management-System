@@ -11,7 +11,7 @@ services:
     environment:
       OLLAMA_BASE: http://ollama:11434
       VLM_TARGET_MODEL: ${VLM_TARGET_MODEL:-qwen2.5vl:7b}
-      VLM_MAX_IMAGE_DIM: ${VLM_MAX_IMAGE_DIM:-1600}
+      VLM_MAX_IMAGE_DIM: ${VLM_MAX_IMAGE_DIM:-2048}
       LEAVE_DATA_DIR: /data
       LEAVE_DB_PATH: /data/leave_app.db
       LEAVE_UPLOAD_DIR: /data/uploads

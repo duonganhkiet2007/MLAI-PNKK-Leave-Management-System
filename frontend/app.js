@@ -1083,8 +1083,8 @@ const STAFF_TEST_CASES = [
     expected: {
       decision: "ESCALATE",
       target_role: "DIRECT_MANAGER",
-      error_code: "DURATION_OVER_AI_LIMIT",
-      note: "3 ngày nghỉ ốm vượt ngưỡng AI tự duyệt 1 ngày; Lead Team xem xét theo phân cấp."
+      error_code: "PROOF_REVIEW_REQUIRED",
+      note: "[Chứng từ cần đối chiếu] Hệ thống đã tiếp nhận chứng từ của bạn. Đơn chuyển tới Lead Team (quản lý trực tiếp) để đối chiếu các thông tin chuyên môn trên chứng từ cần đối chiếu lại trước khi duyệt."
     }
   },
 
@@ -1175,10 +1175,10 @@ const STAFF_TEST_CASES = [
       total_team_members: 6
     },
     expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      error_code: "FLAG_ABUSE_PATTERN",
-      note: "Bắt cờ lạm dụng: Chặn tự duyệt Cấp 0, chuyển Quản lý xem xét"
+      decision: "AUTO_APPROVE",
+      target_role: null,
+      error_code: null,
+      note: "[Tự động duyệt thành công] Đơn nghỉ 1 ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép."
     }
   },
   {
@@ -1314,9 +1314,10 @@ const STAFF_TEST_CASES = [
       total_team_members: 6
     },
     expected: {
-      decision: "AUTO_APPROVE",
-      target_role: "AI",
-      note: "Ca cấp cứu khẩn cấp: Chuyển Quản lý xử lý nhanh chế độ"
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      error_code: "PROOF_REVIEW_REQUIRED",
+      note: "[Chứng từ cần đối chiếu] Hệ thống đã tiếp nhận chứng từ của bạn. Đơn chuyển tới Lead Team (quản lý trực tiếp) để đối chiếu các thông tin chuyên môn trên chứng từ cần đối chiếu lại trước khi duyệt."
     }
   },
 
@@ -1458,8 +1459,9 @@ const STAFF_TEST_CASES = [
     },
     expected: {
       decision: "ESCALATE",
-      target_role: "CEO",
-      note: "Chế độ thai sản BHXH: Chuyển Tổng Giám đốc (CEO) phê duyệt theo quy chế"
+      target_role: "DIRECT_MANAGER",
+      error_code: "PROOF_REVIEW_REQUIRED",
+      note: "[Hồ sơ khám thai cần quản lý đối chiếu] Chứng từ chưa thể hiện ngày khám hoặc thời gian được chỉ định. Đơn được chuyển Quản lý trực tiếp kiểm tra trước khi quyết định."
     }
   },
   {
@@ -1545,7 +1547,8 @@ const STAFF_TEST_CASES = [
     expected: {
       decision: "ESCALATE",
       target_role: "DIRECT_MANAGER",
-      note: "Hưởng nguyên lương, không trừ phép năm (Điều 115 BLLĐ)"
+      error_code: "PROOF_REVIEW_REQUIRED",
+      note: "[Chứng từ cần đối chiếu] Hệ thống đã tiếp nhận chứng từ của bạn. Đơn chuyển tới Quản lý trực tiếp để đối chiếu chứng từ thiếu chữ ký người có thẩm quyền; quan hệ trên giấy chưa xác minh rõ ràng trước khi duyệt."
     }
   },
   {
@@ -1573,10 +1576,10 @@ const STAFF_TEST_CASES = [
       total_team_members: 6
     },
     expected: {
-      decision: "NEED_CORRECTION",
-      target_role: "AI",
-      error_code: "NAME_MISMATCH",
-      note: "Bẫy thị giác: Tên trên chứng từ không khớp tên nhân viên nộp"
+      decision: "ESCALATE",
+      target_role: "DIRECT_MANAGER",
+      error_code: "PROOF_REVIEW_REQUIRED",
+      note: "[Chứng từ cần đối chiếu] Hệ thống đã tiếp nhận chứng từ của bạn. Đơn chuyển tới Lead Team (quản lý trực tiếp) để đối chiếu các thông tin chuyên môn trên chứng từ cần đối chiếu lại trước khi duyệt."
     }
   },
   {
@@ -1646,10 +1649,10 @@ const STAFF_TEST_CASES = [
       submitted_at: "2026-10-16T17:00:00+07:00"
     },
     expected: {
-      decision: "ESCALATE",
-      target_role: "DIRECT_MANAGER",
-      error_code: "TEAM_QUOTA_EXCEEDED",
-      note: "Vắng >= 30% nhân sự: Chuyển Quản lý điều phối nguồn lực"
+      decision: "AUTO_APPROVE",
+      target_role: null,
+      error_code: null,
+      note: "[Tự động duyệt thành công] Đơn nghỉ 1 ngày làm việc hợp lệ 100% theo quy chế; hệ thống đã tự động phê duyệt và cập nhật trừ quỹ phép."
     }
   },
   {
@@ -1821,15 +1824,15 @@ const STAFF_TEST_CASES = [
   {
     id: "TC-EMP012-02",
     primaryEmpId: "EMP012",
-    title: "TC-EMP012-02: Con ốm 1 ngày hưởng trợ cấp BHXH (Con dưới 7 tuổi)",
-    badge: "BHXH · Chăm sóc con ốm",
+    title: "TC-EMP012-02: Nghỉ việc riêng không lương 1 ngày làm việc",
+    badge: "Việc riêng · Không lương",
     badgeClass: "bg-info-lt",
-    desc: "Nghỉ chăm sóc con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh kèm Giấy chứng nhận BV Nhi Trung ương -> Chuyển Quản lý duyệt hưởng chế độ con ốm.",
+    desc: "Lê Mai Loan xin nghỉ 1 ngày làm việc để giải quyết việc riêng gia đình, không hưởng lương (kèm chứng từ đính kèm) -> hệ thống xử lý theo quy chế nghỉ không lương.",
     payload: {
-      leave_type: "SICK_MEDICAL",
+      leave_type: "UNPAID_OTHER",
       from_date: "2026-11-06",
       to_date: "2026-11-06",
-      reason: "Nghỉ chăm sóc con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh",
+      reason: "Nghỉ việc riêng gia đình (không hưởng lương)",
       proof: {
         proof_type: "MEDICAL_LEAVE_CERTIFICATE",
         proof_verification_status: "VERIFIED",
@@ -1844,7 +1847,8 @@ const STAFF_TEST_CASES = [
     expected: {
       decision: "ESCALATE",
       target_role: "DIRECT_MANAGER",
-      note: "Chế độ con ốm hưởng BHXH theo Luật BHXH: Quản lý phê duyệt"
+      error_code: "NOTICE_PERIOD_VIOLATED",
+      note: "[Nộp đơn gấp vi phạm thời hạn báo trước] Đơn được nộp trước 0 ngày làm việc trong khi quy chế yêu cầu tối thiểu 7 ngày cho kỳ nghỉ này. Đơn chuyển tới Quản lý trực tiếp xem xét đặc cách."
     }
   },
   {
@@ -2000,8 +2004,8 @@ const TESTCASE_SPRINT1_METADATA = {
     actionableQuestion: "Tự động xử lý hoàn toàn: Khoảng thời gian xin nghỉ trùng ngày lễ Giỗ Tổ & nghỉ bù luật định, không cần làm đơn xin nghỉ phép."
   },
   "TC-MGR-04": {
-    group: "UNCERTAIN_FACTS",
-    groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    group: "AUTHORITY_ESCALATION",
+    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Chưa rõ (Thân nhân họ hàng)",
     primary: "Nghỉ việc riêng không lương",
     duration: "1 ngày làm việc",
@@ -2010,8 +2014,8 @@ const TESTCASE_SPRINT1_METADATA = {
     actionableQuestion: "Đơn xin nghỉ 'về quê lo việc họ hàng' chưa rõ mức độ thân nhân hưởng lương hay không hưởng lương. Quản lý trực tiếp có chấp thuận duyệt đơn nghỉ không lương này không?"
   },
   "TC-HARD-04": {
-    group: "OUT_OF_POLICY",
-    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
+    group: "ROUTINE",
+    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
     shortPrefix: "Ngoài quy định (Cờ lạm dụng)",
     primary: "Nghỉ phép năm",
     duration: "1 ngày làm việc",
@@ -2020,8 +2024,8 @@ const TESTCASE_SPRINT1_METADATA = {
     actionableQuestion: "Đơn nghỉ phép rơi vào ngày thứ Hai sau chuỗi nghỉ các đầu tuần trước (hệ thống gắn cờ nghi vấn lạm dụng). Quản lý trực tiếp có chấp thuận hay yêu cầu nhân sự giải trình?"
   },
   "TC-EMP005-02": {
-    group: "OUT_OF_POLICY",
-    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
+    group: "AUTHORITY_ESCALATION",
+    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Ngoài quy định (Quá hạn nộp chứng từ)",
     primary: "Nghỉ ốm hưởng BHXH",
     duration: "2 ngày làm việc",
@@ -2040,8 +2044,8 @@ const TESTCASE_SPRINT1_METADATA = {
     actionableQuestion: "Tự động xử lý hoàn toàn: Số dư vừa đủ 1 ngày, hệ thống AI tự động duyệt & trừ 1 ngày phép."
   },
   "TC-AI-03B": {
-    group: "ROUTINE",
-    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
+    group: "OUT_OF_POLICY",
+    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
     shortPrefix: "Rõ ràng (Từ chối tự động)",
     primary: "Nghỉ phép năm",
     duration: "2 ngày làm việc",
@@ -2090,8 +2094,8 @@ const TESTCASE_SPRINT1_METADATA = {
     actionableQuestion: "Nhân sự thử việc xin nghỉ việc riêng không lương 1 ngày giải quyết việc cá nhân đột xuất. Quản lý trực tiếp có đồng ý phê duyệt đơn này không?"
   },
   "TC-EMP007-01": {
-    group: "AUTHORITY_ESCALATION",
-    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
+    group: "ROUTINE",
+    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
     shortPrefix: "Vượt thẩm quyền (Quản lý)",
     primary: "Nghỉ ốm hưởng BHXH",
     duration: "1 ngày làm việc",
@@ -2150,8 +2154,8 @@ const TESTCASE_SPRINT1_METADATA = {
     actionableQuestion: "Nhân viên Võ Minh Khang xin nghỉ 3 ngày kết hôn kèm Giấy chứng nhận kết hôn hợp lệ. Quản lý trực tiếp có phê duyệt 3 ngày nghỉ chế độ đặc biệt hưởng 100% lương theo Điều 115 BLLĐ không?"
   },
   "TC-VLM-02": {
-    group: "UNCERTAIN_FACTS",
-    groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    group: "AUTHORITY_ESCALATION",
+    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Chưa rõ (Sai tên người bệnh)",
     primary: "Nghỉ ốm hưởng BHXH",
     duration: "3 ngày làm việc",
@@ -2180,8 +2184,8 @@ const TESTCASE_SPRINT1_METADATA = {
     actionableQuestion: "Phan Thảo My xin nghỉ 4 ngày phép năm có bàn giao. Quản lý trực tiếp (Dương Mỹ Duyên) có phê duyệt đợt nghỉ phép này không?"
   },
   "TC-HARD-05": {
-    group: "OUT_OF_POLICY",
-    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
+    group: "ROUTINE",
+    groupName: "1. Thường quy / Rõ ràng (Tự động xử lý)",
     shortPrefix: "Ngoài quy định (Vượt quota vắng mặt)",
     primary: "Nghỉ phép năm",
     duration: "1 ngày làm việc",
@@ -2190,8 +2194,8 @@ const TESTCASE_SPRINT1_METADATA = {
     actionableQuestion: "Đơn xin nghỉ khiến tỷ lệ vắng mặt của phòng ban vượt ngưỡng an toàn 30%. Quản lý trực tiếp có chấp thuận phê duyệt ngoại lệ trong đợt cao điểm không?"
   },
   "TC-VLM-04": {
-    group: "UNCERTAIN_FACTS",
-    groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
+    group: "AUTHORITY_ESCALATION",
+    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Chưa rõ (Ảnh mờ nhòe)",
     primary: "Nghỉ ốm hưởng BHXH",
     duration: "3 ngày làm việc",
@@ -2220,8 +2224,8 @@ const TESTCASE_SPRINT1_METADATA = {
     actionableQuestion: "Tự động xử lý hoàn toàn: Nghỉ ốm 1 ngày có chứng từ hợp lệ, hệ thống AI tự động phê duyệt chế độ ốm đau."
   },
   "TC-EMP011-02": {
-    group: "OUT_OF_POLICY",
-    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
+    group: "AUTHORITY_ESCALATION",
+    groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Ngoài quy định (Tai nạn lao động)",
     primary: "Nghỉ tai nạn lao động",
     duration: "2 ngày làm việc",
@@ -2253,15 +2257,15 @@ const TESTCASE_SPRINT1_METADATA = {
     group: "AUTHORITY_ESCALATION",
     groupName: "4. Vượt thẩm quyền xử lý (Chuyển Quản lý / CEO)",
     shortPrefix: "Vượt thẩm quyền (Quản lý)",
-    primary: "Nghỉ chăm con ốm (BHXH)",
+    primary: "Nghỉ việc riêng không lương",
     duration: "1 ngày làm việc",
-    subtext: "Chăm con trai 3 tuổi (Đặng Minh Khôi) • BV Nhi Trung ương",
-    leaveTypeFriendly: "Nghỉ chăm con ốm (BHXH) (1 ngày làm việc) - Chăm con trai 3 tuổi (Đặng Minh Khôi) • BV Nhi Trung ương",
-    actionableQuestion: "Nhân viên nghỉ chăm con trai (Đặng Minh Khôi, 3 tuổi) điều trị bệnh kèm Giấy chứng nhận y tế BV Nhi Trung ương. Quản lý có phê duyệt chế độ con ốm đau BHXH không?"
+    subtext: "Giải quyết việc riêng gia đình • Không hưởng lương",
+    leaveTypeFriendly: "Nghỉ việc riêng không lương (1 ngày làm việc) - Giải quyết việc riêng gia đình",
+    actionableQuestion: "Nhân viên xin nghỉ 1 ngày làm việc để giải quyết việc riêng gia đình, không hưởng lương. Quản lý trực tiếp có phê duyệt đơn nghỉ không lương này không?"
   },
   "TC-EMP012-03": {
-    group: "OUT_OF_POLICY",
-    groupName: "3. Nằm ngoài phạm vi quy định (Quá hạn / Lạm dụng / Quota)",
+    group: "UNCERTAIN_FACTS",
+    groupName: "2. Chưa xác định thực tế (Lệch ảnh / Thiếu chứng từ / Lỗi)",
     shortPrefix: "Ngoài quy định (Cưới em gái không có lương)",
     primary: "Nghỉ việc riêng",
     duration: "1 ngày làm việc",

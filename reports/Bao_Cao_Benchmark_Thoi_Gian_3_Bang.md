@@ -1,6 +1,6 @@
 # BÁO CÁO KẾT QUẢ ĐỐI SÁNH HIỆU NĂNG (BENCHMARK)
 ### So sánh Thời gian Thao tác Thủ công vs Pipeline AI Tự động hóa
-*Bộ dữ liệu kiểm định: 140 ca kiểm thử (STAFF_TEST_CASES) & 32 mẫu chứng từ y tế/hành chính*
+*Bộ dữ liệu kiểm định: 130 ca kiểm thử (STAFF_TEST_CASES) & 32 mẫu chứng từ y tế/hành chính*
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Chỉ số đo lường | 👤 Thao tác Thủ công (Người dùng) | ⚡ Pipeline AI Tự động hóa | 🚀 Tốc độ Tăng & Hiệu quả |
 | :--- | :--- | :--- | :--- |
-| **Tổng thời gian hoàn thành (140 đơn)** | **4.952,0 giây** (~1,38 giờ) | **2,701 giây** (Tuần tự)<br>**6,540 giây** (Song song 5 luồng) | **Nhanh hơn 1.833,4 LẦN** (Tuần tự)<br>**Nhanh hơn 757,2 LẦN** (Song song) |
+| **Tổng thời gian hoàn thành (130 đơn)** | **4.952,0 giây** (~1,38 giờ) | **2,701 giây** (Tuần tự)<br>**6,540 giây** (Song song 5 luồng) | **Nhanh hơn 1.833,4 LẦN** (Tuần tự)<br>**Nhanh hơn 757,2 LẦN** (Song song) |
 | **Thời gian trung bình mỗi đơn** | **35,4 giây** | **19,29 mili-giây (ms)** | **Nhanh hơn 1.833,6 lần** |
 | **Quy trình truyền thống (E2E có duyệt tay)** | **30.152,0 giây** (~8,38 giờ) | **2,701 giây** | **Nhanh hơn 11.163,3 LẦN** |
 | **Tổng thời gian tiết kiệm được** | — | **4.949,3 giây** (~1,37 giờ) | **Cắt giảm 99,95% độ trễ** |

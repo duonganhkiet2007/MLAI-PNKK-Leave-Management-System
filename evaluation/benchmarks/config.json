@@ -20,7 +20,6 @@
   "repetitions": 1,
   "ollama_base": "http://localhost:11434",
   "vlm_model": "qwen2.5vl:7b",
-  "llm_model": "qwen2.5:3b-instruct",
   "vlm_max_image_dim": 1024,
   "inference_parameters": {"temperature": 0.0, "num_predict": 512, "num_ctx": 4096}
 }

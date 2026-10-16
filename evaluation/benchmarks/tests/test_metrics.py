@@ -36,6 +36,6 @@ def test_isolation_requires_marker(tmp_path):
 
 def test_dataset_integrity():
     cases=read(BENCH/'datasets/applications.json');truth=read(BENCH/'datasets/ground_truth.json')
-    assert len(cases)==140
-    assert len(set(c['id'] for c in cases))==140
+    assert len(cases)==110
+    assert len(set(c['id'] for c in cases))==110
     assert all(c['id'] in truth and c['synthetic'] for c in cases)

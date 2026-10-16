@@ -5,7 +5,7 @@ from evaluation.benchmarks.common import read,dump
 MATCH_CONFIG=['dataset_version','seed','reference_time','timezone','concurrency_levels','scenarios','mixed_weights',
     'contention_weights','arrival','stagger_window_seconds','request_timeout_seconds','completion_timeout_seconds',
     'poll_interval_seconds','mock_inference_seconds','model_mode','cache_policy','model_start','repetitions',
-    'ollama_base','vlm_model','llm_model','vlm_max_image_dim','inference_parameters']
+    'ollama_base','vlm_model','vlm_max_image_dim','inference_parameters']
 
 def check(a,b):
     mismatches=[k for k in ['dataset_sha256','annotations_sha256','ground_truth_sha256','policy_sha256','hardware','models'] if a.get(k)!=b.get(k)]

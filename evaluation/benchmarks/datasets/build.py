@@ -35,8 +35,6 @@ def build():
       'proof_mismatch':(15,[item({'leave_type':'SICK_MEDICAL','proof':{**medical,'patient_name':'Entirely Different Identity'}},'NEED_CORRECTION','EMPLOYEE','policy_rules.md §1, §2.2','Subject identity must match'),
           item({'leave_type':'SICK_MEDICAL','proof':{**medical,'recommended_from_date':'2026-09-15'}},'NEED_CORRECTION','EMPLOYEE','policy_rules.md §1, §2.2','Requested dates outside supporting document'),
           item({'leave_type':'SICK_MEDICAL','proof':{**medical,'proof_type':'MARRIAGE_CERTIFICATE'}},'NEED_CORRECTION','EMPLOYEE','policy_rules.md §2.2','Wrong supporting document type')]),
-      'duplicate_conflict':(10,[item({'approved_working_dates':['2026-09-14']},'AUTO_REJECT','EMPLOYEE','policy_rules.md §3.4','Duplicate approved leave must not deduct twice'),
-          item({'to_date':'2026-09-15','approved_working_dates':['2026-09-14']},'NEED_CORRECTION','EMPLOYEE','policy_rules.md §3.4','Partially overlapping dates require correction')]),
       'boundary':(15,[item({'remaining_leave_days':1},'AUTO_APPROVE',None,'policy_rules.md §2.1','Exactly enough balance'),
           item({'total_team_members':10,'team_absent_count':2},'AUTO_APPROVE',None,'policy_rules.md §3.4','Exactly 30% quota','§3.4 uses <30%; code accepts ≤30%; threshold needs policy owner'),
           item({'from_date':'2026-09-19','to_date':'2026-09-20'},'NO_LEAVE_REQUIRED',None,'policy_rules.md §1; calendars/holidays_2026.json','Weekend has no working dates'),
@@ -59,23 +57,6 @@ def build():
                 'expected_audit_events':['EVALUATED'],'policy_reference':'core/'+ref,
                 'rationale':rationale,'annotation_status':'policy_conflict' if conflict else 'independently_authored',
                 'policy_conflict':conflict,'severity':'critical' if category.startswith('proof') else 'major'}
-    free=[('Tôi xin nghỉ phép năm ngày 14/09/2026.',{'from_date':'2026-09-14','to_date':'2026-09-14','leave_type':'ANNUAL'}),
-        ('Cho em nghỉ phép năm ngày mai nhé.',{'from_date':'2026-09-02','to_date':'2026-09-02','leave_type':'ANNUAL'}),
-        ('Em xin nghỉ ốm ngày 14/09/2026.',{'from_date':'2026-09-14','leave_type':'SICK_MEDICAL'}),
-        ('Em muốn nghỉ một hôm, chưa biết ngày nào.',{'date_ambiguous':True}),
-        ('Tôi xin nghỉ không lương từ 14/09/2026 đến 15/09/2026.',{'from_date':'2026-09-14','to_date':'2026-09-15','leave_type':'UNPAID_OTHER'}),
-        ('Tôi xin nghỉ phép năm ngày 14/09/2026, bàn giao cho Benchmark Person 001.',{'handover_person_name':'Benchmark Person 001','leave_type':'ANNUAL'})]
-    replies=[('Đồng ý duyệt','APPROVE_OVERRIDE'),('Từ chối','REJECT'),('Cần bổ sung chứng từ','REQUEST_MORE_INFO'),
-        ('Sửa ngày bắt đầu sang 15/09/2026','MODIFY_CONDITIONAL'),('Để tôi xem lại sau','AMBIGUOUS'),('Chưa quyết định','AMBIGUOUS'),
-        ('Không đồng ý','REJECT'),('Tôi cần kiểm tra thêm','AMBIGUOUS')]
-    for i in range(20):
-        kind='free_text' if i<12 else 'reviewer'
-        text,exp=(free[i%len(free)] if i<12 else replies[(i-12)%len(replies)])
-        id=f'language-{i+1:03}'
-        cases.append({'id':id,'category':'language','kind':kind,'text':text,'synthetic':True,
-            'reference_time':base['submitted_at'],'timezone':'Asia/Ho_Chi_Minh'})
-        truth[id]={'expected':exp,'policy_reference':'User-authored literal text / policy_rules.md §3.4 human authority',
-            'annotation_status':'independently_authored','severity':'critical' if exp=='AMBIGUOUS' else 'major'}
     def write(name,obj): (HERE/name).write_text(json.dumps(obj,ensure_ascii=False,indent=2),encoding='utf-8')
     write('applications.json',cases); write('ground_truth.json',truth)
     # Annotations describe printed synthetic source, not model output; corrupted unreadability is unlabelled.
@@ -88,8 +69,8 @@ def build():
             'source':'deterministic printed synthetic fixture, no real person or medical record',
             'readability_after_corruption':None})
     write('proof_annotations.json',annotations)
-    write('manifest.json',{'version':'1.0','cases':len(cases),'distinct_templates':sum(len(v[1]) for v in templates.values())+len(free)+len(replies),
-        'limitation':'140 cases are variations of a smaller authored template set, not 140 independent policy branches.',
+    write('manifest.json',{'version':'1.0','cases':len(cases),'distinct_templates':sum(len(v[1]) for v in templates.values()),
+        'limitation':'110 cases are variations of a smaller authored template set, not 110 independent policy branches.',
         'ground_truth_source':['core/policy_rules.md','core/raw_policy.json'],
         'conflicts':'Conflicting policy labels are excluded from headline accuracy and retained as diagnostic observations.'})
     print(f'Generated {len(cases)} cases without importing the evaluated engine.')

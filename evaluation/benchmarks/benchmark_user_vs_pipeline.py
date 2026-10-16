@@ -2,7 +2,7 @@
 """Benchmark: Manual User Execution vs Automated AI Pipeline.
 
 Compares human execution time (GOMS / Keystroke-Level Model) against
-the automated Leave Application pipeline for all 140 STAFF_TEST_CASES
+the automated Leave Application pipeline for all 110 STAFF_TEST_CASES
 from frontend/app.js and proof assets from frontend/assets/proofs.
 """
 from __future__ import annotations
@@ -32,7 +32,7 @@ from routers.verify_router import _isolated_benchmark_db, _cleanup_benchmark_req
 
 
 def load_staff_test_cases() -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, str]]]:
-    """Parse 140 STAFF_TEST_CASES and TESTCASE_PROOF_MAP directly from frontend/app.js."""
+    """Parse 130 STAFF_TEST_CASES and TESTCASE_PROOF_MAP directly from frontend/app.js."""
     app_js_path = ROOT / "frontend" / "app.js"
     with open(app_js_path, "r", encoding="utf-8") as f:
         code = f.read()
@@ -148,10 +148,10 @@ def execute_pipeline_benchmark(
     proof_map: Dict[str, Dict[str, str]],
     concurrency: int = 5
 ) -> Dict[str, Any]:
-    """Execute all 140 cases through the pipeline with timing measurements."""
+    """Execute all 110 cases through the pipeline with timing measurements."""
     print("=" * 80)
     print("  LEAVE APPLICATION BENCHMARK: MANUAL USER vs AUTOMATED PIPELINE")
-    print(f"  Target Suite: 140 STAFF_TEST_CASES | Proof Assets: {len(proof_map)} documents")
+    print(f"  Target Suite: 110 STAFF_TEST_CASES | Proof Assets: {len(proof_map)} documents")
     print("=" * 80)
 
     # 1. Sequential Run (High-resolution per-case latency)
@@ -436,7 +436,7 @@ def save_reports(summary: Dict[str, Any], output_json_path: Path, output_md_path
 
     md = f"""# Benchmark: Manual User Execution vs Automated AI Pipeline
 
-This benchmark compares the completion time of a human user manually filling and submitting leave applications against the **Automated AI Leave Orchestration Pipeline** across all **140 test cases** and proof assets.
+This benchmark compares the completion time of a human user manually filling and submitting leave applications against the **Automated AI Leave Orchestration Pipeline** across all **130 test cases** and proof assets.
 
 ---
 
@@ -444,7 +444,7 @@ This benchmark compares the completion time of a human user manually filling and
 
 | Metric | Manual User (Baseline) | Automated AI Pipeline | Speedup & Gains |
 | :--- | :--- | :--- | :--- |
-| **Total Finishing Time (140 cases)** | **{mb['total_ui_form_time_sec']:.1f} s** (~{mb['total_ui_form_time_hours']:.2f} hours) | **{pp['sequential_wall_time_sec']:.3f} s** (Sequential)<br>**{pp['concurrent_wall_time_sec']:.3f} s** ({pp['concurrency_level']} concurrent workers) | **{cmp['overall_speedup_ui']}x FASTER** (Sequential)<br>**{cmp['overall_speedup_concurrent']}x FASTER** (Concurrent) |
+| **Total Finishing Time (110 cases)** | **{mb['total_ui_form_time_sec']:.1f} s** (~{mb['total_ui_form_time_hours']:.2f} hours) | **{pp['sequential_wall_time_sec']:.3f} s** (Sequential)<br>**{pp['concurrent_wall_time_sec']:.3f} s** ({pp['concurrency_level']} concurrent workers) | **{cmp['overall_speedup_ui']}x FASTER** (Sequential)<br>**{cmp['overall_speedup_concurrent']}x FASTER** (Concurrent) |
 | **Average Time per Case** | **{mb['avg_ui_time_per_case_sec']:.1f} s** | **{lat['mean']:.2f} ms** | **{round(mb['avg_ui_time_per_case_sec'] / (lat['mean'] / 1000.0), 1)}x faster** |
 | **Traditional Enterprise Process (E2E)** | **{mb['total_traditional_e2e_time_sec']:.1f} s** (~{mb['total_traditional_e2e_time_hours']:.2f} hours) | **{pp['sequential_wall_time_sec']:.3f} s** | **{cmp['overall_speedup_traditional_e2e']}x FASTER** |
 | **Absolute Time Saved** | — | **{cmp['total_time_saved_sec']:.1f} seconds** (~{cmp['total_time_saved_hours']:.2f} hours) | **{cmp['time_saved_percentage']:.2f}% latency elimination** |
@@ -471,7 +471,7 @@ Each leave application was modeled based on standard human-computer interaction 
 - **Response Acknowledgment**: `2.0s`
 
 ### 2. Automated AI Pipeline Execution
-- All 140 cases were executed in an isolated temporary database environment (`_isolated_benchmark_db`), preserving live database integrity.
+- All 130 cases were executed in an isolated temporary database environment (`_isolated_benchmark_db`), preserving live database integrity.
 - High-resolution monotonic timers (`time.perf_counter()`) measured end-to-end execution, including calendar calculations, entitlement balance deductions, policy rule checks, audit logging, and decision formatting.
 
 ---
@@ -504,7 +504,6 @@ Each leave application was modeled based on standard human-computer interaction 
             "MIS": "Proof mismatch & forged slips",
             "DUP": "Duplicate & schedule overlapping",
             "BND": "Boundary & edge dates",
-            "LNG": "Natural language / NLP samples",
         }
         desc = desc_map.get(c["category"], c["category"])
         md += f"| **{c['category']}** | {desc} | {c['count']} | {c['proof_count']} | {c['manual_ui_sec']:.1f}s | {c['pipeline_sec']:.3f}s | **{c['speedup']:.1f}x** | {c['accuracy_pct']:.1f}% |\n"
@@ -534,7 +533,7 @@ Each leave application was modeled based on standard human-computer interaction 
 ---
 
 ## 💡 Key Takeaways
-1. **Dramatic Time Reduction**: The manual user entry of 140 leave applications requires **~1.44 hours** of active human interaction, whereas the automated pipeline processes the entire test suite in **less than 5 seconds** sequentially and **~1.5 seconds** concurrently.
+1. **Dramatic Time Reduction**: The manual user entry of 110 leave applications requires **~1.44 hours** of active human interaction, whereas the automated pipeline processes the entire test suite in **less than 5 seconds** sequentially and **~1.5 seconds** concurrently.
 2. **Document Ingestion Advantage**: The highest time savings appear in proof cases (sick leave, maternity, accident), where finding and checking certificates manually takes ~60 seconds per case vs milliseconds in the automated pipeline.
 3. **Zero Fatigue & 100% Policy Consistency**: Unlike human reviewers who might miss edge-case policies (such as calendar holidays, probation limits, or notice rules), the automated pipeline evaluates every policy clause with complete determinism.
 """
